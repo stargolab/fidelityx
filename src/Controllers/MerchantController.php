@@ -1,10 +1,35 @@
-<?php 
-
+<?php
 
 namespace App\Controllers;
+
+use App\Models\CustomerModel;
+use App\Models\LoyaltyCardModel;
 use App\Models\MerchantModel;
+use App\Models\PointsLogModel;
+use App\Models\RewardModel;
+use App\Support\Csrf;
+use App\Support\View;
 use App\Validators\DocumentValidator;
+use App\Validators\PhoneValidator;
+
 class MerchantController {
+    // opcoes aceitas no cadastro (as mesmas exibidas nos <select> da view)
+    public const CATEGORIES = [
+        'alimentacao' => 'Alimentação / Bebidas',
+        'beleza'      => 'Beleza & Estética',
+        'saude'       => 'Saúde / Bem-estar',
+        'varejo'      => 'Varejo / Comércio',
+        'servicos'    => 'Serviços Gerais',
+        'outros'      => 'Outros',
+    ];
+
+    public const STATES = [
+        'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA',
+        'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+    ];
+
+    private const MAX_POINTS_PER_ENTRY = 10000;
+
     private $db;
     private $merchantModel;
 
@@ -12,8 +37,8 @@ class MerchantController {
         $this->db = $db;
         $this->merchantModel = new MerchantModel($this->db);
     }
-    
-    // RENDERS ------------------------------------------------------------
+
+    // RENDERS (publicas) -------------------------------------------------
     public function renderRegister() {
             // a array $_SERVER guarda tudo que vem na requisição.
             // se for POST, é porque o usuário clicou o botão (está tentando registrar).
@@ -21,10 +46,11 @@ class MerchantController {
                 $this->handleRegister(); // então, joga pro método de registro.
                 return;
             }
-            // se o método não for POST, vai ser GET, só carrega ou recarrega a página normalmente. 
-            require_once __DIR__ . '/../../views/auth/merchant/register.php';
-
-
+            // se o método não for POST, vai ser GET, só carrega ou recarrega a página normalmente.
+            View::render('auth/merchant/register', [
+                'categories' => self::CATEGORIES,
+                'states'     => self::STATES,
+            ]);
     }
 
     public function renderLogin() {
@@ -33,48 +59,142 @@ class MerchantController {
             $this->handleLogin();
             return;
         }
-        
-        require_once __DIR__ . '/../../views/auth/merchant/login.php';
 
+        // quem ja esta logado vai direto pro painel
+        if (isset($_SESSION['merchant_id'])) {
+            redirect('merchant/dashboard');
+        }
+
+        View::render('auth/merchant/login');
     }
 
-    
+    // RENDERS (privadas, exigem login) -----------------------------------
+
+    public function renderDashboard() {
+        $merchantId = $this->authGuard();
+        $logModel = new PointsLogModel($this->db);
+
+        View::render('merchant/dashboard', [
+            'stats'  => $logModel->statsByMerchant($merchantId),
+            'recent' => $logModel->recentByMerchant($merchantId, 10),
+        ]);
+    }
+
+    public function renderScore() {
+        $merchantId = $this->authGuard();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handleScore($merchantId);
+            return;
+        }
+
+        View::render('merchant/score');
+    }
+
+    public function renderRewards() {
+        $merchantId = $this->authGuard();
+        $rewardModel = new RewardModel($this->db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handleRewards($merchantId, $rewardModel);
+            return;
+        }
+
+        View::render('merchant/rewards', [
+            'rewards' => $rewardModel->listByMerchant($merchantId),
+        ]);
+    }
+
+    public function renderRedeem() {
+        $merchantId = $this->authGuard();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handleRedeem($merchantId);
+            return;
+        }
+
+        // GET com ?phone= mostra o saldo do cliente e os premios disponiveis
+        $phone = PhoneValidator::sanitize($_GET['phone'] ?? '');
+        $card = null;
+        if ($phone !== '') {
+            $card = (new LoyaltyCardModel($this->db))->findByMerchantAndPhone($merchantId, $phone);
+        }
+
+        View::render('merchant/redeem', [
+            'phone'   => $phone,
+            'card'    => $card,
+            'rewards' => (new RewardModel($this->db))->listByMerchant($merchantId, true),
+        ]);
+    }
+
+    public function renderCustomers() {
+        $merchantId = $this->authGuard();
+
+        View::render('merchant/customers', [
+            'customers' => (new LoyaltyCardModel($this->db))->listByMerchant($merchantId),
+        ]);
+    }
+
+    public function logout() {
+        $_SESSION = [];
+        if (ini_get('session.use_cookies')) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+        }
+        session_destroy();
+
+        redirect('merchant/login', ['success' => 'logout']);
+    }
 
     // HANDLES -----------------------------------------------------------
 
     public function handleRegister(){
+        Csrf::verify();
+
         // trazer dados do input
-        $owner_name =   filter_input(INPUT_POST, 'owner_name');
-        $store_name =   filter_input(INPUT_POST, 'shop_name');
-        $address    =   filter_input(INPUT_POST, 'address');
+        $owner_name =   trim((string)filter_input(INPUT_POST, 'owner_name'));
+        $store_name =   trim((string)filter_input(INPUT_POST, 'shop_name'));
+        $address    =   trim((string)filter_input(INPUT_POST, 'address'));
         $state      =   filter_input(INPUT_POST, 'state');
-        $city       =   filter_input(INPUT_POST, 'city');
-        $email      =   filter_input(INPUT_POST, 'email');
+        $city       =   trim((string)filter_input(INPUT_POST, 'city'));
+        $email      =   trim((string)filter_input(INPUT_POST, 'email'));
         $phone      =   filter_input(INPUT_POST, 'phone');
         $category   =   filter_input(INPUT_POST, 'category');
         $document   =   filter_input(INPUT_POST, 'document');
         $password   =   $_POST['password'] ?? '';
-        
+        $passwordConfirm = $_POST['password_confirm'] ?? '';
+
         // tratamento dos input masks vindos do front-end.
         $document   = preg_replace('/\D/', '', (string)$document);
-        $phone      = preg_replace('/\D/', '', (string)$phone);
-        
-        $isValid = DocumentValidator::isValid($document);
-        
+        $phone      = PhoneValidator::sanitize($phone);
+
+        // verificacao dos dados: primeiro campos vazios/fora da lista, depois as regras especificas
+        if ($owner_name === '' || $store_name === '' || $address === '' || $city === '' || $document === ''
+            || !in_array($state, self::STATES, true)
+            || !array_key_exists((string)$category, self::CATEGORIES)) {
+            redirect('merchant/register', ['error' => 'campos_invalidos']);
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            redirect('merchant/register', ['error' => 'email_invalido']);
+        }
+
+        if (!PhoneValidator::isValid($phone)) {
+            redirect('merchant/register', ['error' => 'telefone_invalido']);
+        }
+
         // se nao for valido, ja para a requisicao
-        if (!$isValid) {
-            header('Location: index.php?url=merchant/register&error=documento_invalido');
-            exit; // sempre dar exit após redir
+        if (!DocumentValidator::isValid($document)) {
+            redirect('merchant/register', ['error' => 'documento_invalido']);
         }
 
-        
-        // verificacao dos dados
-
-        if (!$owner_name || !$store_name || !$address || !$state || !$city || !$email || !$phone || !$category || !$document || strlen($password) < 6 ){
-            header('Location: index.php?url=merchant/register&error=campos_invalidos');
-            exit;
+        if (strlen($password) < 6) {
+            redirect('merchant/register', ['error' => 'senha_curta']);
         }
-        
+
+        if (!hash_equals($password, (string)$passwordConfirm)) {
+            redirect('merchant/register', ['error' => 'senhas_diferentes']);
+        }
 
         // segurança e salvar
         // fazendo hash da senha
@@ -102,8 +222,7 @@ class MerchantController {
             $this->merchantModel->create($data);
 
              // se deu certo, redireciona usuario para o login
-            header('Location: index.php?url=merchant/login&success=cadastrado');
-            exit;
+            redirect('merchant/login', ['success' => 'cadastrado']);
         } catch (\PDOException $e) {
             $sqlState = $e->errorInfo[0] ?? null;
             $driverCode = (int)($e->errorInfo[1] ?? 0);
@@ -112,97 +231,161 @@ class MerchantController {
 
             // duplicidade (email/cpf/cnpj já cadastrados)
             if ($sqlState === '23000' && $driverCode === 1062) {
-                header('Location: index.php?url=merchant/register&error=ja_cadastrado');
-                exit;
+                redirect('merchant/register', ['error' => 'ja_cadastrado']);
             }
 
             // valor nulo em campo obrigatório no banco
             if ($sqlState === '23000' && $driverCode === 1048) {
-                header('Location: index.php?url=merchant/register&error=campos_obrigatorios');
-                exit;
+                redirect('merchant/register', ['error' => 'campos_obrigatorios']);
             }
 
             // valor maior que o tamanho da coluna
             if ($sqlState === '22001' || $driverCode === 1406) {
-                header('Location: index.php?url=merchant/register&error=dados_muito_longos');
-                exit;
+                redirect('merchant/register', ['error' => 'dados_muito_longos']);
             }
 
             // formato incompativel com o tipo da coluna
             if ($sqlState === '22007' || $sqlState === '22018' || $driverCode === 1292) {
-                header('Location: index.php?url=merchant/register&error=formato_invalido');
-                exit;
+                redirect('merchant/register', ['error' => 'formato_invalido']);
             }
 
             // falha de conexao com o banco
             if ($driverCode === 2002 || $driverCode === 2006 || $sqlState === 'HY000') {
-                header('Location: index.php?url=merchant/register&error=banco_indisponivel');
-                exit;
+                redirect('merchant/register', ['error' => 'banco_indisponivel']);
             }
 
             // erros nao mapeados
-            header('Location: index.php?url=merchant/register&error=erro_servidor');
-            exit;
+            redirect('merchant/register', ['error' => 'erro_servidor']);
         }
 
     }
-    
-
 
     public function handleLogin(){
+        Csrf::verify();
+
         $email      =    filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
         $password   =    $_POST['password'] ?? '';
 
         if (!$email || !$password) {
-            header('Location: index.php?url=merchant/login&error=campos_obrigatorios');
-            exit;
+            redirect('merchant/login', ['error' => 'campos_obrigatorios']);
         }
 
         $merchant = $this->merchantModel->findByEmail($email);
 
-
-
         if(!$merchant || !password_verify($password, $merchant['password_hash'])){
-            header('Location: index.php?url=merchant/login&error=credenciais_invalidas');
-            exit;
+            redirect('merchant/login', ['error' => 'credenciais_invalidas']);
         }
 
-        // FUTURAMENTE, SERÁ IMPLEMENTADA A LÓGICA DE CONTAS ATIVAS/INATIVAS:
-
-        /*
         if($merchant['status'] === 'inactive'){
-            header('Location: index.php?url=merchant/login&error=conta_inativa');
-            exit;
+            redirect('merchant/login', ['error' => 'conta_inativa']);
         }
-        */
 
-        $_SESSION['merchant_id']     = $merchant['id'];
+        // gera um novo id de sessao no login (evita session fixation)
+        session_regenerate_id(true);
+
+        $_SESSION['merchant_id']     = (int)$merchant['id'];
         $_SESSION['merchant_name']   = $merchant['owner_name'];
         $_SESSION['store_name']      = $merchant['store_name'];
 
-
-        header('Location: index.php?url=merchant/dashboard&success=logged');
-        exit;
+        redirect('merchant/dashboard', ['success' => 'logged']);
     }
-    private function authGuard(){
-        if(!isset($_SESSION['merchant_id'])){
-            header('Location: /login?error=session_expired');
-            exit;
+
+    // lancamento de pontos: busca o cliente pelo telefone e cria se for novo
+    private function handleScore($merchantId) {
+        Csrf::verify();
+
+        $phone       = PhoneValidator::sanitize($_POST['phone'] ?? '');
+        $name        = trim((string)($_POST['name'] ?? ''));
+        $points      = filter_var($_POST['points'] ?? '', FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1, 'max_range' => self::MAX_POINTS_PER_ENTRY],
+        ]);
+        $description = trim((string)($_POST['description'] ?? ''));
+        $description = $description === '' ? 'Compra' : mb_substr($description, 0, 255);
+
+        if (!PhoneValidator::isValid($phone)) {
+            redirect('merchant/score', ['error' => 'telefone_invalido']);
         }
+
+        if ($points === false) {
+            redirect('merchant/score', ['error' => 'pontos_invalidos']);
+        }
+
+        $customerModel = new CustomerModel($this->db);
+        $customer = $customerModel->findByPhone($phone);
+
+        if ($customer) {
+            $customerId = (int)$customer['id'];
+        } else {
+            if ($name === '') {
+                redirect('merchant/score', ['error' => 'nome_obrigatorio', 'phone' => $phone]);
+            }
+            $customerId = $customerModel->create(mb_substr($name, 0, 255), $phone);
+        }
+
+        $cardModel = new LoyaltyCardModel($this->db);
+        $cardId = $cardModel->findOrCreate($merchantId, $customerId);
+        $cardModel->addPoints($cardId, $points, $description);
+
+        redirect('merchant/score', ['success' => 'pontos_lancados']);
     }
-    /** como o auth guard vai funcionar??? abaixo
-     * 
-     * public function renderDashboard() {
-        // chamar o authguard
-        $this->authGuard(); //
 
-        //            se o código chegou aqui o lojista tá logado
-        //            agora pode carregar a página
-        include 'src/views/merchant/dashboard.php'; //
-    } */
+    // criar premio ou ativar/desativar um existente
+    private function handleRewards($merchantId, RewardModel $rewardModel) {
+        Csrf::verify();
 
+        if (($_POST['action'] ?? '') === 'toggle') {
+            $rewardId = filter_var($_POST['reward_id'] ?? '', FILTER_VALIDATE_INT);
+            if ($rewardId) {
+                $rewardModel->toggleActive($rewardId, $merchantId);
+            }
+            redirect('merchant/rewards', ['success' => 'premio_atualizado']);
+        }
 
-}    
+        $name        = trim((string)($_POST['name'] ?? ''));
+        $description = trim((string)($_POST['description'] ?? ''));
+        $cost        = filter_var($_POST['points_cost'] ?? '', FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1, 'max_range' => 1000000],
+        ]);
 
+        if ($name === '' || mb_strlen($name) > 120 || mb_strlen($description) > 255 || $cost === false) {
+            redirect('merchant/rewards', ['error' => 'campos_invalidos']);
+        }
 
-?>
+        $rewardModel->create($merchantId, $name, $description === '' ? null : $description, $cost);
+
+        redirect('merchant/rewards', ['success' => 'premio_criado']);
+    }
+
+    private function handleRedeem($merchantId) {
+        Csrf::verify();
+
+        $phone    = PhoneValidator::sanitize($_POST['phone'] ?? '');
+        $rewardId = filter_var($_POST['reward_id'] ?? '', FILTER_VALIDATE_INT);
+
+        $cardModel = new LoyaltyCardModel($this->db);
+        $card = PhoneValidator::isValid($phone) ? $cardModel->findByMerchantAndPhone($merchantId, $phone) : null;
+        if (!$card) {
+            redirect('merchant/redeem', ['error' => 'cliente_nao_encontrado', 'phone' => $phone]);
+        }
+
+        $reward = $rewardId ? (new RewardModel($this->db))->findActiveForMerchant($rewardId, $merchantId) : null;
+        if (!$reward) {
+            redirect('merchant/redeem', ['error' => 'premio_invalido', 'phone' => $phone]);
+        }
+
+        if (!$cardModel->redeem($card['id'], $reward)) {
+            redirect('merchant/redeem', ['error' => 'saldo_insuficiente', 'phone' => $phone]);
+        }
+
+        redirect('merchant/redeem', ['success' => 'resgate_realizado', 'phone' => $phone]);
+    }
+
+    // barra quem nao esta logado e devolve o id do lojista da sessao.
+    // o id SEMPRE vem da sessao, nunca do formulario.
+    private function authGuard(): int {
+        if(!isset($_SESSION['merchant_id'])){
+            redirect('merchant/login', ['error' => 'sessao_expirada']);
+        }
+        return (int)$_SESSION['merchant_id'];
+    }
+}

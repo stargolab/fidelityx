@@ -1,6 +1,6 @@
 <?php
 // ----------------------------------------------------------------------------------------
-// explicação breve fluxo de dados, com exemplo do registro 
+// explicação breve fluxo de dados, com exemplo do registro
 
 // navegador: vê o action="index.php?url=merchant/register" e manda o POST pra lá (ele cai aqui no index.php, e o switch guia ele pro merchant, depois o match guia pro controller, e assim vai.)
 
@@ -12,7 +12,11 @@
 // -----------------------------------------------------------------------------------------
 
 // inicializacao
-session_start();
+// cookie de sessao so via http (js nao le) e sem envio em POST vindo de outro site
+session_start([
+    'cookie_httponly' => true,
+    'cookie_samesite' => 'Lax',
+]);
 
 // autoloading psr-4 , carrega as classes necessárias, não tem necessidade de ficar puxando com require, include, etc.
 // pro nosso caso especifico, substitui massivamente os requires, deixa o código mais limpo e combinado com o singleton
@@ -21,6 +25,13 @@ session_start();
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use Dotenv\Dotenv;
+use App\Controllers\ErrorController;
+
+// qualquer excecao nao tratada vira log + pagina 500 (nunca mostra o erro cru pro usuario)
+set_exception_handler(function (\Throwable $e) {
+    error_log('[uncaught] ' . $e);
+    (new ErrorController())->handle(500);
+});
 
 // criando instancia da biblioteca dotenv
 // __DIR__ . '/..' diz para o php subir uma pasta para encontrar o .env na raiz
@@ -30,56 +41,56 @@ $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 // a .env será usada no Database.php!
 
-// namespace 
+// namespace
 use App\Database;
 
 // conexao com o banco
 $db = Database::getConnection();
 
 // sistema tratamento da url. exemplo resultado final: http://localhost:8080/index.php?url=merchant/register
-$url = $_GET['url'] ?? 'home';
-$url = filter_var(rtrim($url, '/'), FILTER_SANITIZE_URL);
+$url = filter_var(rtrim((string)($_GET['url'] ?? ''), '/'), FILTER_SANITIZE_URL);
+$url = $url === '' ? 'home' : $url;
 $urlParts = explode('/', $url);
 
 $domain = $urlParts[0];
-$action = $urlParts[1] ?? 'dashboard';
+$action = $urlParts[1] ?? null;
 
 switch ($domain) {
-    
+
+    case 'home':
+        // por enquanto a "home" é o login do lojista
+        redirect('merchant/login');
+
     case 'customer':
         // exemplo do psr-4 citado acima, sem require_once
         $controller = new \App\Controllers\CustomerController($db);
-        
+
         // match é o novo switch do php, disponivel a partir do php8, deixa o codigo mais limpo
-        match ($action) {
-            'newPoint' => $controller->renderNewPoint(),
-            'prize'    => $controller->renderPrize(),
-            'redeem'   => $controller->renderRedeemPrize(),
-            default    => $controller->renderDashboard(),
+        match ($action ?? 'balance') {
+            'balance' => $controller->renderBalance(),
+            default   => (new ErrorController())->handle(404),
         };
         break;
 
     case 'merchant':
         $controller = new \App\Controllers\MerchantController($db);
 
-        match ($action) {
-            'login'    => $controller->renderLogin(),
-            'register' => $controller->renderRegister(),
-            'score'    => $controller->renderScore(),
-            'insights' => $controller->renderInsights(),
-            'profile'  => $controller->renderProfile(),
-            'dashboard'=> $controller->renderDashboard(),
-            default    => (new \App\Controllers\ErrorController())->handle(404),
+        match ($action ?? 'dashboard') {
+            'login'     => $controller->renderLogin(),
+            'register'  => $controller->renderRegister(),
+            'logout'    => $controller->logout(),
+            'dashboard' => $controller->renderDashboard(),
+            'score'     => $controller->renderScore(),
+            'rewards'   => $controller->renderRewards(),
+            'redeem'    => $controller->renderRedeem(),
+            'customers' => $controller->renderCustomers(),
+            default     => (new ErrorController())->handle(404),
         };
         break;
 
-    case 'api':
-        // em breve
-        break;
-
     default:
-        // rota inexistente é 404.
-        $controller = new \App\Controllers\ErrorController();
+        // rota inexistente é 404. (a api fica pra depois do MVP)
+        $controller = new ErrorController();
         $controller->handle(404);
         break;
 }

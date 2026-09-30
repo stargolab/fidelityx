@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS merchants (
   category VARCHAR(30) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   plan ENUM('free', 'pro') NOT NULL DEFAULT 'free',
-  status ENUM('active', 'inactive') NOT NULL DEFAULT 'inactive',
+  status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
 
   -- para futuras implementações (NULL)
   cnpj VARCHAR(14) NULL,
@@ -97,6 +97,29 @@ CREATE TABLE IF NOT EXISTS loyalty_cards (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================
+-- rewards // catálogo de prêmios de cada lojista
+-- =========================
+CREATE TABLE IF NOT EXISTS rewards (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+  merchant_id BIGINT UNSIGNED NOT NULL,
+  name VARCHAR(120) NOT NULL,
+  description VARCHAR(255) NULL,
+  points_cost INT UNSIGNED NOT NULL,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  KEY idx_rewards_merchant_active (merchant_id, active),
+
+  CONSTRAINT fk_rewards_merchant
+    FOREIGN KEY (merchant_id) REFERENCES merchants(id)
+    ON DELETE RESTRICT
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================
 -- points_log // histórico / auditoria
 -- =========================
 CREATE TABLE IF NOT EXISTS points_log (
@@ -106,6 +129,7 @@ CREATE TABLE IF NOT EXISTS points_log (
   type ENUM('earn', 'redeem') NOT NULL,
   quantity INT NOT NULL,
   description VARCHAR(255) NOT NULL,
+  reward_id BIGINT UNSIGNED NULL, -- preenchido quando type = 'redeem'
 
   -- para futuras implementações (NULL)
   responsible_user VARCHAR(255) NULL,
@@ -117,8 +141,14 @@ CREATE TABLE IF NOT EXISTS points_log (
   KEY idx_points_log_card (card_id),
   KEY idx_points_log_type (type),
 
+  KEY idx_points_log_reward (reward_id),
+
   CONSTRAINT fk_points_log_card
     FOREIGN KEY (card_id) REFERENCES loyalty_cards(id)
     ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_points_log_reward
+    FOREIGN KEY (reward_id) REFERENCES rewards(id)
+    ON DELETE SET NULL
     ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

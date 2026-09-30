@@ -19,7 +19,7 @@
         <h1>Ops! Algo deu errado.</h1>
         <p>Ocorreu um problema ao carregar esta página. Tente novamente em instantes ou volte para o painel.</p>
         
-        <a href="/merchant/dashboard" class="btn-home">Voltar ao Painel</a>
+        <a href="/index.php?url=merchant/dashboard" class="btn-home">Voltar ao Painel</a>
     </div>
 </body>
 </html>

@@ -19,7 +19,7 @@
         <h1>Erro interno</h1>
         <p>Algo saiu do esperado do nosso lado. Já estamos trabalhando nisso — tente novamente em instantes.</p>
         
-        <a href="/merchant/dashboard" class="btn-home">Voltar ao Painel</a>
+        <a href="/index.php?url=merchant/dashboard" class="btn-home">Voltar ao Painel</a>
     </div>
 </body>
 </html>

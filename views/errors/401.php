@@ -19,7 +19,7 @@
         <h1>Sessão necessária</h1>
         <p>Para acessar esta página, você precisa estar autenticado. Faça login e tente novamente.</p>
         
-        <a href="/merchant/dashboard" class="btn-home">Voltar ao Painel</a>
+        <a href="/index.php?url=merchant/dashboard" class="btn-home">Voltar ao Painel</a>
     </div>
 </body>
 </html>

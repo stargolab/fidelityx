@@ -19,7 +19,7 @@
         <h1>Calma aí!</h1>
         <p>Você fez muitas tentativas em pouco tempo. Aguarde alguns instantes e tente novamente.</p>
         
-        <a href="/merchant/dashboard" class="btn-home">Voltar ao Painel</a>
+        <a href="/index.php?url=merchant/dashboard" class="btn-home">Voltar ao Painel</a>
     </div>
 </body>
 </html>

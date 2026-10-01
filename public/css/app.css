@@ -1,0 +1,153 @@
+/* public/css/app.css — layout do painel do lojista e da consulta publica */
+
+.app-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.5rem;
+    padding: 1rem 1.5rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+}
+
+.app-nav img {
+    height: 32px;
+}
+
+.app-nav .nav-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.app-nav a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 8px;
+}
+
+.app-nav a:hover,
+.app-nav a.active {
+    color: var(--text-main);
+    background: var(--bg-body);
+}
+
+.app-nav .nav-store {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.app-main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.app-main h1 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.app-main h2 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat .stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.stat .stat-label {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+th {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+td.num,
+th.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.muted {
+    color: var(--text-muted);
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-earn {
+    background: rgba(52, 211, 153, 0.15);
+    color: #6ee7b7;
+}
+
+.badge-redeem {
+    background: rgba(129, 140, 248, 0.15);
+    color: var(--primary-hover);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    border-color: var(--primary);
+}
+
+.btn-inline {
+    width: auto;
+    padding: 0.75rem 1.5rem;
+}

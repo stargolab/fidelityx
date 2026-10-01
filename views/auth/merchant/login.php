@@ -1,10 +1,11 @@
+<?php use App\Support\Csrf; ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login Lojista | FidelityX</title>
-    
+
     <link rel="stylesheet" href="/css/global.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/auth.css">
@@ -17,7 +18,11 @@
             <p>Painel do Lojista</p>
         </header>
 
-        <form action="index.php?url=merchant/login" method="POST">
+        <?php require __DIR__ . '/../../partials/flash.php'; ?>
+
+        <form action="<?= e(url('merchant/login')) ?>" method="POST">
+            <?= Csrf::field() ?>
+
             <div class="form-group">
                 <label for="email">E-mail Comercial</label>
                 <input type="email" name="email" id="email" placeholder="seu@email.com" required autocomplete="email">
@@ -32,7 +37,8 @@
         </form>
 
         <footer class="auth-footer">
-            <p>Ainda não é parceiro? <a href="/index.php?url=merchant/register">Cadastre sua loja</a></p>
+            <p>Ainda não é parceiro? <a href="<?= e(url('merchant/register')) ?>">Cadastre sua loja</a></p>
+            <p>É cliente? <a href="<?= e(url('customer/balance')) ?>">Consulte seus pontos</a></p>
         </footer>
     </div>
 

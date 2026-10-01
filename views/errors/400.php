@@ -19,7 +19,7 @@
         <h1>Requisição inválida</h1>
         <p>Algo nessa solicitação não veio do jeito certo. Revise os dados e tente novamente.</p>
         
-        <a href="/merchant/dashboard" class="btn-home">Voltar ao Painel</a>
+        <a href="/index.php?url=merchant/dashboard" class="btn-home">Voltar ao Painel</a>
     </div>
 </body>
 </html>

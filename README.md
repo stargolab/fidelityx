@@ -20,15 +20,30 @@ Recentemente refatorado para adotar o padrão **MVC com separação clara de res
 
 ## ✨ Features
 
-### Funcionalidades Implementadas
+### Funcionalidades do MVP
 
-- ✅ **Cadastro de Lojistas** — Registro completo com validação de documentos (CPF/CNPJ)
-- ✅ **Autenticação Segura** — Login com hash BCRYPT e sessões persistentes
-- ✅ **Validação de Documentos** — Algoritmos robustos de validação de CPF e CNPJ
-- ✅ **Gestão de Planos** — Suporte para múltiplos planos (Free, Pro)
-- ✅ **Sistema de Status** — Ativação/desativação de comerciantes
-- ✅ **Arquitetura Desacoplada** — Separação clara entre Controllers, Models e Validators
-- ✅ **Banco de Dados Normalizado** — Estrutura escalável com índices otimizados
+**Painel do lojista**
+- ✅ **Cadastro de Lojistas** — Registro completo com validação de documentos (CPF/CNPJ), e-mail, telefone e confirmação de senha
+- ✅ **Autenticação Segura** — Login com hash BCRYPT, renovação do ID de sessão, logout e bloqueio de contas inativas
+- ✅ **Lançamento de Pontos** — Busca o cliente pelo telefone e cadastra na hora se ele for novo
+- ✅ **Catálogo de Prêmios** — Cada loja cadastra prêmios com custo em pontos e ativa/desativa quando quiser
+- ✅ **Resgate** — Confere o saldo e debita em transação, sem risco de gastar o mesmo ponto duas vezes
+- ✅ **Dashboard e Clientes** — Indicadores, últimas movimentações e lista de clientes com saldo
+
+**Área pública do cliente**
+- ✅ **Consulta de Saldo** — O cliente informa o telefone e vê os pontos em cada loja e os prêmios disponíveis (sem login, com limite de consultas)
+
+### Rotas
+
+| Rota (`index.php?url=`) | Acesso | Descrição |
+|---|---|---|
+| `merchant/register` · `merchant/login` · `merchant/logout` | público | Conta do lojista |
+| `merchant/dashboard` | lojista | Indicadores e últimas movimentações |
+| `merchant/score` | lojista | Lançar pontos |
+| `merchant/rewards` | lojista | Catálogo de prêmios |
+| `merchant/redeem` | lojista | Resgatar prêmio |
+| `merchant/customers` | lojista | Clientes e saldos |
+| `customer/balance` | público | Consulta de saldo pelo telefone |
 
 ---
 
@@ -37,7 +52,7 @@ Recentemente refatorado para adotar o padrão **MVC com separação clara de res
 | Componente | Tecnologia | Versão |
 |---|---|---|
 | **Linguagem** | PHP | 8.1+ |
-| **Banco de Dados** | MySQL | 8.0+ |
+| **Banco de Dados** | MySQL / MariaDB | 8.0+ / 10.4+ |
 | **ORM** | PDO (prepared statements) | nativa |
 | **Autenticação** | BCRYPT | nativa |
 | **Dependency Manager** | Composer | 2.0+ |
@@ -56,7 +71,8 @@ FidelityX implementa uma arquitetura MVC **manual** que prioriza clareza, testab
 src/
 ├── Controllers/       → Orquestração de requisições HTTP
 ├── Models/            → Lógica de persistência (BD)
-└── Validators/        → Validação de dados (regras de negócio)
+├── Validators/        → Validação de dados (regras de negócio)
+└── Support/           → View, CSRF e helpers (e(), redirect(), url())
 ```
 
 ### Fluxo de Requisição
@@ -82,10 +98,8 @@ src/
 
 ```php
 // Validação rigorosa
-$isValid = DocumentValidator::isValid($document);
-if (!$isValid) {
-    header('Location: index.php?url=merchant/register&error=documento_invalido');
-    exit;
+if (!DocumentValidator::isValid($document)) {
+    redirect('merchant/register', ['error' => 'documento_invalido']);
 }
 
 // Persistência segura com prepared statements
@@ -142,9 +156,14 @@ mysql -u root -p < database/schema.sql
 
 O arquivo [database/schema.sql](database/schema.sql) cria automaticamente:
 - Database `fidelityx`
-- Tabelas de Merchants e Customers
-- Índices para performance
+- Tabelas `merchants`, `customers`, `loyalty_cards`, `rewards` e `points_log`
+- Índices e chaves estrangeiras
 - Charset UTF-8mb4
+
+> **Já tinha o banco criado antes do MVP?** Rode uma vez a migration:
+> `mysql -u root -p fidelityx < database/migrations/001_mvp.sql`
+>
+> Detalhes das tabelas em [docs/db/schema-explanation.md](docs/db/schema-explanation.md).
 
 #### 4. Configure Variáveis de Ambiente
 
@@ -159,11 +178,13 @@ nano .env
 `.env`:
 ```
 DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=fidelityx
 DB_USER=root
 DB_PASS=sua_senha
-DB_NAME=fidelityx
-DB_PORT=3306
 ```
+
+> Depois de atualizar o projeto (`git pull`), rode `composer dump-autoload` para registrar arquivos novos do autoload.
 
 #### 5. Inicie o Servidor Local
 
@@ -174,7 +195,7 @@ php -S localhost:8000 -t public/
 # Ou com Nginx/Apache (configure document root para ./public/)
 ```
 
-Acesse: `http://localhost:8000`
+Acesse: `http://localhost:8000` (redireciona para o login do lojista). A consulta pública do cliente fica em `http://localhost:8000/index.php?url=customer/balance`.
 
 ---
 
@@ -184,7 +205,7 @@ Acesse: `http://localhost:8000`
 fidelityx/
 ├── database/
 │   ├── schema.sql              # Schema do banco de dados
-│   └── migrations/             # (Futuro) Versionamento de schema
+│   └── migrations/             # Alterações para bancos já existentes
 ├── docs/
 │   ├── adr/                    # Architecture Decision Records
 │   └── db/                     # Documentação de banco de dados
@@ -197,11 +218,14 @@ fidelityx/
 │   ├── Controllers/            # Orquestração de requisições
 │   ├── Models/                 # Camada de dados
 │   ├── Validators/             # Validação de regras de negócio
+│   ├── Support/                # View, CSRF e helpers
 │   └── Database.php            # Singleton de conexão PDO
 ├── views/
 │   ├── auth/                   # Templates de autenticação
+│   ├── merchant/               # Painel do lojista
+│   ├── customer/               # Consulta pública do cliente
+│   ├── partials/               # Cabeçalho, navegação e mensagens
 │   └── errors/                 # Templates de erro (400, 404, 500...)
-├── config/                     # Configurações da aplicação
 ├── composer.json               # Dependências PHP
 ├── tsconfig.json               # Configuração TypeScript
 └── README.md                   # Este arquivo
@@ -211,34 +235,29 @@ fidelityx/
 
 ## 🔧 Desenvolvimento
 
-### Rodando Testes
+### Checagem de sintaxe
+
+Ainda não há testes automatizados nem ferramentas de qualidade configuradas (PHPUnit, PHPStan e PHP-CS-Fixer estão no roadmap). Por enquanto:
 
 ```bash
-# Testes unitários (em breve)
-composer test
-```
-
-### Code Quality
-
-```bash
-# PHPStan (análise estática)
-composer analyse
-
-# PHP-CS-Fixer (formatting)
-composer format
+# verifica a sintaxe de todos os arquivos PHP
+find src views public -name "*.php" -exec php -l {} \;
 ```
 
 ### Estrutura de Controllers
 
+Cada rota tem um `render*()`: no GET ele mostra a view; no POST ele delega para o `handle*()` correspondente. Rotas privadas começam com `authGuard()`, que devolve o id do lojista logado (sempre da sessão, nunca do formulário).
+
 ```php
-namespace App\Controllers;
+public function renderScore() {
+    $merchantId = $this->authGuard();
 
-class MerchantController {
-    private $db;
-    private $merchantModel;
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $this->handleScore($merchantId); // Csrf::verify() + validação + model
+        return;
+    }
 
-    public function renderRegister() { /* Renderiza view */ }
-    public function handleRegister() { /* Processa POST */ }
+    View::render('merchant/score');
 }
 ```
 
@@ -249,31 +268,38 @@ class MerchantController {
 - ✅ **Prepared Statements** — Proteção contra SQL Injection
 - ✅ **BCRYPT Hashing** — Senhas armazenadas com hash seguro
 - ✅ **Input Sanitization** — `filter_input()` para todos os dados
-- ✅ **Validação de Negócio** — Documentos validados com algoritmos official
-- ✅ **UTF-8mb4** — Proteção contra ataques Unicode
+- ✅ **Validação de Negócio** — Documentos validados com algoritmos oficiais
+- ✅ **CSRF** — Token por sessão em todos os formulários POST
+- ✅ **XSS** — Toda saída nas views passa por `e()` (`htmlspecialchars`)
+- ✅ **Sessão** — Cookie `HttpOnly` + `SameSite=Lax` e `session_regenerate_id()` no login
+- ✅ **Isolamento entre lojas** — Consultas filtram pelo `merchant_id` da sessão
+- ✅ **Erros** — Detalhes técnicos vão para o log; o usuário vê só as páginas de erro
 
 ---
 
 ## 📊 Roadmap
 
-### Q2 2026 - Beta
+### MVP (atual)
 
-- [ ] Dashboard de Lojistas
-- [ ] Sistema de Pontos (earn/redeem)
+- [x] Dashboard de Lojistas
+- [x] Sistema de Pontos (earn/redeem) com catálogo de prêmios
+- [x] Consulta pública de saldo
+
+### Próximos passos
+
+- [ ] Testes automatizados (PHPUnit) e análise estática (PHPStan)
+- [ ] Edição de perfil do lojista e recuperação de senha
+- [ ] Máscaras de input no front-end (TypeScript)
+- [ ] Planos Free/Pro com limites
+- [ ] Área do cliente com login
 - [ ] API REST para integrações
-- [ ] Mobile App (React Native)
 
-### Q3 2026 - v1.0
+### Futuro
 
-- [ ] Analytics em tempo real
+- [ ] Analytics e insights
 - [ ] Integração com gateways de pagamento
 - [ ] Webhooks para eventos de loja
-
-### Q4 2026+
-
-- [ ] Machine Learning para recomendações
-- [ ] Multi-tenant avançado
-- [ ] Marketplace de integrações
+- [ ] Mobile App
 
 ---
 
@@ -300,13 +326,12 @@ test: adiciona/atualiza testes
 
 - [ADR - Decisões Arquiteturais](docs/adr/001-documents-validation.md)
 - [Schema do Banco de Dados](docs/db/schema-explanation.md)
-- [API Reference](docs/api/) (em desenvolvimento)
 
 ---
 
 ## 📝 Licença
 
-MIT License — Veja [LICENSE](LICENSE) para detalhes.
+MIT License.
 
 ---
 
@@ -324,4 +349,4 @@ MIT License — Veja [LICENSE](LICENSE) para detalhes.
 
 ---
 
-**Última atualização**: Maio 2026 | **Versão**: 0.1.0-beta
+**Última atualização**: Setembro 2026 | **Versão**: 0.2.0-mvp

@@ -58,6 +58,13 @@ merchants 1───N loyalty_cards N───1 customers
 | `reward_id` | Preenchido em resgates. Vira `NULL` se o prêmio for apagado. |
 | `ip_address` | IP de quem fez a operação. |
 
+### `rate_limit_hits` — tentativas (limite de abuso)
+| Coluna | Observação |
+|---|---|
+| `bucket` | Tipo de limite: `login_email`, `login_ip`, `balance_ip`. |
+| `key_hash` | SHA-256 da chave (e-mail ou IP em minúsculas). O dado pessoal não é gravado. |
+| `created_at` | Cada linha é uma tentativa; só contam as que estão dentro da janela. Linhas com mais de 1 dia são apagadas aos poucos. |
+
 ## Regras de consistência
 
 - **Lançar e resgatar** rodam em transação: o saldo do cartão e a linha do `points_log` são gravados juntos, ou nenhum dos dois é gravado.

@@ -13,6 +13,9 @@ SET time_zone = '+00:00';
 CREATE TABLE IF NOT EXISTS merchants (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
+  -- codigo publico da loja (8 caracteres): vai no QR do cartaz e identifica a loja na consulta de saldo
+  public_code CHAR(8) NOT NULL,
+
   owner_name VARCHAR(255) NOT NULL,
   store_name VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL,
@@ -34,6 +37,7 @@ CREATE TABLE IF NOT EXISTS merchants (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
   UNIQUE KEY uq_merchants_email (email),
+  UNIQUE KEY uq_merchants_public_code (public_code),
   UNIQUE KEY uq_merchants_cpf (cpf),
   UNIQUE KEY uq_merchants_cnpj (cnpj),
   KEY idx_merchants_status (status), -- teste com indices pra melhorar a otimizacao de busca
@@ -43,10 +47,11 @@ CREATE TABLE IF NOT EXISTS merchants (
 -- =========================
 -- customers // clientes
 -- =========================
+-- so o telefone e global. o nome fica no cartao de cada loja (loyalty_cards.customer_name):
+-- uma loja nunca ve o que o cliente informou em outra (LGPD, ver docs/adr/002).
 CREATE TABLE IF NOT EXISTS customers (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
-  name VARCHAR(255) NOT NULL,
   phone VARCHAR(30) NOT NULL,
 
   -- Future-proofing (NULL)
@@ -70,7 +75,13 @@ CREATE TABLE IF NOT EXISTS loyalty_cards (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
   merchant_id BIGINT UNSIGNED NOT NULL,
-  customer_id BIGINT UNSIGNED NOT NULL,
+  customer_id BIGINT UNSIGNED NULL, -- NULL depois que o cartao e anonimizado
+
+  -- dados que o cliente deu a ESTA loja (NULL depois de anonimizado)
+  customer_name VARCHAR(255) NULL,
+  consent_at TIMESTAMP NULL,           -- quando o cliente autorizou (NULL = cadastro anterior ao registro)
+  consent_version VARCHAR(20) NULL,    -- versao do texto de privacidade aceito (App\Support\Privacy::VERSION)
+  anonymized_at TIMESTAMP NULL,        -- exclusao a pedido do cliente: o cartao fica so para os relatorios
 
   current_points INT NOT NULL DEFAULT 0,
   total_accumulated INT NOT NULL DEFAULT 0,

@@ -20,33 +20,42 @@ Recentemente refatorado para adotar o padrão **MVC com separação clara de res
 
 ## ✨ Features
 
-### Funcionalidades do MVP
+### Funcionalidades
 
 **Painel do lojista**
-- ✅ **Cadastro de Lojistas** — Registro completo com validação de documentos (CPF/CNPJ), e-mail, telefone e confirmação de senha
-- ✅ **Autenticação Segura** — Login com hash BCRYPT, renovação do ID de sessão, logout e bloqueio de contas inativas
-- ✅ **Atendimento pelo telefone** — A home é um único campo de telefone que decide o caminho: cliente da loja vai direto para a tela do cliente; cliente de outra loja só confirma o nome; telefone novo vai para o cadastro rápido
-- ✅ **Tela do cliente** — Nome e saldo no topo, lançar pontos (atalhos +1/+5/+10) e resgatar os prêmios que o saldo já paga, sem sair da tela
-- ✅ **Cadastro rápido** — Telefone já preenchido, só o nome e o consentimento do cliente
-- ✅ **Catálogo de Prêmios** — Cada loja cadastra prêmios com custo em pontos e ativa/desativa quando quiser
+- ✅ **Cadastro de Lojistas** — Registro completo com validação de documentos (CPF/CNPJ), e-mail, telefone e confirmação de senha; máscaras de telefone e documento
+- ✅ **Autenticação Segura** — Login com hash BCRYPT, renovação do ID de sessão, logout, bloqueio de contas inativas e limite de 5 erros em 15 min
+- ✅ **Atendimento pelo telefone** — A home é um único campo de telefone: cliente da loja vai direto para a tela do cliente; qualquer outro telefone vai para o cadastro rápido
+- ✅ **Tela do cliente** — Nome e saldo no topo, progresso até o próximo prêmio, lançar pontos (atalhos +1/+5/+10) e resgatar os prêmios que o saldo já paga
+- ✅ **Cadastro rápido** — Telefone já preenchido, só o nome e o consentimento do cliente (gravado com data e versão do texto)
+- ✅ **Prêmios** — Criar, editar, ativar/desativar e excluir (prêmio já resgatado só é desativado)
 - ✅ **Resgate** — Confere o saldo e debita em transação, sem risco de gastar o mesmo ponto duas vezes
-- ✅ **Clientes** — Lista de clientes com saldo; o nome abre a tela do cliente
+- ✅ **Clientes** — Lista paginada com busca por nome ou telefone; extrato de pontos de cada cliente
+- ✅ **Relatórios** — Clientes, pontos emitidos, resgates, pontos em circulação e histórico paginado
+- ✅ **Cartaz com QR code** — Pronto para imprimir, leva o cliente à consulta de saldo da loja
+- ✅ **Primeiros passos** — Guia para a loja nova até o primeiro prêmio e os primeiros pontos
 - ✅ **Funciona do celular ao PC** — Layout mobile-first (360 px a 1440 px), menu de celular e alvos de toque de 44 px
 
-**Área pública do cliente**
-- ✅ **Consulta de Saldo** — O cliente informa o telefone e vê os pontos em cada loja e os prêmios disponíveis (sem login, limite de 5 consultas por minuto por IP)
+**Área pública**
+- ✅ **Página inicial** — Apresenta o produto e leva ao cadastro da loja e à consulta de saldo
+- ✅ **Consulta de Saldo** — Pelo QR do cartaz (ou código da loja) e o telefone: saldo naquela loja, prêmios e quanto falta para o próximo (sem login, limite de 5 consultas por minuto por IP)
+- ✅ **Privacidade (LGPD)** — Cada loja só vê o que o cliente informou a ela; consentimento registrado; exclusão dos dados a pedido do cliente; política de privacidade publicada (rascunho pendente de revisão jurídica). Detalhes em [`docs/adr/002-lgpd-dados-por-loja.md`](docs/adr/002-lgpd-dados-por-loja.md)
 
 ### Rotas
 
 | Rota (`index.php?url=`) | Acesso | Descrição |
 |---|---|---|
+| `home` (ou raiz) · `privacy` | público | Página inicial e política de privacidade |
 | `merchant/register` · `merchant/login` · `merchant/logout` | público | Conta do lojista |
-| `merchant/dashboard` | lojista | Home: busca pelo telefone (`?phone=`) e confirmação de cliente de outra loja (POST) |
-| `merchant/customer?phone=` | lojista | Tela do cliente: lançar pontos e resgatar |
-| `merchant/customer-new?phone=` | lojista | Cadastro rápido de cliente novo |
-| `merchant/rewards` | lojista | Catálogo de prêmios |
-| `merchant/customers` | lojista | Clientes e saldos |
-| `customer/balance` | público | Consulta de saldo pelo telefone |
+| `merchant/dashboard` | lojista | Home: guia de primeiros passos e busca pelo telefone (`?phone=`) |
+| `merchant/customer?phone=` | lojista | Tela do cliente: lançar pontos, resgatar, registrar consentimento e excluir dados |
+| `merchant/customer-new?phone=` | lojista | Cadastro rápido de cliente nesta loja |
+| `merchant/statement?phone=` | lojista | Extrato de pontos do cliente |
+| `merchant/customers?q=&page=` | lojista | Clientes e saldos, com busca e paginação |
+| `merchant/rewards` · `merchant/reward-edit?id=` | lojista | Catálogo de prêmios e edição |
+| `merchant/reports?page=` | lojista | Indicadores e histórico de movimentações |
+| `merchant/poster` | lojista | Cartaz com QR code e código da loja |
+| `customer/balance?loja=` | público | Consulta de saldo pelo telefone, na loja do código |
 
 ---
 
@@ -166,6 +175,7 @@ O arquivo [database/schema.sql](database/schema.sql) cria automaticamente:
 > **Já tinha o banco criado antes?** Rode uma vez cada migration que ainda não aplicou, em ordem:
 > `mysql -u root -p fidelityx < database/migrations/001_mvp.sql` (bancos anteriores ao MVP)
 > `mysql -u root -p fidelityx < database/migrations/002_rate_limit.sql` (limite de tentativas de login e da consulta pública)
+> `mysql -u root -p fidelityx < database/migrations/003_lgpd.sql` (dados do cliente por loja, consentimento e código público da loja)
 >
 > Detalhes das tabelas em [docs/db/schema-explanation.md](docs/db/schema-explanation.md).
 
@@ -188,7 +198,7 @@ DB_USER=root
 DB_PASS=sua_senha
 ```
 
-Opcional: `APP_URL=https://seu-dominio` (endereço público do sistema, usado no QR code do cartaz; vazio usa o host da requisição).
+Opcional: `APP_TIMEZONE=America/Sao_Paulo` (fuso da aplicação; vazio usa esse) e `APP_URL=https://seu-dominio` (endereço público do sistema, usado no QR code do cartaz; vazio usa o host da requisição).
 
 > Depois de atualizar o projeto (`git pull`), rode `composer dump-autoload` para registrar arquivos novos do autoload.
 

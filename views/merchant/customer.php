@@ -15,6 +15,27 @@
     </div>
 </section>
 
+<?php if ($card['consent_at'] === null): ?>
+    <?php // cadastro anterior ao registro de consentimento (migration 003): pergunta ao cliente e grava ?>
+    <section class="card consent-pending">
+        <h2>Consentimento não registrado</h2>
+        <p class="muted">Este cliente foi cadastrado antes de o sistema guardar o consentimento. Pergunte se ele autoriza e registre.</p>
+        <form action="<?= e(url('merchant/customer')) ?>" method="POST">
+            <?= Csrf::field() ?>
+            <input type="hidden" name="action" value="consent">
+            <input type="hidden" name="phone" value="<?= e($card['phone']) ?>">
+            <div class="form-group">
+                <label class="checkbox">
+                    <input type="checkbox" name="consent" value="1" required>
+                    <span>O cliente autorizou esta loja a guardar o nome e o telefone dele para o programa de pontos
+                        (<a href="<?= e(url('privacy')) ?>" target="_blank" rel="noopener">política de privacidade</a>).</span>
+                </label>
+            </div>
+            <button type="submit" class="btn-secondary">Registrar consentimento</button>
+        </form>
+    </section>
+<?php endif; ?>
+
 <?php if ($progress): ?>
     <section class="card">
         <?php require __DIR__ . '/../partials/reward-progress.php'; ?>
@@ -73,6 +94,25 @@
         </ul>
     <?php endif; ?>
 </section>
+
+<?php // exclusao a pedido do cliente (LGPD): escondida num <details> pra nao ser clicada por engano no balcao ?>
+<details class="card danger-zone">
+    <summary>Excluir dados do cliente</summary>
+    <p class="muted">Use quando o cliente pedir. Apaga o nome e o telefone dele nesta loja e zera o saldo.
+        As movimentações continuam nos relatórios, sem identificação. Não dá para desfazer.</p>
+    <form action="<?= e(url('merchant/customer')) ?>" method="POST">
+        <?= Csrf::field() ?>
+        <input type="hidden" name="action" value="anonymize">
+        <input type="hidden" name="phone" value="<?= e($card['phone']) ?>">
+        <div class="form-group">
+            <label class="checkbox">
+                <input type="checkbox" name="confirm" value="1" required>
+                <span>O cliente pediu a exclusão dos dados dele.</span>
+            </label>
+        </div>
+        <button type="submit" class="btn-secondary btn-danger">Excluir dados</button>
+    </form>
+</details>
 
 <script>
     // atalhos +1/+5/+10 somam no campo de pontos (o lancamento continua pelo botao)

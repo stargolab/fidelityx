@@ -44,9 +44,9 @@ final class RewardModelTest extends DatabaseTestCase {
         $merchant = $this->createMerchant();
         $reward = $this->createReward($merchant, 'Cafe', 20);
 
-        $this->db->exec("INSERT INTO customers (name, phone) VALUES ('Bia', '11911110001')");
+        $this->db->exec("INSERT INTO customers (phone) VALUES ('11911110001')");
         $cards = new LoyaltyCardModel($this->db);
-        $cardId = $cards->findOrCreate($merchant, (int)$this->db->lastInsertId());
+        $cardId = $cards->findOrCreate($merchant, (int)$this->db->lastInsertId(), "Bia", \App\Support\Privacy::VERSION);
         $cards->addPoints($cardId, 30, 'Compra');
         $this->assertTrue($cards->redeem($cardId, $reward));
 

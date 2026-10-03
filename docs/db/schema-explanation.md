@@ -1,7 +1,7 @@
 # Schema do banco — FidelityX
 
-MySQL 8.0+ / MariaDB 10.4+ · InnoDB · `utf8mb4_unicode_ci` · horários em UTC.
-Arquivo: [`database/schema.sql`](../../database/schema.sql). Bancos criados antes do MVP: rodar [`database/migrations/001_mvp.sql`](../../database/migrations/001_mvp.sql).
+MySQL 8.0+ / MariaDB 10.4+ · InnoDB · `utf8mb4_unicode_ci` · colunas `TIMESTAMP` (guardadas em UTC pelo MySQL e lidas no fuso da aplicação, `APP_TIMEZONE`, padrão `America/Sao_Paulo`).
+Arquivo: [`database/schema.sql`](../../database/schema.sql). Bancos já existentes: rodar, em ordem, as migrations de [`database/migrations/`](../../database/migrations/) que ainda não rodaram (`001_mvp`, `002_rate_limit`, `003_lgpd`).
 
 ## Visão geral
 
@@ -14,8 +14,8 @@ merchants 1───N loyalty_cards N───1 customers
  rewards 1───N  points_log
 ```
 
-- Um **cliente** é identificado pelo **telefone** e é único na plataforma inteira.
-- Um **cartão** (`loyalty_cards`) liga um cliente a um lojista e guarda o saldo. Existe no máximo um cartão por par lojista × cliente.
+- Um **cliente** é só o **telefone**, único na plataforma inteira.
+- Um **cartão** (`loyalty_cards`) liga um cliente a um lojista e guarda o que o cliente informou **àquela loja** (nome e consentimento) e o saldo. Existe no máximo um cartão por par lojista × cliente. Uma loja nunca vê o cartão de outra ([ADR 002](../adr/002-lgpd-dados-por-loja.md)).
 - Toda movimentação de pontos gera uma linha em `points_log`, que funciona como trilha de auditoria.
 
 ## Tabelas
@@ -23,6 +23,7 @@ merchants 1───N loyalty_cards N───1 customers
 ### `merchants` — lojistas
 | Coluna | Observação |
 |---|---|
+| `public_code` | `UNIQUE`, 8 caracteres. Código público da loja: vai no QR do cartaz e identifica a loja na consulta de saldo. Gerado no cadastro (`App\Support\PublicCode`). |
 | `email`, `cpf`, `cnpj` | `UNIQUE`. Só um dos dois documentos é preenchido, apenas com números. |
 | `password_hash` | BCRYPT (`password_hash`). |
 | `plan` | `free`/`pro`. Ainda não é usado pelo código (pós-MVP). |
@@ -33,13 +34,16 @@ merchants 1───N loyalty_cards N───1 customers
 | Coluna | Observação |
 |---|---|
 | `phone` | `UNIQUE`, 10 ou 11 dígitos sem máscara. É a chave de busca no balcão e na consulta pública. |
-| `name` | Informado pelo lojista no primeiro lançamento de pontos. |
+
 | `cpf`, `email`, `birth_date`, `gender` | Opcionais, para uso futuro. |
 
 ### `loyalty_cards` — cartões de fidelidade
 | Coluna | Observação |
 |---|---|
-| `merchant_id`, `customer_id` | `UNIQUE (merchant_id, customer_id)`. |
+| `merchant_id`, `customer_id` | `UNIQUE (merchant_id, customer_id)`. `customer_id` vira `NULL` quando o cartão é anonimizado. |
+| `customer_name` | Nome que o cliente informou a esta loja. Nenhuma outra loja vê. |
+| `consent_at`, `consent_version` | Quando o cliente autorizou e qual versão da política (`Privacy::VERSION`). `NULL` = cadastro anterior ao registro; a tela do cliente pede de novo. |
+| `anonymized_at` | Exclusão a pedido do cliente: o cartão perde nome, telefone, consentimento e saldo e fica só para os relatórios. |
 | `current_points` | Saldo disponível. Aumenta ao ganhar pontos e diminui ao resgatar. |
 | `total_accumulated` | Tudo que o cliente já ganhou nesta loja. Só aumenta. |
 | `last_use_at` | Última movimentação. |

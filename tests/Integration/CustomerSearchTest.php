@@ -8,9 +8,7 @@ use Tests\Support\DatabaseTestCase;
 
 final class CustomerSearchTest extends DatabaseTestCase {
     private function addCustomer(int $merchant, string $name, string $phone): int {
-        $this->db->prepare('INSERT INTO customers (name, phone) VALUES (:n, :p) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)')
-            ->execute([':n' => $name, ':p' => $phone]);
-        return (new LoyaltyCardModel($this->db))->findOrCreate($merchant, (int)$this->db->lastInsertId());
+        return $this->createCard($merchant, $name, $phone);
     }
 
     private function names(int $merchant, string $search, int $limit = 50, int $offset = 0): array {

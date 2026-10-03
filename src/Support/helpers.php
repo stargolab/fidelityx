@@ -27,6 +27,14 @@ function format_phone($phone): string {
     return $digits;
 }
 
+// fuso da aplicacao: APP_TIMEZONE do .env (nome IANA) ou horario de Brasilia.
+// o index.php e o bootstrap dos testes aplicam no PHP, e o Database usa o mesmo na conexao,
+// entao PHP e MySQL nunca ficam em fusos diferentes (independe do php.ini e do servidor de banco).
+function app_timezone(): string {
+    $configured = (string)($_ENV['APP_TIMEZONE'] ?? '');
+    return in_array($configured, timezone_identifiers_list(), true) ? $configured : 'America/Sao_Paulo';
+}
+
 // timestamp do banco -> "30/09/2026 14:05"
 function format_datetime($value): string {
     return $value ? date('d/m/Y H:i', strtotime($value)) : '—';

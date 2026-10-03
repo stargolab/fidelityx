@@ -15,7 +15,7 @@ final class LoyaltyCardModelTest extends DatabaseTestCase {
         parent::setUp();
         $this->cards = new LoyaltyCardModel($this->db);
         $this->merchantId = $this->createMerchant();
-        $this->customerId = (new CustomerModel($this->db))->create('Ana Teste', '11999990001');
+        $this->customerId = (new CustomerModel($this->db))->create('11999990001');
     }
 
     public function testFindOrCreateDevolveOMesmoCartaoSemDuplicar(): void {
@@ -113,15 +113,28 @@ final class LoyaltyCardModelTest extends DatabaseTestCase {
         $this->assertFalse($this->cards->findByMerchantAndPhone($otherMerchant, '11999990001'));
     }
 
-    public function testListByPhoneMostraOsCartoesDeTodasAsLojasAtivas(): void {
+    public function testNomeEConsentimentoSaoDoCartaoDeCadaLoja(): void {
         $otherMerchant = $this->createMerchant('outra@teste.test');
-        $inactive = $this->createMerchant('inativa@teste.test');
-        $this->db->exec("UPDATE merchants SET status = 'inactive' WHERE id = $inactive");
 
-        foreach ([$this->merchantId, $otherMerchant, $inactive] as $merchant) {
-            $this->cards->findOrCreate($merchant, $this->customerId);
-        }
+        $this->cards->findOrCreate($this->merchantId, $this->customerId, 'Ana Teste', 'v1');
+        $this->cards->findOrCreate($otherMerchant, $this->customerId, 'Aninha', null);
 
-        $this->assertCount(2, $this->cards->listByPhone('11999990001'), 'loja inativa nao aparece');
+        $here = $this->cards->findByMerchantAndPhone($this->merchantId, '11999990001');
+        $there = $this->cards->findByMerchantAndPhone($otherMerchant, '11999990001');
+        $this->assertSame('Ana Teste', $here['customer_name']);
+        $this->assertSame('v1', $here['consent_version']);
+        $this->assertNotNull($here['consent_at']);
+        $this->assertSame('Aninha', $there['customer_name']);
+        $this->assertNull($there['consent_at']);
+    }
+
+    public function testCartaoExistenteNaoTemNomeNemConsentimentoTrocados(): void {
+        $first = $this->cards->findOrCreate($this->merchantId, $this->customerId, 'Ana Teste', 'v1');
+        $again = $this->cards->findOrCreate($this->merchantId, $this->customerId, 'Outro Nome', 'v2');
+
+        $this->assertSame($first, $again);
+        $card = $this->cards->findByMerchantAndPhone($this->merchantId, '11999990001');
+        $this->assertSame('Ana Teste', $card['customer_name']);
+        $this->assertSame('v1', $card['consent_version']);
     }
 }

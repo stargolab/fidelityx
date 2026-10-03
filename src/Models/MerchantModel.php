@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\PublicCode;
+
 class MerchantModel{
     private $db;
 
@@ -9,10 +11,22 @@ class MerchantModel{
         $this->db = $db;
     }
 
+    // cria o lojista ja com o codigo publico da loja.
+    // codigo repetido (chance minima) e sorteado de novo; outros duplicados (e-mail, cpf, cnpj) sobem pro controller.
     public function create($data){
-        $sql = "INSERT INTO merchants (owner_name, store_name, address, state, city, email, phone, category, cpf, cnpj, password_hash) VALUES (:on, :sn, :address, :state, :city, :email, :phone, :category, :cpf, :cnpj, :password_hash)";
+        $sql = "INSERT INTO merchants (public_code, owner_name, store_name, address, state, city, email, phone, category, cpf, cnpj, password_hash) VALUES (:public_code, :on, :sn, :address, :state, :city, :email, :phone, :category, :cpf, :cnpj, :password_hash)";
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute($data);
+
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                return $stmt->execute([':public_code' => PublicCode::generate()] + $data);
+            } catch (\PDOException $e) {
+                $duplicatedCode = ($e->errorInfo[1] ?? null) === 1062 && str_contains($e->getMessage(), 'uq_merchants_public_code');
+                if (!$duplicatedCode || $attempt >= 3) {
+                    throw $e;
+                }
+            }
+        }
     }
 
     public function findByEmail($email){
@@ -23,5 +37,23 @@ class MerchantModel{
         ]);
 
         return $stmt->fetch(\PDO::FETCH_ASSOC); // array associativo
+    }
+
+    public function findPublicCode($merchantId): ?string {
+        $stmt = $this->db->prepare('SELECT public_code FROM merchants WHERE id = :id');
+        $stmt->execute([':id' => $merchantId]);
+        $code = $stmt->fetchColumn();
+
+        return $code === false ? null : $code;
+    }
+
+    // loja ativa pelo codigo publico (consulta de saldo); false se nao existir
+    public function findActiveByPublicCode(string $code) {
+        $stmt = $this->db->prepare(
+            "SELECT id, store_name, public_code FROM merchants WHERE public_code = :code AND status = 'active'"
+        );
+        $stmt->execute([':code' => $code]);
+
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
     }
 }

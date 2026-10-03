@@ -59,46 +59,22 @@ final class BalcaoFlowTest extends HttpTestCase {
         [, $location] = $this->get('merchant/dashboard&phone=11911110001');
         $this->assertSame('merchant/customer&phone=11911110001', $location);
 
-        // consulta publica: saldo na loja e so o primeiro nome
+        // consulta publica (pelo codigo da loja, como no QR): saldo na loja e so o primeiro nome
+        $code = (string)$this->scalar("SELECT public_code FROM merchants WHERE email = 'padaria@teste.test'");
         $this->newSession();
-        [$status] = $this->post('customer/balance', ['phone' => '11911110001']);
+        [$status] = $this->post('customer/balance', ['phone' => '11911110001', 'loja' => $code], true, 'customer/balance&loja=' . $code);
         $this->assertSame(200, $status);
         $this->assertStringContainsString('Padaria da Ana', $this->lastBody);
         $this->assertStringContainsString('Bia', $this->lastBody);
         $this->assertStringNotContainsString('Souza', $this->lastBody);
     }
 
-    public function testClienteDeOutraLojaSoConfirmaONome(): void {
-        $lojaA = $this->createMerchant('a@teste.test');
-        $this->createMerchant('b@teste.test');
-        $this->db->exec("INSERT INTO customers (name, phone) VALUES ('Carla Mendes', '11922220002')");
-        $this->db->exec("INSERT INTO loyalty_cards (merchant_id, customer_id) SELECT $lojaA, id FROM customers");
-
-        $this->loginAs('b@teste.test');
-
-        // loja B nao entra direto na tela de um cliente que so existe na loja A
-        [, $location] = $this->get('merchant/customer&phone=11922220002');
-        $this->assertSame('merchant/dashboard&error=cliente_nao_encontrado', $location);
-
-        // a busca mostra a confirmacao com o primeiro nome
-        [$status] = $this->get('merchant/dashboard&phone=11922220002');
-        $this->assertSame(200, $status);
-        $this->assertStringContainsString('confirm-name">Carla<', $this->lastBody);
-        $this->assertStringNotContainsString('Mendes', $this->lastBody);
-
-        // confirmar cria o cartao da loja B e abre a tela do cliente, sem novo cadastro
-        [, $location] = $this->post('merchant/dashboard', ['phone' => '11922220002'], true, 'merchant/dashboard&phone=11922220002');
-        $this->assertSame('merchant/customer&phone=11922220002&success=cliente_adicionado', $location);
-        $this->assertSame(2, (int)$this->scalar('SELECT COUNT(*) FROM loyalty_cards'));
-        $this->assertSame(1, (int)$this->scalar('SELECT COUNT(*) FROM customers'));
-    }
-
     public function testLojaNaoMexeEmClienteNemPremioDeOutra(): void {
         $lojaA = $this->createMerchant('a@teste.test');
         $this->createMerchant('b@teste.test');
         $premioA = $this->createReward($lojaA, 'Cafe', 1);
-        $this->db->exec("INSERT INTO customers (name, phone) VALUES ('Carla Mendes', '11922220002')");
-        $this->db->exec("INSERT INTO loyalty_cards (merchant_id, customer_id, current_points) SELECT $lojaA, id, 50 FROM customers");
+        $cardA = $this->createCard($lojaA, 'Carla Mendes', '11922220002');
+        $this->db->exec("UPDATE loyalty_cards SET current_points = 50 WHERE id = $cardA");
 
         $this->loginAs('b@teste.test');
 
@@ -106,8 +82,8 @@ final class BalcaoFlowTest extends HttpTestCase {
         [, $location] = $this->post('merchant/customer', ['action' => 'score', 'phone' => '11922220002', 'points' => 5], true, 'merchant/rewards');
         $this->assertSame('merchant/dashboard&error=cliente_nao_encontrado', $location);
 
-        // mesmo depois de virar cliente da loja B, o premio da loja A nao vale ali
-        $this->post('merchant/dashboard', ['phone' => '11922220002'], true, 'merchant/dashboard&phone=11922220002');
+        // mesmo depois de virar cliente da loja B (cadastro rapido), o premio da loja A nao vale ali
+        $this->post('merchant/customer-new', ['phone' => '11922220002', 'name' => 'Carla', 'consent' => '1'], true, 'merchant/customer-new&phone=11922220002');
         [, $location] = $this->post('merchant/customer', ['action' => 'redeem', 'phone' => '11922220002', 'reward_id' => $premioA['id']], true, 'merchant/rewards');
         $this->assertSame('merchant/customer&phone=11922220002&error=premio_invalido', $location);
 
@@ -147,12 +123,16 @@ final class BalcaoFlowTest extends HttpTestCase {
     }
 
     public function testConsultaPublicaLimitadaPorIpMesmoComSessaoNova(): void {
+        $code = $this->publicCode($this->createMerchant('a@teste.test'));
+        $page = 'customer/balance&loja=' . $code;
+        $fields = ['phone' => '11911110001', 'loja' => $code];
+
         for ($i = 0; $i < 5; $i++) {
-            $this->assertSame(200, $this->post('customer/balance', ['phone' => '11911110001'])[0]);
+            $this->assertSame(200, $this->post('customer/balance', $fields, true, $page)[0]);
         }
-        $this->assertSame(429, $this->post('customer/balance', ['phone' => '11911110001'])[0]);
+        $this->assertSame(429, $this->post('customer/balance', $fields, true, $page)[0]);
 
         $this->newSession();
-        $this->assertSame(429, $this->post('customer/balance', ['phone' => '11911110001'])[0]);
+        $this->assertSame(429, $this->post('customer/balance', $fields, true, $page)[0]);
     }
 }

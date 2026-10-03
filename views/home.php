@@ -70,6 +70,8 @@
             <a href="<?= e(url('merchant/login')) ?>">Entrar no painel</a>
             ·
             <a href="<?= e(url('customer/balance')) ?>">Consultar pontos</a>
+            ·
+            <a href="<?= e(url('privacy')) ?>">Privacidade</a>
         </p>
     </footer>
 </body>

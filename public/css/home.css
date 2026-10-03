@@ -252,3 +252,35 @@ main,
         height: 32px;
     }
 }
+
+/* politica de privacidade: texto corrido, largura confortavel de leitura */
+.privacy {
+    max-width: 720px;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+
+.privacy h1 {
+    font-size: 1.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.privacy h2 {
+    font-size: 1.15rem;
+    margin: 1.75rem 0 0.5rem;
+}
+
+.privacy p,
+.privacy li {
+    color: var(--text-muted);
+}
+
+.privacy strong {
+    color: var(--text-main);
+}
+
+.privacy ul {
+    padding-left: 1.25rem;
+    display: grid;
+    gap: 0.4rem;
+}

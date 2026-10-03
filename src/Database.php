@@ -41,6 +41,12 @@ class Database {
                     $pass,
                     $options
                 );
+
+                // a sessao do mysql no mesmo fuso do PHP. usa o offset ("-03:00") e nao o nome:
+                // o nome exige as tabelas de fuso carregadas no mysql, o que o XAMPP e o CI nao garantem.
+                // (o offset e calculado na hora da conexao, entao respeita horario de verao se o fuso tiver)
+                $offset = (new \DateTimeImmutable('now', new \DateTimeZone(date_default_timezone_get())))->format('P');
+                self::$instance->exec("SET time_zone = '$offset'");
             } catch (PDOException $e) {
                 // o detalhe do erro vai pro log, nunca pra tela (pode expor usuario/host do banco)
                 error_log('[Database::getConnection] ' . $e->getMessage());

@@ -19,10 +19,11 @@ abstract class DatabaseTestCase extends TestCase {
 
     protected function createMerchant(string $email = 'loja@teste.test'): int {
         $stmt = $this->db->prepare(
-            "INSERT INTO merchants (owner_name, store_name, address, state, city, email, phone, category, cpf, password_hash)
-             VALUES ('Dona Teste', 'Loja Teste', 'Rua 1', 'SP', 'Sao Paulo', :email, '11988887777', 'varejo', :cpf, :hash)"
+            "INSERT INTO merchants (public_code, owner_name, store_name, address, state, city, email, phone, category, cpf, password_hash)
+             VALUES (:code, 'Dona Teste', 'Loja Teste', 'Rua 1', 'SP', 'Sao Paulo', :email, '11988887777', 'varejo', :cpf, :hash)"
         );
         $stmt->execute([
+            ':code'  => strtoupper(substr(md5($email), 0, 8)),
             ':email' => $email,
             ':cpf'   => substr(str_pad((string)crc32($email), 11, '0'), 0, 11),
             ':hash'  => password_hash('teste123', PASSWORD_BCRYPT),
@@ -36,6 +37,18 @@ abstract class DatabaseTestCase extends TestCase {
         );
         $stmt->execute([':m' => $merchantId, ':n' => $name, ':c' => $cost, ':a' => (int)$active]);
         return ['id' => (int)$this->db->lastInsertId(), 'name' => $name, 'points_cost' => $cost];
+    }
+
+    // cliente (telefone global) + cartao nesta loja com o nome dado a ela; devolve o id do cartao.
+    // $consent = false simula cadastro anterior ao registro de consentimento (migration 003).
+    protected function createCard(int $merchantId, string $name, string $phone, bool $consent = true): int {
+        $customerId = (new \App\Models\CustomerModel($this->db))->findOrCreate($phone);
+        return (new \App\Models\LoyaltyCardModel($this->db))
+            ->findOrCreate($merchantId, $customerId, $name, $consent ? \App\Support\Privacy::VERSION : null);
+    }
+
+    protected function publicCode(int $merchantId): string {
+        return (string)$this->scalar('SELECT public_code FROM merchants WHERE id = :id', [':id' => $merchantId]);
     }
 
     protected function scalar(string $sql, array $params = []) {

@@ -14,12 +14,13 @@ class PointsLogModel {
         return $this->pageByMerchant($merchantId, (int)$limit, 0);
     }
 
-    // uma pagina do historico de movimentacoes da loja, da mais recente pra mais antiga
+    // uma pagina do historico de movimentacoes da loja, da mais recente pra mais antiga.
+    // LEFT JOIN: cartao anonimizado nao tem cliente, mas a movimentacao continua no historico (nome e telefone NULL)
     public function pageByMerchant($merchantId, int $limit, int $offset) {
-        $sql = 'SELECT pl.type, pl.quantity, pl.description, pl.created_at, c.name AS customer_name, c.phone
+        $sql = 'SELECT pl.type, pl.quantity, pl.description, pl.created_at, lc.customer_name, c.phone
                 FROM points_log pl
                 JOIN loyalty_cards lc ON lc.id = pl.card_id
-                JOIN customers c ON c.id = lc.customer_id
+                LEFT JOIN customers c ON c.id = lc.customer_id
                 WHERE lc.merchant_id = :merchant_id
                 ORDER BY pl.created_at DESC, pl.id DESC
                 LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset;
@@ -62,7 +63,7 @@ class PointsLogModel {
     // numeros do dashboard
     public function statsByMerchant($merchantId) {
         $sql = "SELECT
-                    (SELECT COUNT(*) FROM loyalty_cards WHERE merchant_id = :m1) AS customers,
+                    (SELECT COUNT(*) FROM loyalty_cards WHERE merchant_id = :m1 AND anonymized_at IS NULL) AS customers,
                     (SELECT COALESCE(SUM(pl.quantity), 0) FROM points_log pl
                         JOIN loyalty_cards lc ON lc.id = pl.card_id
                         WHERE lc.merchant_id = :m2 AND pl.type = 'earn') AS points_issued,

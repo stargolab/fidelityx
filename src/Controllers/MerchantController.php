@@ -9,6 +9,7 @@ use App\Models\PointsLogModel;
 use App\Models\RewardModel;
 use App\Support\Csrf;
 use App\Support\Paginator;
+use App\Support\Privacy;
 use App\Support\QrSvg;
 use App\Support\RateLimiter;
 use App\Support\RewardProgress;
@@ -78,14 +79,11 @@ class MerchantController {
     // RENDERS (privadas, exigem login) -----------------------------------
 
     // home do lojista: um campo de telefone que decide o destino.
-    // cliente desta loja -> tela do cliente; de outra loja -> confirma o nome; novo -> cadastro rapido
+    // cliente desta loja -> tela do cliente; qualquer outro -> cadastro rapido.
+    // telefone novo e telefone de cliente de outra loja seguem EXATAMENTE o mesmo caminho:
+    // a loja nao descobre se o numero existe em outro lugar nem o nome dado la (LGPD, docs/adr/002).
     public function renderDashboard() {
         $merchantId = $this->authGuard();
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $this->handleConfirmCustomer($merchantId);
-            return;
-        }
 
         if (!isset($_GET['phone'])) {
             View::render('merchant/dashboard', ['steps' => $this->onboardingSteps($merchantId)]);
@@ -101,16 +99,7 @@ class MerchantController {
             redirect('merchant/customer', ['phone' => $phone]);
         }
 
-        $customer = (new CustomerModel($this->db))->findByPhone($phone);
-        if (!$customer) {
-            redirect('merchant/customer-new', ['phone' => $phone]);
-        }
-
-        // cadastro de outra loja: mostra so o primeiro nome (o resto e dado que outra loja coletou)
-        View::render('merchant/confirm-customer', [
-            'phone'     => $phone,
-            'firstName' => strtok($customer['name'], ' '),
-        ]);
+        redirect('merchant/customer-new', ['phone' => $phone]);
     }
 
     // guia de primeiros passos da home: cada passo sabe se ja foi feito pelos dados da propria loja.
@@ -154,12 +143,15 @@ class MerchantController {
     // cartaz para imprimir: nome da loja + qr code que leva a consulta publica de saldo.
     // o qr e gerado no servidor (svg), sem servico externo.
     public function renderPoster() {
-        $this->authGuard();
+        $merchantId = $this->authGuard();
 
-        $balanceUrl = $this->publicBaseUrl() . url('customer/balance');
+        // o qr leva a consulta DESTA loja (a consulta so mostra o saldo da loja do codigo)
+        $code = $this->merchantModel->findPublicCode($merchantId);
+        $balanceUrl = $this->publicBaseUrl() . url('customer/balance', ['loja' => $code]);
 
         View::render('merchant/poster', [
             'balanceUrl' => $balanceUrl,
+            'publicCode' => $code,
             'qrSvg'      => QrSvg::svg($balanceUrl),
         ]);
     }
@@ -183,24 +175,7 @@ class MerchantController {
         return $scheme . '://' . $host;
     }
 
-    // lojista confirmou o cliente de outra loja: cria o cartao desta loja e segue para a tela do cliente
-    private function handleConfirmCustomer($merchantId) {
-        Csrf::verify();
 
-        $phone = PhoneValidator::sanitize($_POST['phone'] ?? '');
-        if (!PhoneValidator::isValid($phone)) {
-            redirect('merchant/dashboard', ['error' => 'telefone_invalido']);
-        }
-
-        $customer = (new CustomerModel($this->db))->findByPhone($phone);
-        if (!$customer) {
-            redirect('merchant/customer-new', ['phone' => $phone]);
-        }
-
-        (new LoyaltyCardModel($this->db))->findOrCreate($merchantId, (int)$customer['id']);
-
-        redirect('merchant/customer', ['phone' => $phone, 'success' => 'cliente_adicionado']);
-    }
 
     // tela do cliente: saldo no topo, lancar pontos e resgatar sem sair dela
     public function renderCustomer() {
@@ -302,7 +277,8 @@ class MerchantController {
         ]);
     }
 
-    // cadastro rapido: so para telefone que nao existe em nenhuma loja
+    // cadastro rapido: para todo telefone que ainda nao tem cartao NESTA loja
+    // (novo na plataforma ou cliente de outra loja: a tela e a mesma, sem pista nenhuma)
     public function renderCustomerNew() {
         $merchantId = $this->authGuard();
 
@@ -316,9 +292,9 @@ class MerchantController {
             redirect('merchant/dashboard', ['error' => 'telefone_invalido']);
         }
 
-        // telefone ja cadastrado (nesta ou em outra loja) nao refaz cadastro: a home decide o caminho
-        if ((new CustomerModel($this->db))->findByPhone($phone)) {
-            redirect('merchant/dashboard', ['phone' => $phone]);
+        // ja e cliente desta loja: nao refaz o cadastro
+        if ((new LoyaltyCardModel($this->db))->findByMerchantAndPhone($merchantId, $phone)) {
+            redirect('merchant/customer', ['phone' => $phone]);
         }
 
         View::render('merchant/customer-new', ['phone' => $phone]);
@@ -342,8 +318,16 @@ class MerchantController {
             redirect('merchant/customer-new', ['phone' => $phone, 'error' => 'consentimento_obrigatorio']);
         }
 
-        $customerId = (new CustomerModel($this->db))->findOrCreate($name, $phone);
-        (new LoyaltyCardModel($this->db))->findOrCreate($merchantId, $customerId);
+        $cardModel = new LoyaltyCardModel($this->db);
+
+        // ja e cliente desta loja (ex.: formulario enviado duas vezes): nao troca nome nem consentimento
+        if ($cardModel->findByMerchantAndPhone($merchantId, $phone)) {
+            redirect('merchant/customer', ['phone' => $phone]);
+        }
+
+        // o telefone e global; nome e consentimento ficam no cartao desta loja
+        $customerId = (new CustomerModel($this->db))->findOrCreate($phone);
+        $cardModel->findOrCreate($merchantId, $customerId, $name, Privacy::VERSION);
 
         redirect('merchant/customer', ['phone' => $phone, 'success' => 'cliente_cadastrado']);
     }
@@ -528,6 +512,24 @@ class MerchantController {
 
         if (!$card) {
             redirect('merchant/dashboard', ['error' => 'cliente_nao_encontrado']);
+        }
+
+        // cartao antigo, sem consentimento gravado: o lojista pergunta e registra
+        if (($_POST['action'] ?? '') === 'consent') {
+            if (($_POST['consent'] ?? '') !== '1') {
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'consentimento_obrigatorio']);
+            }
+            $cardModel->recordConsent($card['id'], Privacy::VERSION);
+            redirect('merchant/customer', ['phone' => $phone, 'success' => 'consentimento_registrado']);
+        }
+
+        // exclusao dos dados a pedido do cliente (LGPD). a confirmacao e obrigatoria: nao tem volta.
+        if (($_POST['action'] ?? '') === 'anonymize') {
+            if (($_POST['confirm'] ?? '') !== '1') {
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'confirmacao_obrigatoria']);
+            }
+            $cardModel->anonymize($card['id'], $merchantId);
+            redirect('merchant/dashboard', ['success' => 'cliente_excluido']);
         }
 
         if (($_POST['action'] ?? '') === 'redeem') {

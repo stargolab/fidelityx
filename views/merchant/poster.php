@@ -17,6 +17,7 @@
     </div>
 
     <p class="poster-cta">Aponte a câmera do celular e consulte seus pontos</p>
+    <p class="poster-code">Código da loja: <strong><?= e($publicCode) ?></strong></p>
     <p class="poster-url"><?= e($balanceUrl) ?></p>
 </article>
 

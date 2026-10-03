@@ -48,12 +48,15 @@ Não há testes automatizados (PHPUnit/PHPStan/PHP-CS-Fixer estão no roadmap). 
 
 ## Backlog
 
-As tasks pós-MVP ficam no artifact **FidelityX — Backlog pós-MVP**: https://claude.ai/artifact/4WYQTvbJf5j4oevnFbfSbm
+As tasks pós-MVP ficam no doc **FidelityX — Backlog pós-MVP** (Claude Docs): https://claude.ai/artifact/4WYQTvbJf5j4oevnFbfSbm
 
-- Antes de começar uma task, leia o backlog (Artifact `action: "read"`) para pegar o escopo e o status atual.
-- Ao concluir uma task (commit/PR feito), atualize o artifact marcando-a como concluída, com a referência do commit ou PR. Republique sobre a mesma URL, sem criar artifact novo.
-- Task nova descoberta durante o trabalho entra no backlog em vez de ficar só na conversa.
-- Sem acesso de edição ao artifact: liste no corpo do PR as tasks do backlog que ele conclui, para quem tiver acesso marcar.
+É um documento do Claude Docs, não um artifact HTML: leia e edite **só pelo conector Claude Docs** (`read`/`update`). Nunca republique o artifact nem crie outro doc.
+
+- Cada tema tem uma tabela com as colunas `#`, Task, Prioridade, Tamanho, Responsável e Status (dropdown: A fazer → Em andamento → Em revisão → Feito). A lista "Detalhes" abaixo de cada tabela traz o escopo de cada task pelo número.
+- Ao começar uma task: leia a linha e os detalhes dela, coloque o responsável e mude o Status para **Em andamento**.
+- PR aberto: **Em revisão**. PR mergeado: **Feito**. Altere só a célula de Status (e Responsável); o resto do doc fica como está.
+- Task nova descoberta durante o trabalho entra na tabela do tema certo em vez de ficar só na conversa.
+- Sem o conector Claude Docs ou sem acesso de edição: liste no corpo do PR as tasks (`#`) que ele conclui, para quem tiver acesso marcar.
 
 ## Claude Code no time
 

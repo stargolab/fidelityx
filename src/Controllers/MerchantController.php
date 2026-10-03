@@ -438,7 +438,7 @@ class MerchantController {
         redirect('merchant/customer', ['phone' => $phone, 'success' => 'pontos_lancados']);
     }
 
-    // criar premio ou ativar/desativar um existente
+    // criar, ativar/desativar ou excluir premio
     private function handleRewards($merchantId, RewardModel $rewardModel) {
         Csrf::verify();
 
@@ -450,6 +450,67 @@ class MerchantController {
             redirect('merchant/rewards', ['success' => 'premio_atualizado']);
         }
 
+        if (($_POST['action'] ?? '') === 'delete') {
+            $rewardId = filter_var($_POST['reward_id'] ?? '', FILTER_VALIDATE_INT);
+            $result = $rewardId ? $rewardModel->deleteOrDeactivate($rewardId, $merchantId) : null;
+
+            redirect('merchant/rewards', match ($result) {
+                'deleted'     => ['success' => 'premio_excluido'],
+                'deactivated' => ['success' => 'premio_desativado_resgatado'],
+                default       => ['error' => 'premio_invalido'],
+            });
+        }
+
+        $fields = $this->readRewardFields();
+        if ($fields === null) {
+            redirect('merchant/rewards', ['error' => 'campos_invalidos']);
+        }
+
+        $rewardModel->create($merchantId, $fields['name'], $fields['description'], $fields['cost']);
+
+        redirect('merchant/rewards', ['success' => 'premio_criado']);
+    }
+
+    // tela de edicao do premio (nome, descricao e custo); o id vem na url e o dono e checado pela sessao
+    public function renderRewardEdit() {
+        $merchantId = $this->authGuard();
+        $rewardModel = new RewardModel($this->db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handleRewardEdit($merchantId, $rewardModel);
+            return;
+        }
+
+        $rewardId = filter_var($_GET['id'] ?? '', FILTER_VALIDATE_INT);
+        $reward = $rewardId ? $rewardModel->findForMerchant($rewardId, $merchantId) : null;
+
+        if (!$reward) {
+            redirect('merchant/rewards', ['error' => 'premio_invalido']);
+        }
+
+        View::render('merchant/reward-edit', ['reward' => $reward]);
+    }
+
+    private function handleRewardEdit($merchantId, RewardModel $rewardModel) {
+        Csrf::verify();
+
+        $rewardId = filter_var($_POST['reward_id'] ?? '', FILTER_VALIDATE_INT);
+        if (!$rewardId || !$rewardModel->findForMerchant($rewardId, $merchantId)) {
+            redirect('merchant/rewards', ['error' => 'premio_invalido']);
+        }
+
+        $fields = $this->readRewardFields();
+        if ($fields === null) {
+            redirect('merchant/reward-edit', ['id' => $rewardId, 'error' => 'campos_invalidos']);
+        }
+
+        $rewardModel->update($rewardId, $merchantId, $fields['name'], $fields['description'], $fields['cost']);
+
+        redirect('merchant/rewards', ['success' => 'premio_editado']);
+    }
+
+    // nome, descricao e custo do formulario de premio; null se algo estiver invalido
+    private function readRewardFields(): ?array {
         $name        = trim((string)($_POST['name'] ?? ''));
         $description = trim((string)($_POST['description'] ?? ''));
         $cost        = filter_var($_POST['points_cost'] ?? '', FILTER_VALIDATE_INT, [
@@ -457,12 +518,10 @@ class MerchantController {
         ]);
 
         if ($name === '' || mb_strlen($name) > 120 || mb_strlen($description) > 255 || $cost === false) {
-            redirect('merchant/rewards', ['error' => 'campos_invalidos']);
+            return null;
         }
 
-        $rewardModel->create($merchantId, $name, $description === '' ? null : $description, $cost);
-
-        redirect('merchant/rewards', ['success' => 'premio_criado']);
+        return ['name' => $name, 'description' => $description === '' ? null : $description, 'cost' => $cost];
     }
 
     // barra quem nao esta logado e devolve o id do lojista da sessao.

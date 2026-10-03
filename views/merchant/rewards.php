@@ -50,12 +50,22 @@
                             <td class="num"><?= (int)$reward['points_cost'] ?> pts</td>
                             <td><?= $reward['active'] ? 'Ativo' : '<span class="muted">Inativo</span>' ?></td>
                             <td class="num">
-                                <form action="<?= e(url('merchant/rewards')) ?>" method="POST">
-                                    <?= Csrf::field() ?>
-                                    <input type="hidden" name="action" value="toggle">
-                                    <input type="hidden" name="reward_id" value="<?= (int)$reward['id'] ?>">
-                                    <button type="submit" class="btn-secondary"><?= $reward['active'] ? 'Desativar' : 'Ativar' ?></button>
-                                </form>
+                                <div class="row-actions">
+                                    <a href="<?= e(url('merchant/reward-edit', ['id' => (int)$reward['id']])) ?>" class="btn-secondary">Editar</a>
+                                    <form action="<?= e(url('merchant/rewards')) ?>" method="POST">
+                                        <?= Csrf::field() ?>
+                                        <input type="hidden" name="action" value="toggle">
+                                        <input type="hidden" name="reward_id" value="<?= (int)$reward['id'] ?>">
+                                        <button type="submit" class="btn-secondary"><?= $reward['active'] ? 'Desativar' : 'Ativar' ?></button>
+                                    </form>
+                                    <form action="<?= e(url('merchant/rewards')) ?>" method="POST"
+                                          onsubmit="return confirm('Excluir este prêmio? Se ele já foi resgatado, será só desativado.');">
+                                        <?= Csrf::field() ?>
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="reward_id" value="<?= (int)$reward['id'] ?>">
+                                        <button type="submit" class="btn-secondary btn-danger">Excluir</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>

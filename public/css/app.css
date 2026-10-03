@@ -363,3 +363,34 @@ th.num {
         max-width: 420px;
     }
 }
+
+/* acoes da linha de uma tabela (editar / ativar / excluir): lado a lado, cada uma com 44px de altura */
+.row-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+/* link com cara de botao secundario */
+a.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.btn-danger {
+    color: var(--error-text);
+}
+
+.btn-danger:hover {
+    border-color: var(--error);
+}
+
+.form-hint {
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+}
+
+a.btn-secondary:hover {
+    color: var(--text-main);
+}

@@ -83,6 +83,7 @@ switch ($domain) {
             'dashboard' => $controller->renderDashboard(),
             'customer'  => $controller->renderCustomer(),
             'rewards'   => $controller->renderRewards(),
+            'reward-edit' => $controller->renderRewardEdit(),
             'customers' => $controller->renderCustomers(),
             default     => (new ErrorController())->handle(404),
         };

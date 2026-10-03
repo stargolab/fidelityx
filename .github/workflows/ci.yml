@@ -71,3 +71,6 @@ jobs:
 
       - name: Testes (PHPUnit)
         run: vendor/bin/phpunit
+
+      - name: Testes das mascaras (JavaScript)
+        run: node tests/js/masks.test.js

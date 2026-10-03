@@ -46,13 +46,13 @@
 
             <div class="form-group">
                 <label for="document">CPF ou CNPJ</label>
-                <input type="text" name="document" id="document" placeholder="Apenas números" inputmode="numeric" required>
+                <input type="text" name="document" id="document" placeholder="000.000.000-00 ou 00.000.000/0000-00" inputmode="numeric" maxlength="18" data-mask="document" required>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
                     <label for="phone">Telefone</label>
-                    <input type="tel" name="phone" id="phone" placeholder="(11) 99999-9999" required>
+                    <input type="tel" name="phone" id="phone" placeholder="(11) 99999-9999" maxlength="15" data-mask="phone" required>
                 </div>
 
                 <div class="form-group">
@@ -105,5 +105,6 @@
         </footer>
     </div>
 
+    <script src="/js/masks.js"></script>
 </body>
 </html>

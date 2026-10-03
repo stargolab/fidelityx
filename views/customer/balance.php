@@ -28,7 +28,7 @@
 
             <div class="form-group">
                 <label for="phone">Seu telefone</label>
-                <input type="tel" name="phone" id="phone" placeholder="(11) 99999-9999" value="<?= e(format_phone($phone)) ?>" required>
+                <input type="tel" name="phone" id="phone" placeholder="(11) 99999-9999" maxlength="15" data-mask="phone" value="<?= e(format_phone($phone)) ?>" required>
             </div>
 
             <button type="submit" class="btn-primary">Consultar</button>
@@ -69,5 +69,6 @@
         </footer>
     </div>
 
+    <script src="/js/masks.js"></script>
 </body>
 </html>

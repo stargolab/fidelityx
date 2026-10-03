@@ -20,7 +20,7 @@
     <h2>Últimas movimentações</h2>
 
     <?php if (!$recent): ?>
-        <p class="muted">Nenhuma movimentação ainda. Comece <a href="<?= e(url('merchant/score')) ?>">lançando pontos</a> para um cliente.</p>
+        <p class="muted">Nenhuma movimentação ainda. Elas aparecem aqui quando um cliente recebe pontos.</p>
     <?php else: ?>
         <div class="table-wrap">
             <table>

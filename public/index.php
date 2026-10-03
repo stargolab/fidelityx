@@ -80,9 +80,8 @@ switch ($domain) {
             'register'  => $controller->renderRegister(),
             'logout'    => $controller->logout(),
             'dashboard' => $controller->renderDashboard(),
-            'score'     => $controller->renderScore(),
+            'customer'  => $controller->renderCustomer(),
             'rewards'   => $controller->renderRewards(),
-            'redeem'    => $controller->renderRedeem(),
             'customers' => $controller->renderCustomers(),
             default     => (new ErrorController())->handle(404),
         };

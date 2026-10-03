@@ -151,3 +151,71 @@ th.num {
     width: auto;
     padding: 0.75rem 1.5rem;
 }
+
+/* tela do cliente (mobile-first: empilhado no celular, lado a lado a partir de 600px) */
+.customer-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.customer-name {
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+.customer-balance {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+}
+
+.customer-balance-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.quick-points {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.quick-points .btn-secondary {
+    flex: 1;
+    padding: 0.6rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.reward-list {
+    list-style: none;
+}
+
+.reward-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.reward-list li:last-child {
+    border-bottom: none;
+}
+
+@media (min-width: 600px) {
+    .customer-summary {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .quick-points .btn-secondary {
+        flex: 0 0 auto;
+        min-width: 4rem;
+    }
+}

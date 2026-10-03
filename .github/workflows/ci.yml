@@ -1,0 +1,73 @@
+# roda lint e testes em todo PR e em todo push na main
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# um push novo no mesmo PR cancela a rodada anterior
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testes:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # 8.1 e a versao minima do projeto; 8.3 garante que nada quebra nas versoes novas
+        php: ['8.1', '8.3']
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    # o bootstrap dos testes recria o banco fidelityx_test a partir do database/schema.sql
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASS: root
+      DB_NAME: fidelityx_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql, mbstring, curl
+          coverage: none
+
+      - name: Cache do Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
+
+      - name: Instalar dependencias
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      # o index.php exige um .env (Dotenv::load); igual a instalacao do README.
+      # os valores de teste continuam valendo: as variaveis do job tem prioridade (Dotenv imutavel)
+      - name: Criar .env a partir do exemplo
+        run: cp .env.example .env
+
+      - name: Checagem de sintaxe (php -l)
+        run: find src views public tests -name "*.php" -print0 | xargs -0 -n1 php -l > /dev/null
+
+      - name: Testes (PHPUnit)
+        run: vendor/bin/phpunit

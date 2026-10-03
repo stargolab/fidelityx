@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         cacheDirectory=".phpunit.cache"
+         colors="true"
+         failOnWarning="true"
+         failOnRisky="true">
+    <testsuites>
+        <!-- regras puras, sem banco -->
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <!-- models e RateLimiter contra o banco de teste -->
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+        <!-- fluxo completo por http, com servidor php -S proprio -->
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
+
+    <php>
+        <!-- o banco de teste e recriado do schema.sql a cada rodada; o bootstrap recusa nome que nao termine em _test -->
+        <env name="DB_NAME" value="fidelityx_test" force="true"/>
+    </php>
+</phpunit>

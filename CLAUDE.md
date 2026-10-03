@@ -45,3 +45,11 @@ Não há testes automatizados (PHPUnit/PHPStan/PHP-CS-Fixer estão no roadmap). 
 - Commits no padrão `tipo(escopo): descrição` (`feat`, `fix`, `refactor`, `docs`, `test`); branches `feature/nome`.
 - SQL sempre com prepared statements; o PDO usa `ATTR_EMULATE_PREPARES = false`, então o mesmo placeholder não pode aparecer duas vezes na query (use `:p1`, `:p2`).
 - O front-end em TypeScript (`src/ts/`) ainda é placeholder; a sanitização de máscaras é feita no back-end.
+
+## Backlog
+
+As tasks pós-MVP ficam no artifact **FidelityX — Backlog pós-MVP**: https://claude.ai/artifact/4WYQTvbJf5j4oevnFbfSbm
+
+- Antes de começar uma task, leia o backlog (Artifact `action: "read"`) para pegar o escopo e o status atual.
+- Ao concluir uma task (commit/PR feito), atualize o artifact marcando-a como concluída, com a referência do commit ou PR. Republique sobre a mesma URL, sem criar artifact novo.
+- Task nova descoberta durante o trabalho entra no backlog em vez de ficar só na conversa.

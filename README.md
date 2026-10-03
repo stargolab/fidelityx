@@ -137,7 +137,7 @@ DocumentValidator::isValid($document); // true/false
 #### 1. Clone o Repositório
 
 ```bash
-git clone https://github.com/sousa7tz/fidelityx.git
+git clone https://github.com/stargolab/fidelityx.git
 cd fidelityx
 ```
 
@@ -307,7 +307,7 @@ public function renderScore() {
 
 Contribuições são bem-vindas! Para reportar bugs ou sugerir features:
 
-1. **Issues**: [GitHub Issues](https://github.com/sousa7tz/fidelityx/issues)
+1. **Issues**: [GitHub Issues](https://github.com/stargolab/fidelityx/issues)
 2. **Pull Requests**: Siga o padrão de branch `feature/nome-da-feature`
 
 ### Padrão de Commits
@@ -345,7 +345,7 @@ MIT License.
 
 - **Email**: suporte@fidelityx.com
 - **Docs**: [fidelityx.dev](https://fidelityx.dev)
-- **Issues**: [GitHub Issues](https://github.com/sousa7tz/fidelityx/issues)
+- **Issues**: [GitHub Issues](https://github.com/stargolab/fidelityx/issues)
 
 ---
 

@@ -83,7 +83,9 @@ abstract class HttpTestCase extends DatabaseTestCase {
 
     protected function csrfToken(): string {
         if (!preg_match('/name="_csrf" value="([a-f0-9]+)"/', $this->lastBody, $m)) {
-            throw new RuntimeException('pagina sem campo _csrf');
+            // mostra o comeco da resposta: quase sempre e uma pagina de erro (500/503) e nao o formulario
+            $title = preg_match('/<title>(.*?)<\/title>/s', $this->lastBody, $t) ? trim($t[1]) : '';
+            throw new RuntimeException("pagina sem campo _csrf (title: '$title'): " . substr(strip_tags($this->lastBody), 0, 200));
         }
         return $m[1];
     }

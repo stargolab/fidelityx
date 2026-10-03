@@ -61,6 +61,11 @@ jobs:
       - name: Instalar dependencias
         run: composer install --no-interaction --no-progress --prefer-dist
 
+      # o index.php exige um .env (Dotenv::load); igual a instalacao do README.
+      # os valores de teste continuam valendo: as variaveis do job tem prioridade (Dotenv imutavel)
+      - name: Criar .env a partir do exemplo
+        run: cp .env.example .env
+
       - name: Checagem de sintaxe (php -l)
         run: find src views public tests -name "*.php" -print0 | xargs -0 -n1 php -l > /dev/null
 

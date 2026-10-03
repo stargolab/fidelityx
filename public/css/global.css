@@ -1,23 +1,63 @@
-/* public/css/global.css */
+/* public/css/global.css
+
+   PALETA — a unica fonte de cores do projeto (tema escuro).
+   Nenhum outro css nem view deve ter cor fixa (#hex, rgb): use sempre estas variaveis.
+   Todos os pares de texto/fundo abaixo passam no contraste WCAG AA (>= 4.5:1).
+
+   Marca
+     --primary          indigo da marca: botoes principais, links, destaques (ex.: saldo)
+     --primary-hover    hover do botao principal e texto do selo de resgate
+     --on-primary       texto em cima de --primary / --primary-hover (botao principal)
+     --primary-soft     fundo translucido de destaque (selo de resgate)
+     --primary-glow     brilho em volta de botoes destacados (paginas de erro)
+
+   Fundo e texto
+     --bg-body          fundo da pagina
+     --bg-card          superficie: cards, inputs, menu
+     --text-main        texto principal
+     --text-muted       texto secundario (legendas, ajuda, cabecalho de tabela)
+     --border           bordas e divisores
+
+   Estados (cada um: cor da borda/icone, cor do texto, fundo translucido)
+     --success / --success-text / --success-soft   mensagem de sucesso, selo de ganho de pontos
+     --error   / --error-text   / --error-soft     mensagem de erro
+     --warning / --warning-text / --warning-soft   avisos (reservado para as proximas telas)
+
+   Foco
+     --focus-ring       anel de foco de inputs (acessibilidade: o foco precisa ser visivel)
+*/
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
 
 :root {
-    /* Cores Dark Mode */
+    /* marca */
     --primary: #818cf8;
-    /* Indigo mais claro para contrastar no escuro */
     --primary-hover: #a5b4fc;
-    --bg-body: #111827;
-    /* Fundo principal (quase preto) */
-    --bg-card: #1f2937;
-    /* Fundo dos cards (um pouco mais claro) */
-    --text-main: #f3f4f6;
-    /* Texto principal (quase branco) */
-    --text-muted: #9ca3af;
-    /* Texto secundário (cinza) */
-    --border: #374151;
-    /* Bordas sutis */
+    --on-primary: #111827;
+    --primary-soft: rgba(129, 140, 248, 0.15);
+    --primary-glow: rgba(129, 140, 248, 0.4);
 
-    /* Utilitários */
+    /* fundo e texto */
+    --bg-body: #111827;
+    --bg-card: #1f2937;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --border: #374151;
+
+    /* estados */
+    --success: #34d399;
+    --success-text: #6ee7b7;
+    --success-soft: rgba(52, 211, 153, 0.12);
+    --error: #f87171;
+    --error-text: #fca5a5;
+    --error-soft: rgba(248, 113, 113, 0.12);
+    --warning: #fbbf24;
+    --warning-text: #fcd34d;
+    --warning-soft: rgba(251, 191, 36, 0.12);
+
+    /* foco */
+    --focus-ring: rgba(129, 140, 248, 0.35);
+
+    /* utilitarios */
     --radius: 12px;
     --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
 }
@@ -35,4 +75,13 @@ body {
     color: var(--text-main);
     min-height: 100vh;
     line-height: 1.5;
+}
+
+/* links seguem a paleta (a cor padrao do navegador nao tem contraste no fundo escuro) */
+a {
+    color: var(--primary);
+}
+
+a:hover {
+    color: var(--primary-hover);
 }

@@ -124,12 +124,12 @@ th.num {
 }
 
 .badge-earn {
-    background: rgba(52, 211, 153, 0.15);
-    color: #6ee7b7;
+    background: var(--success-soft);
+    color: var(--success-text);
 }
 
 .badge-redeem {
-    background: rgba(129, 140, 248, 0.15);
+    background: var(--primary-soft);
     color: var(--primary-hover);
 }
 

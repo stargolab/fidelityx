@@ -1,16 +1,9 @@
 /* public/css/errors.css */
-:root {
-    --bg: #0b0f1a;
-    --surface: #161e2d;
-    --primary: #6366f1;
-    --primary-glow: rgba(99, 102, 241, 0.4);
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-}
+/* as cores vem da paleta do global.css (carregado antes deste arquivo) */
 
 body {
     font-family: 'Inter', sans-serif;
-    background-color: var(--bg);
+    background-color: var(--bg-body);
     color: var(--text-main);
     display: flex;
     align-items: center;
@@ -53,7 +46,7 @@ body {
     font-size: 8rem;
     font-weight: 900;
     margin: 0;
-    background: linear-gradient(180deg, #fff 0%, var(--text-muted) 100%);
+    background: linear-gradient(180deg, var(--text-main) 0%, var(--text-muted) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     opacity: 0.1;
@@ -79,7 +72,7 @@ p {
 
 .btn-home {
     background: var(--primary);
-    color: #white;
+    color: var(--on-primary);
     text-decoration: none;
     padding: 1rem 2rem;
     border-radius: 12px;
@@ -90,6 +83,7 @@ p {
 }
 
 .btn-home:hover {
+    color: var(--on-primary);
     transform: scale(1.05);
     box-shadow: 0 0 30px var(--primary);
 }

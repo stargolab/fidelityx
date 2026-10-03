@@ -5,7 +5,6 @@ namespace App\Controllers;
 use App\Models\CustomerModel;
 use App\Models\LoyaltyCardModel;
 use App\Models\MerchantModel;
-use App\Models\PointsLogModel;
 use App\Models\RewardModel;
 use App\Support\Csrf;
 use App\Support\View;
@@ -70,14 +69,59 @@ class MerchantController {
 
     // RENDERS (privadas, exigem login) -----------------------------------
 
+    // home do lojista: um campo de telefone que decide o destino.
+    // cliente desta loja -> tela do cliente; de outra loja -> confirma o nome; novo -> cadastro rapido
     public function renderDashboard() {
         $merchantId = $this->authGuard();
-        $logModel = new PointsLogModel($this->db);
 
-        View::render('merchant/dashboard', [
-            'stats'  => $logModel->statsByMerchant($merchantId),
-            'recent' => $logModel->recentByMerchant($merchantId, 10),
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handleConfirmCustomer($merchantId);
+            return;
+        }
+
+        if (!isset($_GET['phone'])) {
+            View::render('merchant/dashboard');
+            return;
+        }
+
+        $phone = PhoneValidator::sanitize($_GET['phone']);
+        if (!PhoneValidator::isValid($phone)) {
+            redirect('merchant/dashboard', ['error' => 'telefone_invalido']);
+        }
+
+        if ((new LoyaltyCardModel($this->db))->findByMerchantAndPhone($merchantId, $phone)) {
+            redirect('merchant/customer', ['phone' => $phone]);
+        }
+
+        $customer = (new CustomerModel($this->db))->findByPhone($phone);
+        if (!$customer) {
+            redirect('merchant/customer-new', ['phone' => $phone]);
+        }
+
+        // cadastro de outra loja: mostra so o primeiro nome (o resto e dado que outra loja coletou)
+        View::render('merchant/confirm-customer', [
+            'phone'     => $phone,
+            'firstName' => strtok($customer['name'], ' '),
         ]);
+    }
+
+    // lojista confirmou o cliente de outra loja: cria o cartao desta loja e segue para a tela do cliente
+    private function handleConfirmCustomer($merchantId) {
+        Csrf::verify();
+
+        $phone = PhoneValidator::sanitize($_POST['phone'] ?? '');
+        if (!PhoneValidator::isValid($phone)) {
+            redirect('merchant/dashboard', ['error' => 'telefone_invalido']);
+        }
+
+        $customer = (new CustomerModel($this->db))->findByPhone($phone);
+        if (!$customer) {
+            redirect('merchant/customer-new', ['phone' => $phone]);
+        }
+
+        (new LoyaltyCardModel($this->db))->findOrCreate($merchantId, (int)$customer['id']);
+
+        redirect('merchant/customer', ['phone' => $phone, 'success' => 'cliente_adicionado']);
     }
 
     public function renderScore() {

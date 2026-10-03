@@ -95,15 +95,46 @@ class LoyaltyCardModel {
         }
     }
 
-    // clientes da loja com saldo, do uso mais recente pro mais antigo
-    public function listByMerchant($merchantId) {
+    // filtro de busca por nome ou telefone. so numero (com ou sem mascara) busca no telefone;
+    // qualquer outra coisa busca no nome. % e _ do que foi digitado valem como letra, nao como coringa.
+    private function searchClause(string $search): array {
+        $search = trim($search);
+        if ($search === '') {
+            return ['', []];
+        }
+
+        if (preg_match('/^[\d\s().+-]+$/', $search)) {
+            $digits = preg_replace('/\D/', '', $search);
+            return $digits === '' ? ['', []] : [' AND c.phone LIKE :q', [':q' => '%' . $digits . '%']];
+        }
+
+        // "\x5c" e a barra invertida (o escape padrao do LIKE no MySQL)
+        $escaped = str_replace(["\x5c", '%', '_'], ["\x5c\x5c", "\x5c%", "\x5c_"], $search);
+        return [' AND c.name LIKE :q', [':q' => '%' . $escaped . '%']];
+    }
+
+    public function countByMerchant($merchantId, string $search = ''): int {
+        [$where, $params] = $this->searchClause($search);
+        $sql = 'SELECT COUNT(*) FROM loyalty_cards lc
+                JOIN customers c ON c.id = lc.customer_id
+                WHERE lc.merchant_id = :merchant_id' . $where;
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':merchant_id' => $merchantId] + $params);
+
+        return (int)$stmt->fetchColumn();
+    }
+
+    // uma pagina de clientes da loja (com busca opcional), do uso mais recente pro mais antigo
+    public function searchByMerchant($merchantId, string $search, int $limit, int $offset) {
+        [$where, $params] = $this->searchClause($search);
         $sql = 'SELECT c.name, c.phone, lc.current_points, lc.total_accumulated, lc.last_use_at
                 FROM loyalty_cards lc
                 JOIN customers c ON c.id = lc.customer_id
-                WHERE lc.merchant_id = :merchant_id
-                ORDER BY lc.last_use_at DESC, lc.id DESC';
+                WHERE lc.merchant_id = :merchant_id' . $where . '
+                ORDER BY lc.last_use_at DESC, lc.id DESC
+                LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset;
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([':merchant_id' => $merchantId]);
+        $stmt->execute([':merchant_id' => $merchantId] + $params);
 
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }

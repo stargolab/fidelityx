@@ -7,6 +7,7 @@ use App\Models\LoyaltyCardModel;
 use App\Models\MerchantModel;
 use App\Models\RewardModel;
 use App\Support\Csrf;
+use App\Support\Paginator;
 use App\Support\RateLimiter;
 use App\Support\View;
 use App\Validators\DocumentValidator;
@@ -29,6 +30,7 @@ class MerchantController {
     ];
 
     private const MAX_POINTS_PER_ENTRY = 10000;
+    private const PER_PAGE = 20;
     private const MAX_LOGIN_FAILURES = 5;
     private const LOGIN_WINDOW_SECONDS = 900;
 
@@ -175,8 +177,15 @@ class MerchantController {
     public function renderCustomers() {
         $merchantId = $this->authGuard();
 
+        $search = mb_substr(trim((string)($_GET['q'] ?? '')), 0, 100);
+
+        $cardModel = new LoyaltyCardModel($this->db);
+        $paginator = new Paginator($cardModel->countByMerchant($merchantId, $search), $_GET['page'] ?? 1, self::PER_PAGE);
+
         View::render('merchant/customers', [
-            'customers' => (new LoyaltyCardModel($this->db))->listByMerchant($merchantId),
+            'customers' => $cardModel->searchByMerchant($merchantId, $search, $paginator->perPage, $paginator->offset()),
+            'paginator' => $paginator,
+            'search'    => $search,
         ]);
     }
 

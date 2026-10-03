@@ -11,17 +11,32 @@ class PointsLogModel {
     }
 
     public function recentByMerchant($merchantId, $limit = 10) {
+        return $this->pageByMerchant($merchantId, (int)$limit, 0);
+    }
+
+    // uma pagina do historico de movimentacoes da loja, da mais recente pra mais antiga
+    public function pageByMerchant($merchantId, int $limit, int $offset) {
         $sql = 'SELECT pl.type, pl.quantity, pl.description, pl.created_at, c.name AS customer_name, c.phone
                 FROM points_log pl
                 JOIN loyalty_cards lc ON lc.id = pl.card_id
                 JOIN customers c ON c.id = lc.customer_id
                 WHERE lc.merchant_id = :merchant_id
                 ORDER BY pl.created_at DESC, pl.id DESC
-                LIMIT ' . (int)$limit;
+                LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset;
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':merchant_id' => $merchantId]);
 
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    public function countByMerchant($merchantId): int {
+        $sql = 'SELECT COUNT(*) FROM points_log pl
+                JOIN loyalty_cards lc ON lc.id = pl.card_id
+                WHERE lc.merchant_id = :merchant_id';
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':merchant_id' => $merchantId]);
+
+        return (int)$stmt->fetchColumn();
     }
 
     // numeros do dashboard

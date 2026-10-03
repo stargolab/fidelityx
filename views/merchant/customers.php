@@ -2,9 +2,27 @@
 <?php require __DIR__ . '/../partials/merchant-header.php'; ?>
 
 <section class="card">
+    <?php // busca por GET (so le dados): nome ou telefone, mantida na paginacao ?>
+    <form action="/index.php" method="GET" class="search-form">
+        <input type="hidden" name="url" value="merchant/customers">
+        <div class="form-group">
+            <label for="q">Buscar por nome ou telefone</label>
+            <input type="search" name="q" id="q" value="<?= e($search) ?>" maxlength="100" autocomplete="off" placeholder="Ex: Maria ou 99999">
+        </div>
+        <button type="submit" class="btn-secondary">Buscar</button>
+        <?php if ($search !== ''): ?>
+            <a href="<?= e(url('merchant/customers')) ?>" class="btn-secondary">Limpar</a>
+        <?php endif; ?>
+    </form>
+
     <?php if (!$customers): ?>
-        <p class="muted">Nenhum cliente ainda. Os clientes aparecem aqui quando recebem pontos pela primeira vez.</p>
+        <?php if ($search !== ''): ?>
+            <p class="muted">Nenhum cliente encontrado para essa busca.</p>
+        <?php else: ?>
+            <p class="muted">Nenhum cliente ainda. Os clientes aparecem aqui quando recebem pontos pela primeira vez.</p>
+        <?php endif; ?>
     <?php else: ?>
+        <p class="muted list-count"><?= $paginator->total ?> <?= $paginator->total === 1 ? 'cliente' : 'clientes' ?></p>
         <div class="table-wrap">
             <table>
                 <thead>
@@ -23,6 +41,12 @@
                 </tbody>
             </table>
         </div>
+
+        <?php
+        $route = 'merchant/customers';
+        $query = $search === '' ? [] : ['q' => $search];
+        require __DIR__ . '/../partials/pagination.php';
+        ?>
     <?php endif; ?>
 </section>
 

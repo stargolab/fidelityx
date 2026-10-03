@@ -394,3 +394,65 @@ a.btn-secondary {
 a.btn-secondary:hover {
     color: var(--text-main);
 }
+
+/* busca em listas: campo em cima e botoes embaixo no celular; tudo numa linha a partir de 640px */
+.search-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.search-form .form-group {
+    margin-bottom: 0;
+}
+
+.search-form input[type="search"] {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    min-height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    background: var(--bg-card);
+    color: var(--text-main);
+}
+
+.list-count {
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+
+/* paginacao: anterior / pagina X de Y / proxima */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+}
+
+a.btn-secondary,
+span.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-secondary.disabled {
+    color: var(--text-muted);
+    cursor: default;
+}
+
+@media (min-width: 640px) {
+    .search-form {
+        flex-direction: row;
+        align-items: flex-end;
+    }
+
+    .search-form .form-group {
+        flex: 1;
+        max-width: 420px;
+    }
+}

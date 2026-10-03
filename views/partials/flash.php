@@ -34,6 +34,7 @@ $flashMessages = [
         'premio_criado'     => 'Prêmio cadastrado.',
         'premio_atualizado' => 'Prêmio atualizado.',
         'resgate_realizado' => 'Resgate realizado com sucesso.',
+        'cliente_adicionado' => 'Cliente adicionado à sua loja.',
     ],
 ];
 

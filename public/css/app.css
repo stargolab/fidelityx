@@ -219,3 +219,26 @@ th.num {
         min-width: 4rem;
     }
 }
+
+/* home do lojista: campo de telefone grande, facil de tocar no celular */
+.phone-search input[type="tel"] {
+    font-size: 1.5rem;
+    padding: 1rem;
+    letter-spacing: 0.03em;
+}
+
+.confirm-name {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-top: 0.5rem;
+}
+
+.confirm-phone {
+    margin-bottom: 1.5rem;
+}
+
+@media (min-width: 600px) {
+    .phone-search {
+        max-width: 420px;
+    }
+}

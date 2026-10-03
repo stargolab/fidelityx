@@ -5,12 +5,14 @@ namespace App\Controllers;
 use App\Models\LoyaltyCardModel;
 use App\Models\RewardModel;
 use App\Support\Csrf;
+use App\Support\RateLimiter;
 use App\Support\View;
 use App\Validators\PhoneValidator;
 
 // area publica do cliente (sem login): consulta de saldo pelo telefone
 class CustomerController {
-    // limite simples por sessao pra dificultar varredura de telefones
+    // limite por ip guardado no banco, pra dificultar varredura de telefones.
+    // fica no banco (e nao na sessao) pra nao zerar quando a pessoa apaga o cookie.
     private const MAX_LOOKUPS = 5;
     private const WINDOW_SECONDS = 60;
 
@@ -28,7 +30,7 @@ class CustomerController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Csrf::verify();
 
-            if ($this->tooManyLookups()) {
+            if ($this->tooManyLookups(RateLimiter::clientIp())) {
                 (new ErrorController())->handle(429);
                 return;
             }
@@ -57,15 +59,14 @@ class CustomerController {
         ]);
     }
 
-    private function tooManyLookups(): bool {
-        $now = time();
-        $recent = array_filter(
-            $_SESSION['balance_lookups'] ?? [],
-            fn($t) => $t > $now - self::WINDOW_SECONDS
-        );
-        $recent[] = $now;
-        $_SESSION['balance_lookups'] = array_values($recent);
+    // conta a consulta atual e diz se o ip passou do limite da janela
+    private function tooManyLookups(string $ip): bool {
+        $limiter = new RateLimiter($this->db);
+        if ($limiter->tooMany('balance_ip', $ip, self::MAX_LOOKUPS, self::WINDOW_SECONDS)) {
+            return true;
+        }
 
-        return count($recent) > self::MAX_LOOKUPS;
+        $limiter->hit('balance_ip', $ip);
+        return false;
     }
 }

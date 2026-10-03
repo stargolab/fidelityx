@@ -19,3 +19,7 @@ Thumbs.db
 # logs
 *.log
 /cache/
+
+# claude code (preferencias pessoais; .claude/settings.json e versionado)
+.claude/settings.local.json
+CLAUDE.local.md

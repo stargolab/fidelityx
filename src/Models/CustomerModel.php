@@ -28,4 +28,23 @@ class CustomerModel {
 
         return (int)$this->db->lastInsertId();
     }
+
+    // devolve o id do cliente do telefone, criando se ainda nao existir.
+    // se outro lojista cadastrar o mesmo telefone no mesmo instante, o UNIQUE barra
+    // o segundo insert; ai o cliente que acabou de ser criado e relido.
+    public function findOrCreate($name, $phone) {
+        $customer = $this->findByPhone($phone);
+        if ($customer) {
+            return (int)$customer['id'];
+        }
+
+        try {
+            return $this->create($name, $phone);
+        } catch (\PDOException $e) {
+            if (($e->errorInfo[1] ?? null) !== 1062) {
+                throw $e;
+            }
+            return (int)$this->findByPhone($phone)['id'];
+        }
+    }
 }

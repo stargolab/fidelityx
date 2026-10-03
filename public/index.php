@@ -78,6 +78,7 @@ switch ($domain) {
         match ($action ?? 'dashboard') {
             'login'     => $controller->renderLogin(),
             'register'  => $controller->renderRegister(),
+            'customer-new' => $controller->renderCustomerNew(),
             'logout'    => $controller->logout(),
             'dashboard' => $controller->renderDashboard(),
             'customer'  => $controller->renderCustomer(),

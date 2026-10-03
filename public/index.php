@@ -58,8 +58,9 @@ $action = $urlParts[1] ?? null;
 switch ($domain) {
 
     case 'home':
-        // por enquanto a "home" é o login do lojista
-        redirect('merchant/login');
+        // apresentacao publica do produto (lojista logado vai direto pro painel)
+        (new \App\Controllers\HomeController())->render();
+        break;
 
     case 'customer':
         // exemplo do psr-4 citado acima, sem require_once

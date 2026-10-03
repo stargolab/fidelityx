@@ -1,0 +1,254 @@
+/* public/css/home.css — pagina inicial publica
+   mobile-first (base = celular a partir de 360px); breakpoints 640px e 1024px, os mesmos do app.css.
+   so usa as variaveis de cor do global.css. */
+
+.home-header,
+main,
+.home-footer {
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.home-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.home-logo {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+}
+
+.home-logo img {
+    height: 28px;
+}
+
+.home-login {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+/* abertura */
+.home-hero {
+    padding: 2rem 0 2.5rem;
+    text-align: center;
+}
+
+.home-hero h1 {
+    font-size: 1.9rem;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+}
+
+.home-lead {
+    color: var(--text-muted);
+    font-size: 1.05rem;
+    margin-bottom: 1.75rem;
+}
+
+/* botoes: um embaixo do outro no celular (largura toda, facil de tocar) */
+.home-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.home-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.home-btn-primary {
+    background: var(--primary);
+    color: var(--on-primary);
+    box-shadow: var(--shadow);
+}
+
+.home-btn-primary:hover {
+    background: var(--primary-hover);
+    color: var(--on-primary);
+    transform: translateY(-1px);
+}
+
+.home-btn-secondary {
+    background: transparent;
+    color: var(--text-main);
+    border: 1px solid var(--border);
+}
+
+.home-btn-secondary:hover {
+    color: var(--text-main);
+    border-color: var(--primary);
+}
+
+/* secoes */
+.home-section {
+    padding: 1.5rem 0;
+}
+
+.home-section h2,
+.home-cta h2 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin-bottom: 1.25rem;
+}
+
+.home-steps {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+.home-steps li {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+}
+
+.home-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    margin-bottom: 0.75rem;
+    border-radius: 50%;
+    background: var(--primary-soft);
+    color: var(--primary-hover);
+    font-weight: 800;
+}
+
+.home-steps h3 {
+    font-size: 1.05rem;
+    margin-bottom: 0.4rem;
+}
+
+.home-steps p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.home-benefits {
+    list-style: none;
+    display: grid;
+    gap: 0.75rem;
+}
+
+.home-benefits li {
+    padding-left: 1rem;
+    border-left: 3px solid var(--primary);
+    color: var(--text-muted);
+}
+
+.home-benefits strong {
+    color: var(--text-main);
+}
+
+.home-cta {
+    margin: 1.5rem 0;
+    padding: 2rem 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-align: center;
+}
+
+.home-cta p {
+    color: var(--text-muted);
+    margin-bottom: 1.25rem;
+}
+
+.home-cta .home-btn {
+    width: 100%;
+}
+
+.home-footer {
+    padding-top: 1.5rem;
+    padding-bottom: 2rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.home-footer a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 0.5rem;
+}
+
+@media (min-width: 640px) {
+    .home-header,
+    main,
+    .home-footer {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+
+    .home-hero {
+        padding: 3.5rem 0 3.5rem;
+    }
+
+    .home-hero h1 {
+        font-size: 2.5rem;
+    }
+
+    .home-lead {
+        max-width: 560px;
+        margin-left: auto;
+        margin-right: auto;
+        font-size: 1.15rem;
+    }
+
+    .home-actions {
+        flex-direction: row;
+        justify-content: center;
+    }
+
+    .home-cta .home-btn {
+        width: auto;
+    }
+
+    .home-steps {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .home-header,
+    main,
+    .home-footer {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+
+    .home-hero h1 {
+        font-size: 3rem;
+    }
+
+    .home-logo img {
+        height: 32px;
+    }
+}

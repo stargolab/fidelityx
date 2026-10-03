@@ -528,3 +528,27 @@ span.btn-secondary {
         flex: 0 0 auto;
     }
 }
+
+/* progresso ate o proximo premio: barra fina com o preenchimento na cor da marca */
+.reward-progress {
+    margin-top: 0.75rem;
+}
+
+.reward-progress-text {
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+}
+
+.progress {
+    height: 0.6rem;
+    background: var(--bg-body);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 999px;
+}

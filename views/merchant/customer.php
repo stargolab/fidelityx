@@ -15,6 +15,12 @@
     </div>
 </section>
 
+<?php if ($progress): ?>
+    <section class="card">
+        <?php require __DIR__ . '/../partials/reward-progress.php'; ?>
+    </section>
+<?php endif; ?>
+
 <section class="card">
     <h2>Lançar pontos</h2>
     <form action="<?= e(url('merchant/customer')) ?>" method="POST">

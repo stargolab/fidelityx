@@ -10,6 +10,7 @@ use App\Models\RewardModel;
 use App\Support\Csrf;
 use App\Support\Paginator;
 use App\Support\RateLimiter;
+use App\Support\RewardProgress;
 use App\Support\View;
 use App\Validators\DocumentValidator;
 use App\Validators\PhoneValidator;
@@ -177,16 +178,18 @@ class MerchantController {
             redirect('merchant/dashboard', ['error' => 'cliente_nao_encontrado']);
         }
 
-        // so os premios que o saldo ja paga
+        // so os premios que o saldo ja paga; o progresso olha todos os ativos (o proximo ainda nao pago)
         $balance = (int)$card['current_points'];
+        $activeRewards = (new RewardModel($this->db))->listByMerchant($merchantId, true);
         $rewards = array_values(array_filter(
-            (new RewardModel($this->db))->listByMerchant($merchantId, true),
+            $activeRewards,
             fn($reward) => (int)$reward['points_cost'] <= $balance
         ));
 
         View::render('merchant/customer', [
-            'card'    => $card,
-            'rewards' => $rewards,
+            'card'     => $card,
+            'rewards'  => $rewards,
+            'progress' => RewardProgress::next($balance, $activeRewards),
         ]);
     }
 

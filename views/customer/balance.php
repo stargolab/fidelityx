@@ -48,6 +48,8 @@
                                 <strong><?= (int)$card['current_points'] ?> pts</strong>
                             </div>
 
+                            <?php $progress = $card['progress']; require __DIR__ . '/../partials/reward-progress.php'; ?>
+
                             <?php if ($card['rewards']): ?>
                                 <ul class="muted" style="margin: 0.5rem 0 0 1.25rem; font-size: 0.85rem;">
                                     <?php foreach ($card['rewards'] as $reward): ?>

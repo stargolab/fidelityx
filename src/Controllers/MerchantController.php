@@ -80,15 +80,35 @@ class MerchantController {
         ]);
     }
 
-    public function renderScore() {
+    // tela do cliente: saldo no topo, lancar pontos e resgatar sem sair dela
+    public function renderCustomer() {
         $merchantId = $this->authGuard();
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $this->handleScore($merchantId);
+            $this->handleCustomer($merchantId);
             return;
         }
 
-        View::render('merchant/score');
+        $phone = PhoneValidator::sanitize($_GET['phone'] ?? '');
+        $card = PhoneValidator::isValid($phone)
+            ? (new LoyaltyCardModel($this->db))->findByMerchantAndPhone($merchantId, $phone)
+            : null;
+
+        if (!$card) {
+            redirect('merchant/dashboard', ['error' => 'cliente_nao_encontrado']);
+        }
+
+        // so os premios que o saldo ja paga
+        $balance = (int)$card['current_points'];
+        $rewards = array_values(array_filter(
+            (new RewardModel($this->db))->listByMerchant($merchantId, true),
+            fn($reward) => (int)$reward['points_cost'] <= $balance
+        ));
+
+        View::render('merchant/customer', [
+            'card'    => $card,
+            'rewards' => $rewards,
+        ]);
     }
 
     public function renderRewards() {
@@ -102,28 +122,6 @@ class MerchantController {
 
         View::render('merchant/rewards', [
             'rewards' => $rewardModel->listByMerchant($merchantId),
-        ]);
-    }
-
-    public function renderRedeem() {
-        $merchantId = $this->authGuard();
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $this->handleRedeem($merchantId);
-            return;
-        }
-
-        // GET com ?phone= mostra o saldo do cliente e os premios disponiveis
-        $phone = PhoneValidator::sanitize($_GET['phone'] ?? '');
-        $card = null;
-        if ($phone !== '') {
-            $card = (new LoyaltyCardModel($this->db))->findByMerchantAndPhone($merchantId, $phone);
-        }
-
-        View::render('merchant/redeem', [
-            'phone'   => $phone,
-            'card'    => $card,
-            'rewards' => (new RewardModel($this->db))->listByMerchant($merchantId, true),
         ]);
     }
 
@@ -290,43 +288,47 @@ class MerchantController {
         redirect('merchant/dashboard', ['success' => 'logged']);
     }
 
-    // lancamento de pontos: busca o cliente pelo telefone e cria se for novo
-    private function handleScore($merchantId) {
+    // post da tela do cliente: lancar pontos ou resgatar premio.
+    // o cartao e sempre buscado pelo lojista da sessao + telefone, nunca por id vindo do form.
+    private function handleCustomer($merchantId) {
         Csrf::verify();
 
-        $phone       = PhoneValidator::sanitize($_POST['phone'] ?? '');
-        $name        = trim((string)($_POST['name'] ?? ''));
-        $points      = filter_var($_POST['points'] ?? '', FILTER_VALIDATE_INT, [
+        $phone = PhoneValidator::sanitize($_POST['phone'] ?? '');
+        $cardModel = new LoyaltyCardModel($this->db);
+        $card = PhoneValidator::isValid($phone) ? $cardModel->findByMerchantAndPhone($merchantId, $phone) : null;
+
+        if (!$card) {
+            redirect('merchant/dashboard', ['error' => 'cliente_nao_encontrado']);
+        }
+
+        if (($_POST['action'] ?? '') === 'redeem') {
+            $rewardId = filter_var($_POST['reward_id'] ?? '', FILTER_VALIDATE_INT);
+            $reward = $rewardId ? (new RewardModel($this->db))->findActiveForMerchant($rewardId, $merchantId) : null;
+
+            if (!$reward) {
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'premio_invalido']);
+            }
+
+            if (!$cardModel->redeem($card['id'], $reward)) {
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'saldo_insuficiente']);
+            }
+
+            redirect('merchant/customer', ['phone' => $phone, 'success' => 'resgate_realizado']);
+        }
+
+        $points = filter_var($_POST['points'] ?? '', FILTER_VALIDATE_INT, [
             'options' => ['min_range' => 1, 'max_range' => self::MAX_POINTS_PER_ENTRY],
         ]);
         $description = trim((string)($_POST['description'] ?? ''));
         $description = $description === '' ? 'Compra' : mb_substr($description, 0, 255);
 
-        if (!PhoneValidator::isValid($phone)) {
-            redirect('merchant/score', ['error' => 'telefone_invalido']);
-        }
-
         if ($points === false) {
-            redirect('merchant/score', ['error' => 'pontos_invalidos']);
+            redirect('merchant/customer', ['phone' => $phone, 'error' => 'pontos_invalidos']);
         }
 
-        $customerModel = new CustomerModel($this->db);
-        $customer = $customerModel->findByPhone($phone);
+        $cardModel->addPoints($card['id'], $points, $description);
 
-        if ($customer) {
-            $customerId = (int)$customer['id'];
-        } else {
-            if ($name === '') {
-                redirect('merchant/score', ['error' => 'nome_obrigatorio', 'phone' => $phone]);
-            }
-            $customerId = $customerModel->create(mb_substr($name, 0, 255), $phone);
-        }
-
-        $cardModel = new LoyaltyCardModel($this->db);
-        $cardId = $cardModel->findOrCreate($merchantId, $customerId);
-        $cardModel->addPoints($cardId, $points, $description);
-
-        redirect('merchant/score', ['success' => 'pontos_lancados']);
+        redirect('merchant/customer', ['phone' => $phone, 'success' => 'pontos_lancados']);
     }
 
     // criar premio ou ativar/desativar um existente
@@ -354,30 +356,6 @@ class MerchantController {
         $rewardModel->create($merchantId, $name, $description === '' ? null : $description, $cost);
 
         redirect('merchant/rewards', ['success' => 'premio_criado']);
-    }
-
-    private function handleRedeem($merchantId) {
-        Csrf::verify();
-
-        $phone    = PhoneValidator::sanitize($_POST['phone'] ?? '');
-        $rewardId = filter_var($_POST['reward_id'] ?? '', FILTER_VALIDATE_INT);
-
-        $cardModel = new LoyaltyCardModel($this->db);
-        $card = PhoneValidator::isValid($phone) ? $cardModel->findByMerchantAndPhone($merchantId, $phone) : null;
-        if (!$card) {
-            redirect('merchant/redeem', ['error' => 'cliente_nao_encontrado', 'phone' => $phone]);
-        }
-
-        $reward = $rewardId ? (new RewardModel($this->db))->findActiveForMerchant($rewardId, $merchantId) : null;
-        if (!$reward) {
-            redirect('merchant/redeem', ['error' => 'premio_invalido', 'phone' => $phone]);
-        }
-
-        if (!$cardModel->redeem($card['id'], $reward)) {
-            redirect('merchant/redeem', ['error' => 'saldo_insuficiente', 'phone' => $phone]);
-        }
-
-        redirect('merchant/redeem', ['success' => 'resgate_realizado', 'phone' => $phone]);
     }
 
     // barra quem nao esta logado e devolve o id do lojista da sessao.

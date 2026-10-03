@@ -3,8 +3,6 @@
 $currentAction = explode('/', (string)($_GET['url'] ?? ''))[1] ?? 'dashboard';
 $navItems = [
     'dashboard' => 'Início',
-    'score'     => 'Lançar pontos',
-    'redeem'    => 'Resgatar',
     'rewards'   => 'Prêmios',
     'customers' => 'Clientes',
 ];

@@ -13,7 +13,7 @@
                 <tbody>
                     <?php foreach ($customers as $customer): ?>
                         <tr>
-                            <td><?= e($customer['name']) ?></td>
+                            <td><a href="<?= e(url('merchant/customer', ['phone' => $customer['phone']])) ?>"><?= e($customer['name']) ?></a></td>
                             <td><?= e(format_phone($customer['phone'])) ?></td>
                             <td class="num"><?= (int)$customer['current_points'] ?></td>
                             <td class="num"><?= (int)$customer['total_accumulated'] ?></td>

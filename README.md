@@ -25,23 +25,26 @@ Recentemente refatorado para adotar o padrão **MVC com separação clara de res
 **Painel do lojista**
 - ✅ **Cadastro de Lojistas** — Registro completo com validação de documentos (CPF/CNPJ), e-mail, telefone e confirmação de senha
 - ✅ **Autenticação Segura** — Login com hash BCRYPT, renovação do ID de sessão, logout e bloqueio de contas inativas
-- ✅ **Lançamento de Pontos** — Busca o cliente pelo telefone e cadastra na hora se ele for novo
+- ✅ **Atendimento pelo telefone** — A home é um único campo de telefone que decide o caminho: cliente da loja vai direto para a tela do cliente; cliente de outra loja só confirma o nome; telefone novo vai para o cadastro rápido
+- ✅ **Tela do cliente** — Nome e saldo no topo, lançar pontos (atalhos +1/+5/+10) e resgatar os prêmios que o saldo já paga, sem sair da tela
+- ✅ **Cadastro rápido** — Telefone já preenchido, só o nome e o consentimento do cliente
 - ✅ **Catálogo de Prêmios** — Cada loja cadastra prêmios com custo em pontos e ativa/desativa quando quiser
 - ✅ **Resgate** — Confere o saldo e debita em transação, sem risco de gastar o mesmo ponto duas vezes
-- ✅ **Dashboard e Clientes** — Indicadores, últimas movimentações e lista de clientes com saldo
+- ✅ **Clientes** — Lista de clientes com saldo; o nome abre a tela do cliente
+- ✅ **Funciona do celular ao PC** — Layout mobile-first (360 px a 1440 px), menu de celular e alvos de toque de 44 px
 
 **Área pública do cliente**
-- ✅ **Consulta de Saldo** — O cliente informa o telefone e vê os pontos em cada loja e os prêmios disponíveis (sem login, com limite de consultas)
+- ✅ **Consulta de Saldo** — O cliente informa o telefone e vê os pontos em cada loja e os prêmios disponíveis (sem login, limite de 5 consultas por minuto por IP)
 
 ### Rotas
 
 | Rota (`index.php?url=`) | Acesso | Descrição |
 |---|---|---|
 | `merchant/register` · `merchant/login` · `merchant/logout` | público | Conta do lojista |
-| `merchant/dashboard` | lojista | Indicadores e últimas movimentações |
-| `merchant/score` | lojista | Lançar pontos |
+| `merchant/dashboard` | lojista | Home: busca pelo telefone (`?phone=`) e confirmação de cliente de outra loja (POST) |
+| `merchant/customer?phone=` | lojista | Tela do cliente: lançar pontos e resgatar |
+| `merchant/customer-new?phone=` | lojista | Cadastro rápido de cliente novo |
 | `merchant/rewards` | lojista | Catálogo de prêmios |
-| `merchant/redeem` | lojista | Resgatar prêmio |
 | `merchant/customers` | lojista | Clientes e saldos |
 | `customer/balance` | público | Consulta de saldo pelo telefone |
 
@@ -72,7 +75,7 @@ src/
 ├── Controllers/       → Orquestração de requisições HTTP
 ├── Models/            → Lógica de persistência (BD)
 ├── Validators/        → Validação de dados (regras de negócio)
-└── Support/           → View, CSRF e helpers (e(), redirect(), url())
+└── Support/           → View, CSRF, RateLimiter e helpers (e(), redirect(), url())
 ```
 
 ### Fluxo de Requisição
@@ -156,12 +159,13 @@ mysql -u root -p < database/schema.sql
 
 O arquivo [database/schema.sql](database/schema.sql) cria automaticamente:
 - Database `fidelityx`
-- Tabelas `merchants`, `customers`, `loyalty_cards`, `rewards` e `points_log`
+- Tabelas `merchants`, `customers`, `loyalty_cards`, `rewards`, `points_log` e `rate_limit_hits`
 - Índices e chaves estrangeiras
 - Charset UTF-8mb4
 
-> **Já tinha o banco criado antes do MVP?** Rode uma vez a migration:
-> `mysql -u root -p fidelityx < database/migrations/001_mvp.sql`
+> **Já tinha o banco criado antes?** Rode uma vez cada migration que ainda não aplicou, em ordem:
+> `mysql -u root -p fidelityx < database/migrations/001_mvp.sql` (bancos anteriores ao MVP)
+> `mysql -u root -p fidelityx < database/migrations/002_rate_limit.sql` (limite de tentativas de login e da consulta pública)
 >
 > Detalhes das tabelas em [docs/db/schema-explanation.md](docs/db/schema-explanation.md).
 
@@ -218,7 +222,7 @@ fidelityx/
 │   ├── Controllers/            # Orquestração de requisições
 │   ├── Models/                 # Camada de dados
 │   ├── Validators/             # Validação de regras de negócio
-│   ├── Support/                # View, CSRF e helpers
+│   ├── Support/                # View, CSRF, RateLimiter e helpers
 │   └── Database.php            # Singleton de conexão PDO
 ├── views/
 │   ├── auth/                   # Templates de autenticação
@@ -249,15 +253,16 @@ find src views public -name "*.php" -exec php -l {} \;
 Cada rota tem um `render*()`: no GET ele mostra a view; no POST ele delega para o `handle*()` correspondente. Rotas privadas começam com `authGuard()`, que devolve o id do lojista logado (sempre da sessão, nunca do formulário).
 
 ```php
-public function renderScore() {
+public function renderCustomer() {
     $merchantId = $this->authGuard();
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $this->handleScore($merchantId); // Csrf::verify() + validação + model
+        $this->handleCustomer($merchantId); // Csrf::verify() + validação + model
         return;
     }
 
-    View::render('merchant/score');
+    // ... busca o cartão do cliente desta loja pelo telefone
+    View::render('merchant/customer', ['card' => $card, 'rewards' => $rewards]);
 }
 ```
 
@@ -272,6 +277,7 @@ public function renderScore() {
 - ✅ **CSRF** — Token por sessão em todos os formulários POST
 - ✅ **XSS** — Toda saída nas views passa por `e()` (`htmlspecialchars`)
 - ✅ **Sessão** — Cookie `HttpOnly` + `SameSite=Lax` e `session_regenerate_id()` no login
+- ✅ **Limite de tentativas** — Login bloqueia com 429 após 5 erros em 15 min por e-mail ou IP; consulta pública limitada a 5/min por IP. Contagem no banco (sobrevive a apagar o cookie), com e-mail e IP guardados só como hash SHA-256
 - ✅ **Isolamento entre lojas** — Consultas filtram pelo `merchant_id` da sessão
 - ✅ **Erros** — Detalhes técnicos vão para o log; o usuário vê só as páginas de erro
 
@@ -284,6 +290,16 @@ public function renderScore() {
 - [x] Dashboard de Lojistas
 - [x] Sistema de Pontos (earn/redeem) com catálogo de prêmios
 - [x] Consulta pública de saldo
+
+### Pós-MVP — Onda 1 (prioridade alta)
+
+- [x] Home com busca pelo telefone, tela do cliente e cadastro rápido
+- [x] Limite de tentativas no login e limite da consulta pública por IP
+- [x] Cadastro simultâneo do mesmo cliente tratado sem erro 500
+- [x] Paleta de cores em variáveis CSS (contraste WCAG AA)
+- [x] Layout responsivo e mobile-first
+- [ ] Testes automatizados e CI
+- [ ] Docker e configuração de produção
 
 ### Próximos passos
 

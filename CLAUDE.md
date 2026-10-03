@@ -38,7 +38,9 @@ Não há testes automatizados (PHPUnit/PHPStan/PHP-CS-Fixer estão no roadmap). 
 - `points_log` é o histórico (`earn`/`redeem`, `reward_id` nos resgates). Toda mudança de saldo passa por `LoyaltyCardModel::addPoints` / `redeem`, que atualizam o cartão e gravam o log na mesma transação; `redeem` usa `SELECT ... FOR UPDATE` para impedir gasto duplo. Não altere saldo fora desses métodos.
 - `merchants` guarda CPF **ou** CNPJ (normalizados, UNIQUE). Validação só por dígito verificador, sem API externa (ver `docs/adr/001-documents-validation.md`).
 
-**Área pública** — `customer/balance` consulta saldo pelo telefone sem login, com rate limit por sessão (5/min → 429) e exibindo só o primeiro nome do cliente.
+**Área pública** — `customer/balance` consulta saldo pelo telefone sem login, com limite por IP (5/min → 429) e exibindo só o primeiro nome do cliente.
+
+**Limite de tentativas** — `App\Support\RateLimiter` conta tentativas na tabela `rate_limit_hits` (chave guardada só como hash SHA-256), então o limite sobrevive a apagar o cookie. Usos: login (5 erros em 15 min por e-mail ou IP → 429) e consulta pública (5/min por IP). O IP vem de `REMOTE_ADDR`; atrás de proxy/load balancer isso precisa ser revisto.
 
 ## Convenções
 

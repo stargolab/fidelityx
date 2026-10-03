@@ -20,6 +20,7 @@ $flashMessages = [
         'telefone_invalido'     => 'Informe um telefone válido com DDD.',
         'pontos_invalidos'      => 'Informe uma quantidade de pontos entre 1 e 10.000.',
         'nome_obrigatorio'      => 'Cliente novo: informe o nome para cadastrá-lo.',
+        'consentimento_obrigatorio' => 'Confirme que o cliente autorizou o cadastro.',
         'cliente_nao_encontrado'=> 'Nenhum cliente com esse telefone nesta loja.',
         'premio_invalido'       => 'Prêmio inválido ou inativo.',
         'saldo_insuficiente'    => 'Saldo de pontos insuficiente para este prêmio.',
@@ -28,10 +29,12 @@ $flashMessages = [
         'cadastrado'        => 'Cadastro realizado! Faça login para continuar.',
         'logged'            => 'Bem-vindo de volta!',
         'logout'            => 'Você saiu da sua conta.',
+        'cliente_cadastrado' => 'Cliente cadastrado. Já pode lançar os pontos.',
         'pontos_lancados'   => 'Pontos lançados com sucesso.',
         'premio_criado'     => 'Prêmio cadastrado.',
         'premio_atualizado' => 'Prêmio atualizado.',
         'resgate_realizado' => 'Resgate realizado com sucesso.',
+        'cliente_adicionado' => 'Cliente adicionado à sua loja.',
     ],
 ];
 

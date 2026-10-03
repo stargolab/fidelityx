@@ -116,3 +116,37 @@
     border-color: #34d399;
     color: #6ee7b7;
 }
+
+/* checkbox com texto ao lado (o input geral de .form-group ocupa 100%, aqui nao) */
+.form-group .checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.form-group .checkbox input {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+    padding: 0;
+    accent-color: var(--primary);
+}
+
+.customer-new-phone {
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin: 0.25rem 0 1.5rem;
+}
+
+.form-back {
+    margin-top: 1rem;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.form-back a {
+    color: var(--text-muted);
+}

@@ -135,6 +135,52 @@ class MerchantController {
         ]);
     }
 
+    // cadastro rapido: so para telefone que nao existe em nenhuma loja
+    public function renderCustomerNew() {
+        $merchantId = $this->authGuard();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handleCustomerNew($merchantId);
+            return;
+        }
+
+        $phone = PhoneValidator::sanitize($_GET['phone'] ?? '');
+        if (!PhoneValidator::isValid($phone)) {
+            redirect('merchant/dashboard', ['error' => 'telefone_invalido']);
+        }
+
+        // telefone ja cadastrado (nesta ou em outra loja) nao refaz cadastro: a home decide o caminho
+        if ((new CustomerModel($this->db))->findByPhone($phone)) {
+            redirect('merchant/dashboard', ['phone' => $phone]);
+        }
+
+        View::render('merchant/customer-new', ['phone' => $phone]);
+    }
+
+    private function handleCustomerNew($merchantId) {
+        Csrf::verify();
+
+        $phone = PhoneValidator::sanitize($_POST['phone'] ?? '');
+        $name  = trim((string)($_POST['name'] ?? ''));
+
+        if (!PhoneValidator::isValid($phone)) {
+            redirect('merchant/dashboard', ['error' => 'telefone_invalido']);
+        }
+
+        if ($name === '' || mb_strlen($name) > 255) {
+            redirect('merchant/customer-new', ['phone' => $phone, 'error' => 'nome_obrigatorio']);
+        }
+
+        if (($_POST['consent'] ?? '') !== '1') {
+            redirect('merchant/customer-new', ['phone' => $phone, 'error' => 'consentimento_obrigatorio']);
+        }
+
+        $customerId = (new CustomerModel($this->db))->findOrCreate($name, $phone);
+        (new LoyaltyCardModel($this->db))->findOrCreate($merchantId, $customerId);
+
+        redirect('merchant/customer', ['phone' => $phone, 'success' => 'cliente_cadastrado']);
+    }
+
     public function logout() {
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {

@@ -42,7 +42,7 @@ Não há testes automatizados (PHPUnit/PHPStan/PHP-CS-Fixer estão no roadmap). 
 
 ## Convenções
 
-- Commits no padrão `tipo(escopo): descrição` (`feat`, `fix`, `refactor`, `docs`, `test`); branches `feature/nome`.
+- Commits no padrão `tipo(escopo): descrição` (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`); branches `tipo/nome` com o mesmo tipo do commit (ex.: `feat/logout`, `fix/csrf-token`). Nunca commitar direto na `main`: tudo entra por PR, e o PR referencia a issue com `close #N` quando houver.
 - SQL sempre com prepared statements; o PDO usa `ATTR_EMULATE_PREPARES = false`, então o mesmo placeholder não pode aparecer duas vezes na query (use `:p1`, `:p2`).
 - O front-end em TypeScript (`src/ts/`) ainda é placeholder; a sanitização de máscaras é feita no back-end.
 
@@ -53,3 +53,9 @@ As tasks pós-MVP ficam no artifact **FidelityX — Backlog pós-MVP**: https://
 - Antes de começar uma task, leia o backlog (Artifact `action: "read"`) para pegar o escopo e o status atual.
 - Ao concluir uma task (commit/PR feito), atualize o artifact marcando-a como concluída, com a referência do commit ou PR. Republique sobre a mesma URL, sem criar artifact novo.
 - Task nova descoberta durante o trabalho entra no backlog em vez de ficar só na conversa.
+- Sem acesso de edição ao artifact: liste no corpo do PR as tasks do backlog que ele conclui, para quem tiver acesso marcar.
+
+## Claude Code no time
+
+- `.claude/settings.json` (versionado) traz as permissões comuns, bloqueia leitura do `.env` e tem um hook que roda `php -l` em todo `.php` editado; erro de sintaxe volta para o Claude corrigir. Preferências pessoais vão em `.claude/settings.local.json` / `CLAUDE.local.md` (ignorados pelo git).
+- Skills do projeto em `.claude/skills/`: `/smoke` (sobe o servidor e testa as rotas principais) e `/pr` (lint, commit, push, PR e atualização do backlog).

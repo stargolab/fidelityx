@@ -78,11 +78,11 @@ switch ($domain) {
         match ($action ?? 'dashboard') {
             'login'     => $controller->renderLogin(),
             'register'  => $controller->renderRegister(),
+            'customer-new' => $controller->renderCustomerNew(),
             'logout'    => $controller->logout(),
             'dashboard' => $controller->renderDashboard(),
-            'score'     => $controller->renderScore(),
+            'customer'  => $controller->renderCustomer(),
             'rewards'   => $controller->renderRewards(),
-            'redeem'    => $controller->renderRedeem(),
             'customers' => $controller->renderCustomers(),
             default     => (new ErrorController())->handle(404),
         };

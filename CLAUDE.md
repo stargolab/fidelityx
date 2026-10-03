@@ -12,13 +12,15 @@ FidelityX: SaaS de fidelidade para lojistas locais. PHP 8.1+ sem framework (MVC 
 composer install                       # dependencias
 composer dump-autoload                 # obrigatorio apos criar classe nova em src/ ou mudar autoload "files"
 php -S localhost:8000 -t public/       # servidor local (document root = public/)
-find src views public -name "*.php" -exec php -l {} \;   # checagem de sintaxe (único "lint" existente)
+find src views public tests -name "*.php" -exec php -l {} \;   # checagem de sintaxe
+composer test                          # phpunit (unidade + integração + fluxo); recria o banco fidelityx_test
+composer test -- --testsuite Unit      # só os testes sem banco
 tsc                                    # compila src/ts -> public/js (tsconfig.json)
 ```
 
 Banco: `mysql -u root -p < database/schema.sql` em instalação nova; bancos anteriores ao MVP precisam de `database/migrations/001_mvp.sql` uma vez. Credenciais em `.env` (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`). No ambiente local do autor o PHP e o MySQL vêm do XAMPP (`C:\xampp\mysql\bin\mysql.exe`).
 
-Não há testes automatizados (PHPUnit/PHPStan/PHP-CS-Fixer estão no roadmap). Para validar mudanças, suba o servidor e exercite as rotas com `curl` usando cookie jar e extraindo o campo `_csrf` do HTML do GET antes de cada POST.
+**Testes (PHPUnit 10.5)** em `tests/`: `Unit` (validators, sem banco), `Integration` (models e `RateLimiter` contra o banco) e `Feature` (fluxo completo por HTTP: o teste sobe um `php -S` próprio numa porta livre e usa cookie + `_csrf` como o navegador). O bootstrap **apaga e recria** o banco `fidelityx_test` a partir do `schema.sql` (o `phpunit.xml` força esse nome e o bootstrap recusa nome que não termine em `_test`); credenciais vêm do `.env` local ou das variáveis de ambiente no CI. Cada teste começa com as tabelas vazias (`DatabaseTestCase`). Regra nova de negócio ou bug corrigido = teste junto. O GitHub Actions (`.github/workflows/ci.yml`) roda lint + PHPUnit em PHP 8.1 e 8.3 com MySQL 8 em todo PR e push na `main`. O MySQL do XAMPP roda sem `sql_mode` estrito (trunca texto longo sem erro), o do CI é estrito: não escreva teste que dependa disso.
 
 ## Arquitetura
 

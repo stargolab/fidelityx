@@ -239,14 +239,27 @@ fidelityx/
 
 ## 🔧 Desenvolvimento
 
-### Checagem de sintaxe
+### Testes
 
-Ainda não há testes automatizados nem ferramentas de qualidade configuradas (PHPUnit, PHPStan e PHP-CS-Fixer estão no roadmap). Por enquanto:
+PHPUnit 10.5, em três suítes:
+
+| Suíte | O que cobre | Banco |
+|---|---|---|
+| `Unit` | `DocumentValidator` (CPF/CNPJ) e `PhoneValidator` | não |
+| `Integration` | `LoyaltyCardModel` (pontos, resgate, transação), `CustomerModel` (cadastro simultâneo) e `RateLimiter` | sim |
+| `Feature` | fluxo completo por HTTP: cadastro da loja, busca pelo telefone, cadastro rápido, lançar e resgatar, cliente de outra loja, isolamento entre lojas, CSRF e limites de tentativas | sim |
 
 ```bash
+composer test                       # todas as suítes
+composer test -- --testsuite Unit   # só as que não usam banco
+
 # verifica a sintaxe de todos os arquivos PHP
-find src views public -name "*.php" -exec php -l {} \;
+find src views public tests -name "*.php" -exec php -l {} \;
 ```
+
+Os testes com banco usam o banco **`fidelityx_test`**, que é apagado e recriado a partir do `schema.sql` a cada rodada (as credenciais vêm do seu `.env`; o usuário precisa poder criar banco). O banco do `.env` nunca é tocado.
+
+O **GitHub Actions** roda lint + testes em PHP 8.1 e 8.3 com MySQL 8 em todo PR e todo push na `main`.
 
 ### Estrutura de Controllers
 
@@ -298,12 +311,12 @@ public function renderCustomer() {
 - [x] Cadastro simultâneo do mesmo cliente tratado sem erro 500
 - [x] Paleta de cores em variáveis CSS (contraste WCAG AA)
 - [x] Layout responsivo e mobile-first
-- [ ] Testes automatizados e CI
+- [x] Testes automatizados e CI
 - [ ] Docker e configuração de produção
 
 ### Próximos passos
 
-- [ ] Testes automatizados (PHPUnit) e análise estática (PHPStan)
+- [ ] Análise estática (PHPStan) e padronização de código (PHP-CS-Fixer)
 - [ ] Edição de perfil do lojista e recuperação de senha
 - [ ] Máscaras de input no front-end (TypeScript)
 - [ ] Planos Free/Pro com limites

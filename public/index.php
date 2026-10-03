@@ -82,6 +82,7 @@ switch ($domain) {
             'logout'    => $controller->logout(),
             'dashboard' => $controller->renderDashboard(),
             'customer'  => $controller->renderCustomer(),
+            'statement' => $controller->renderStatement(),
             'rewards'   => $controller->renderRewards(),
             'reward-edit' => $controller->renderRewardEdit(),
             'customers' => $controller->renderCustomers(),

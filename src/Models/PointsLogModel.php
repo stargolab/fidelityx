@@ -29,6 +29,26 @@ class PointsLogModel {
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    // extrato de um cartao: movimentacoes do cliente nesta loja, da mais recente pra mais antiga
+    public function pageByCard($cardId, int $limit, int $offset) {
+        $sql = 'SELECT type, quantity, description, created_at
+                FROM points_log
+                WHERE card_id = :card_id
+                ORDER BY created_at DESC, id DESC
+                LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset;
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':card_id' => $cardId]);
+
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    public function countByCard($cardId): int {
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM points_log WHERE card_id = :card_id');
+        $stmt->execute([':card_id' => $cardId]);
+
+        return (int)$stmt->fetchColumn();
+    }
+
     public function countByMerchant($merchantId): int {
         $sql = 'SELECT COUNT(*) FROM points_log pl
                 JOIN loyalty_cards lc ON lc.id = pl.card_id

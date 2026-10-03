@@ -456,3 +456,11 @@ span.btn-secondary {
         max-width: 420px;
     }
 }
+
+/* link do extrato na tela do cliente: area de toque de 44px sem aumentar a tela */
+.customer-statement-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 0.9rem;
+}

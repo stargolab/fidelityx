@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\CustomerModel;
 use App\Models\LoyaltyCardModel;
 use App\Models\MerchantModel;
+use App\Models\PointsLogModel;
 use App\Models\RewardModel;
 use App\Support\Csrf;
 use App\Support\Paginator;
@@ -157,6 +158,30 @@ class MerchantController {
         View::render('merchant/customer', [
             'card'    => $card,
             'rewards' => $rewards,
+        ]);
+    }
+
+    // extrato do cliente: todas as movimentacoes dele nesta loja, paginadas.
+    // o cartao e buscado pelo lojista da sessao + telefone, entao nao ha como ver extrato de outra loja.
+    public function renderStatement() {
+        $merchantId = $this->authGuard();
+
+        $phone = PhoneValidator::sanitize($_GET['phone'] ?? '');
+        $card = PhoneValidator::isValid($phone)
+            ? (new LoyaltyCardModel($this->db))->findByMerchantAndPhone($merchantId, $phone)
+            : null;
+
+        if (!$card) {
+            redirect('merchant/dashboard', ['error' => 'cliente_nao_encontrado']);
+        }
+
+        $logModel = new PointsLogModel($this->db);
+        $paginator = new Paginator($logModel->countByCard((int)$card['id']), $_GET['page'] ?? 1, self::PER_PAGE);
+
+        View::render('merchant/statement', [
+            'card'      => $card,
+            'entries'   => $logModel->pageByCard((int)$card['id'], $paginator->perPage, $paginator->offset()),
+            'paginator' => $paginator,
         ]);
     }
 

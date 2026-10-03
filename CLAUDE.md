@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 FidelityX: SaaS de fidelidade para lojistas locais. PHP 8.1+ sem framework (MVC manual), MySQL/MariaDB via PDO, dependências Composer de produção: `vlucas/phpdotenv` e `chillerlan/php-qrcode` (QR do cartaz). Código, comentários, mensagens e commits em português (comentários em minúsculas e sem acento, no estilo existente).
 
+**Estado: só desenvolvimento, nada em produção ainda.** Mudanças de schema e de comportamento podem ser feitas sem período de transição nem compatibilidade com dados de produção; ainda assim, mudança de schema vem com migration em `database/migrations/` para os bancos locais do time.
+
 ## Comandos
 
 ```bash
@@ -18,13 +20,13 @@ composer test -- --testsuite Unit      # só os testes sem banco
 tsc                                    # compila src/ts -> public/js (tsconfig.json)
 ```
 
-Banco: `mysql -u root -p < database/schema.sql` em instalação nova; bancos anteriores ao MVP precisam de `database/migrations/001_mvp.sql` uma vez. Credenciais em `.env` (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`; `APP_URL` opcional: endereço público usado no QR do cartaz, vazio usa o host da requisição). No ambiente local do autor o PHP e o MySQL vêm do XAMPP (`C:\xampp\mysql\bin\mysql.exe`).
+Banco: `mysql -u root -p < database/schema.sql` em instalação nova. Banco já existente: rode, em ordem e uma vez cada, as migrations de `database/migrations/` que ainda não rodou (`001_mvp`, `002_rate_limit`, `003_lgpd`); o `schema.sql` sempre reflete o estado final. Credenciais em `.env` (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`; `APP_URL` opcional: endereço público usado no QR do cartaz, vazio usa o host da requisição). No ambiente local do autor o PHP e o MySQL vêm do XAMPP (`C:\xampp\mysql\bin\mysql.exe`).
 
 **Testes (PHPUnit 10.5)** em `tests/`: `Unit` (validators, sem banco), `Integration` (models e `RateLimiter` contra o banco) e `Feature` (fluxo completo por HTTP: o teste sobe um `php -S` próprio numa porta livre e usa cookie + `_csrf` como o navegador). O bootstrap **apaga e recria** o banco `fidelityx_test` a partir do `schema.sql` (o `phpunit.xml` força esse nome e o bootstrap recusa nome que não termine em `_test`); credenciais vêm do `.env` local ou das variáveis de ambiente no CI. Cada teste começa com as tabelas vazias (`DatabaseTestCase`). Regra nova de negócio ou bug corrigido = teste junto. O GitHub Actions (`.github/workflows/ci.yml`) roda lint + PHPUnit em PHP 8.1 e 8.3 com MySQL 8 em todo PR e push na `main`. O MySQL do XAMPP roda sem `sql_mode` estrito (trunca texto longo sem erro), o do CI é estrito: não escreva teste que dependa disso.
 
 ## Arquitetura
 
-**Roteamento** — tudo entra por `public/index.php` com `?url=dominio/acao`. Um `switch` no domínio (`merchant`, `customer`) instancia o controller e um `match` na ação chama o método `render*()`. Rota nova = novo braço no `match` + método no controller. O `index.php` abre a conexão com o banco antes de rotear, então sem MySQL toda rota devolve 503.
+**Roteamento** — tudo entra por `public/index.php` com `?url=dominio/acao`. Um `switch` no domínio (`merchant`, `customer`, mais `home` e `privacy` sem ação) instancia o controller e um `match` na ação chama o método `render*()`. Rota nova = novo braço no `match` + método no controller. O `index.php` abre a conexão com o banco antes de rotear, então sem MySQL toda rota devolve 503.
 
 **Padrão de controller** — cada rota tem um `renderX()` público: no GET chama `View::render(...)`, no POST delega para um `handleX()` privado. Todo `handle*` começa com `Csrf::verify()` (aborta com 403). Rotas privadas começam com `$merchantId = $this->authGuard()`; o `merchant_id` vem **sempre da sessão**, nunca do formulário, e todo model filtra por ele (isolamento entre lojas).
 
@@ -37,12 +39,13 @@ Banco: `mysql -u root -p < database/schema.sql` em instalação nova; bancos ant
 **Erros** — `ErrorController::handle($code)` renderiza `views/errors/{code}.php` (fallback `default.php`). Exceções não tratadas são logadas e viram 500 pelo `set_exception_handler` do `index.php`; detalhes técnicos vão só para `error_log`.
 
 **Modelo de dados** (detalhes em `docs/db/schema-explanation.md`):
-- `customers` é global e único por telefone (só dígitos, 10–11, via `PhoneValidator::sanitize`); o mesmo cliente pode ter cartão em várias lojas.
-- `loyalty_cards` = par (merchant, customer) único, guarda `current_points` e `total_accumulated`. `findOrCreate` usa `ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`.
+- `customers` é **só o telefone**, global e único (só dígitos, 10–11, via `PhoneValidator::sanitize`); o mesmo cliente pode ter cartão em várias lojas.
+- `loyalty_cards` = par (merchant, customer) único. Guarda o que o cliente deu **a esta loja** (`customer_name`, `consent_at`, `consent_version`), o saldo (`current_points`, `total_accumulated`) e `anonymized_at`. `findOrCreate` usa `ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)` e nunca troca nome nem consentimento de cartão existente.
+- **LGPD (regra da task 11, `docs/adr/002-lgpd-dados-por-loja.md`)**: nenhuma tela de uma loja mostra dado vindo de outra. Telefone sem cartão nesta loja vai sempre para o cadastro rápido, seja novo ou de outra loja: nunca crie caminho que diferencie os dois. Consentimento é gravado no cadastro com `Privacy::VERSION` (mudou o texto de `views/privacy.php` de forma relevante, troque a versão). Exclusão = `LoyaltyCardModel::anonymize` (cartão fica só para os relatórios, telefone some quando não há mais cartão).
 - `points_log` é o histórico (`earn`/`redeem`, `reward_id` nos resgates). Toda mudança de saldo passa por `LoyaltyCardModel::addPoints` / `redeem`, que atualizam o cartão e gravam o log na mesma transação; `redeem` usa `SELECT ... FOR UPDATE` para impedir gasto duplo. Não altere saldo fora desses métodos.
 - `merchants` guarda CPF **ou** CNPJ (normalizados, UNIQUE). Validação só por dígito verificador, sem API externa (ver `docs/adr/001-documents-validation.md`).
 
-**Área pública** — a home (`HomeController`, view `views/home.php`, `public/css/home.css`) apresenta o produto e leva ao cadastro; lojista logado vai direto ao painel. `customer/balance` consulta saldo pelo telefone sem login, com limite por IP (5/min → 429) e exibindo só o primeiro nome do cliente.
+**Área pública** — a home (`HomeController`, view `views/home.php`, `public/css/home.css`) apresenta o produto e leva ao cadastro; lojista logado vai direto ao painel. `customer/balance&loja=CODIGO` consulta o saldo pelo telefone sem login, **só na loja do código** (`merchants.public_code`, impresso no cartaz e embutido no QR), com limite por IP (5/min → 429) e exibindo só o primeiro nome do cartão daquela loja. Sem código válido, a página pede o código (nunca lista lojas). `privacy` é a política de privacidade (rascunho pendente de revisão jurídica).
 
 **Limite de tentativas** — `App\Support\RateLimiter` conta tentativas na tabela `rate_limit_hits` (chave guardada só como hash SHA-256), então o limite sobrevive a apagar o cookie. Usos: login (5 erros em 15 min por e-mail ou IP → 429) e consulta pública (5/min por IP). O IP vem de `REMOTE_ADDR`; atrás de proxy/load balancer isso precisa ser revisto.
 

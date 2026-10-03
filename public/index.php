@@ -65,6 +65,10 @@ switch ($domain) {
         (new \App\Controllers\HomeController())->render();
         break;
 
+    case 'privacy':
+        (new \App\Controllers\HomeController())->renderPrivacy();
+        break;
+
     case 'customer':
         // exemplo do psr-4 citado acima, sem require_once
         $controller = new \App\Controllers\CustomerController($db);

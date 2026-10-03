@@ -3,7 +3,7 @@
 <?php require __DIR__ . '/../partials/merchant-header.php'; ?>
 
 <section class="card">
-    <p class="muted">Nenhuma loja tem cadastro com este telefone.</p>
+    <p class="muted">Cliente novo nesta loja.</p>
     <p class="customer-new-phone"><?= e(format_phone($phone)) ?></p>
 
     <form action="<?= e(url('merchant/customer-new')) ?>" method="POST">
@@ -19,7 +19,8 @@
         <div class="form-group">
             <label class="checkbox">
                 <input type="checkbox" name="consent" value="1" required>
-                <span>O cliente autorizou guardar o nome e o telefone para o programa de pontos.</span>
+                <span>O cliente autorizou esta loja a guardar o nome e o telefone dele para o programa de pontos
+                    (<a href="<?= e(url('privacy')) ?>" target="_blank" rel="noopener">política de privacidade</a>).</span>
             </label>
         </div>
 

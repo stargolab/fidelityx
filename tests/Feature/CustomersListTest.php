@@ -9,8 +9,8 @@ final class CustomersListTest extends HttpTestCase {
     private function seedCustomers(int $merchant, int $count): void {
         for ($i = 1; $i <= $count; $i++) {
             $phone = '1191' . str_pad((string)$i, 7, '0', STR_PAD_LEFT);
-            $this->db->exec("INSERT INTO customers (name, phone) VALUES ('Cliente $i', '$phone')");
-            $this->db->exec("INSERT INTO loyalty_cards (merchant_id, customer_id) VALUES ($merchant, LAST_INSERT_ID())");
+            $this->db->exec("INSERT INTO customers (phone) VALUES ('$phone')");
+            $this->db->exec("INSERT INTO loyalty_cards (merchant_id, customer_id, customer_name) VALUES ($merchant, LAST_INSERT_ID(), 'Cliente $i')");
         }
     }
 

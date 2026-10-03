@@ -8,8 +8,8 @@ use Tests\Support\HttpTestCase;
 // pagina de relatorios: indicadores e historico de movimentacoes
 final class ReportsTest extends HttpTestCase {
     private function cardFor(int $merchant, string $name, string $phone): int {
-        $this->db->exec("INSERT INTO customers (name, phone) VALUES ('$name', '$phone')");
-        return (new LoyaltyCardModel($this->db))->findOrCreate($merchant, (int)$this->db->lastInsertId());
+        $this->db->exec("INSERT INTO customers (phone) VALUES ('$phone')");
+        return (new LoyaltyCardModel($this->db))->findOrCreate($merchant, (int)$this->db->lastInsertId(), "$name", \App\Support\Privacy::VERSION);
     }
 
     public function testMostraIndicadoresEHistorico(): void {

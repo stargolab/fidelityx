@@ -11,9 +11,9 @@ final class RewardProgressScreenTest extends HttpTestCase {
         $m = $this->createMerchant('loja@teste.test');
         $this->createReward($m, 'Cafe', 20);
         $this->createReward($m, 'Suco', 50);
-        $this->db->exec("INSERT INTO customers (name, phone) VALUES ('Bia Souza', '11911110001')");
+        $this->db->exec("INSERT INTO customers (phone) VALUES ('11911110001')");
         $cards = new LoyaltyCardModel($this->db);
-        $card = $cards->findOrCreate($m, (int)$this->db->lastInsertId());
+        $card = $cards->findOrCreate($m, (int)$this->db->lastInsertId(), "Bia Souza", \App\Support\Privacy::VERSION);
         if ($points > 0) {
             $cards->addPoints($card, $points, 'Compra');
         }
@@ -21,9 +21,9 @@ final class RewardProgressScreenTest extends HttpTestCase {
     }
 
     public function testConsultaPublicaMostraFaltamPontosEBarra(): void {
-        $this->setUpCustomer(30);
+        $code = $this->publicCode($this->setUpCustomer(30));
 
-        $this->post('customer/balance', ['phone' => '11911110001']);
+        $this->post('customer/balance', ['phone' => '11911110001', 'loja' => $code], true, 'customer/balance&loja=' . $code);
         $this->assertMatchesRegularExpression('/Faltam\s*<strong>20 pontos<\/strong>\s*para\s*<strong>Suco<\/strong>/', $this->lastBody);
         $this->assertStringContainsString('aria-valuenow="60"', $this->lastBody);
         $this->assertStringContainsString('width: 60%', $this->lastBody);
@@ -58,8 +58,8 @@ final class RewardProgressScreenTest extends HttpTestCase {
 
     public function testLojaSemPremioNaoMostraBarra(): void {
         $m = $this->createMerchant('loja@teste.test');
-        $this->db->exec("INSERT INTO customers (name, phone) VALUES ('Bia', '11911110001')");
-        (new LoyaltyCardModel($this->db))->findOrCreate($m, (int)$this->db->lastInsertId());
+        $this->db->exec("INSERT INTO customers (phone) VALUES ('11911110001')");
+        (new LoyaltyCardModel($this->db))->findOrCreate($m, (int)$this->db->lastInsertId(), "Bia", \App\Support\Privacy::VERSION);
         $this->loginAs('loja@teste.test');
 
         $this->get('merchant/customer&phone=11911110001');
@@ -70,8 +70,8 @@ final class RewardProgressScreenTest extends HttpTestCase {
         $m = $this->createMerchant('loja@teste.test');
         $this->createReward($m, 'Cafe', 20, false);
         $this->createReward($m, 'Suco', 50);
-        $this->db->exec("INSERT INTO customers (name, phone) VALUES ('Bia', '11911110001')");
-        (new LoyaltyCardModel($this->db))->findOrCreate($m, (int)$this->db->lastInsertId());
+        $this->db->exec("INSERT INTO customers (phone) VALUES ('11911110001')");
+        (new LoyaltyCardModel($this->db))->findOrCreate($m, (int)$this->db->lastInsertId(), "Bia", \App\Support\Privacy::VERSION);
         $this->loginAs('loja@teste.test');
 
         $this->get('merchant/customer&phone=11911110001');

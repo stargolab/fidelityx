@@ -24,6 +24,7 @@ $flashMessages = [
         'cliente_nao_encontrado'=> 'Nenhum cliente com esse telefone nesta loja.',
         'premio_invalido'       => 'Prêmio inválido ou inativo.',
         'saldo_insuficiente'    => 'Saldo de pontos insuficiente para este prêmio.',
+        'confirmacao_obrigatoria' => 'Marque a confirmação de que o cliente pediu a exclusão.',
     ],
     'success' => [
         'cadastrado'        => 'Cadastro realizado! Faça login para continuar.',
@@ -37,7 +38,8 @@ $flashMessages = [
         'premio_excluido'   => 'Prêmio excluído.',
         'premio_desativado_resgatado' => 'Este prêmio já foi resgatado, então foi desativado em vez de apagado (o histórico continua completo).',
         'resgate_realizado' => 'Resgate realizado com sucesso.',
-        'cliente_adicionado' => 'Cliente adicionado à sua loja.',
+        'consentimento_registrado' => 'Consentimento registrado.',
+        'cliente_excluido'  => 'Dados do cliente excluídos.',
     ],
 ];
 

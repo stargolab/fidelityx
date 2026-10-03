@@ -35,7 +35,13 @@
                     <?php foreach ($entries as $entry): ?>
                         <tr>
                             <td><?= e(format_datetime($entry['created_at'])) ?></td>
-                            <td><a href="<?= e(url('merchant/statement', ['phone' => $entry['phone']])) ?>"><?= e($entry['customer_name']) ?></a></td>
+                            <td>
+                                <?php if ($entry['phone'] === null): ?>
+                                    <span class="muted">Cliente excluído</span>
+                                <?php else: ?>
+                                    <a href="<?= e(url('merchant/statement', ['phone' => $entry['phone']])) ?>"><?= e($entry['customer_name']) ?></a>
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <?php if ($entry['type'] === 'earn'): ?>
                                     <span class="badge badge-earn">Ganhou</span>

@@ -14,7 +14,8 @@ final class MasksTest extends HttpTestCase {
     }
 
     public function testConsultaPublicaTemMascaraDeTelefone(): void {
-        $this->get('customer/balance');
+        $code = $this->publicCode($this->createMerchant('mascara@teste.test'));
+        $this->get('customer/balance&loja=' . $code);
         $this->assertStringContainsString('data-mask="phone"', $this->lastBody);
         $this->assertStringContainsString('src="/js/masks.js"', $this->lastBody);
     }

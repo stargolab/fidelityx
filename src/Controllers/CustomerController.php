@@ -3,14 +3,18 @@
 namespace App\Controllers;
 
 use App\Models\LoyaltyCardModel;
+use App\Models\MerchantModel;
 use App\Models\RewardModel;
 use App\Support\Csrf;
+use App\Support\PublicCode;
 use App\Support\RateLimiter;
 use App\Support\RewardProgress;
 use App\Support\View;
 use App\Validators\PhoneValidator;
 
-// area publica do cliente (sem login): consulta de saldo pelo telefone
+// area publica do cliente (sem login): consulta de saldo pelo telefone, UMA loja por vez.
+// a loja vem do codigo publico (?loja=, impresso no cartaz e embutido no QR). assim quem sabe o telefone
+// de alguem nao descobre em quais lojas a pessoa compra (LGPD, docs/adr/002).
 class CustomerController {
     // limite por ip guardado no banco, pra dificultar varredura de telefones.
     // fica no banco (e nao na sessao) pra nao zerar quando a pessoa apaga o cookie.
@@ -24,41 +28,52 @@ class CustomerController {
     }
 
     public function renderBalance() {
-        $cards = null;
-        $phone = '';
-        $error = null;
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
+        if ($isPost) {
             Csrf::verify();
+        }
 
+        $rawCode = $isPost ? ($_POST['loja'] ?? '') : ($_GET['loja'] ?? '');
+        $code = PublicCode::normalize($rawCode);
+        $store = $code ? (new MerchantModel($this->db))->findActiveByPublicCode($code) : false;
+
+        // sem loja valida: pede o codigo da loja (nada de listar lojas)
+        if (!$store) {
+            View::render('customer/balance', [
+                'store' => null,
+                'error' => trim((string)$rawCode) !== '' ? 'loja_invalida' : null,
+            ]);
+            return;
+        }
+
+        $data = ['store' => $store, 'phone' => '', 'card' => null, 'error' => null];
+
+        if ($isPost) {
             if ($this->tooManyLookups(RateLimiter::clientIp())) {
                 (new ErrorController())->handle(429);
                 return;
             }
 
             $phone = PhoneValidator::sanitize($_POST['phone'] ?? '');
+            $data['phone'] = $phone;
 
             if (!PhoneValidator::isValid($phone)) {
-                $error = 'telefone_invalido';
+                $data['error'] = 'telefone_invalido';
             } else {
-                $cards = (new LoyaltyCardModel($this->db))->listByPhone($phone);
-                $rewardModel = new RewardModel($this->db);
+                $card = (new LoyaltyCardModel($this->db))->findByMerchantAndPhone((int)$store['id'], $phone);
+                $data['card'] = $card ?: false;
 
-                foreach ($cards as &$card) {
-                    $card['rewards'] = $rewardModel->listByMerchant($card['merchant_id'], true);
-                    $card['progress'] = RewardProgress::next((int)$card['current_points'], $card['rewards']);
+                if ($card) {
+                    $rewards = (new RewardModel($this->db))->listByMerchant((int)$store['id'], true);
+                    $data['rewards'] = $rewards;
+                    $data['progress'] = RewardProgress::next((int)$card['current_points'], $rewards);
+                    // so o primeiro nome, pra nao expor dados de quem digitou o telefone errado
+                    $data['firstName'] = strtok((string)$card['customer_name'], ' ');
                 }
-                unset($card);
             }
         }
 
-        View::render('customer/balance', [
-            'phone' => $phone,
-            'cards' => $cards,
-            'error' => $error,
-            // mostra so o primeiro nome, pra nao expor dados de quem digitou o telefone errado
-            'firstName' => $cards ? strtok($cards[0]['customer_name'], ' ') : null,
-        ]);
+        View::render('customer/balance', $data);
     }
 
     // conta a consulta atual e diz se o ip passou do limite da janela

@@ -35,8 +35,8 @@ final class PosterTest extends HttpTestCase {
     public function testGuiaDePrimeirosPassosSugereOCartazMasNaoSegura(): void {
         $m = $this->createMerchant('loja@teste.test');
         $this->createReward($m, 'Cafe', 20);
-        $this->db->exec("INSERT INTO customers (name, phone) VALUES ('Bia', '11911110001')");
-        $this->db->exec("INSERT INTO loyalty_cards (merchant_id, customer_id) SELECT $m, id FROM customers");
+        $this->db->exec("INSERT INTO customers (phone) VALUES ('11911110001')");
+        $this->db->exec("INSERT INTO loyalty_cards (merchant_id, customer_id, customer_name) SELECT $m, id, 'Bia' FROM customers");
         $this->db->exec("INSERT INTO points_log (card_id, type, quantity, description) SELECT id, 'earn', 5, 'Compra' FROM loyalty_cards");
         $this->loginAs('loja@teste.test');
 

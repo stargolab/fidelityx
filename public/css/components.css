@@ -157,3 +157,9 @@
 .form-back a {
     color: var(--text-muted);
 }
+
+.alert-warning {
+    background: var(--warning-soft);
+    border-color: var(--warning);
+    color: var(--warning-text);
+}

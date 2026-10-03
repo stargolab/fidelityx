@@ -76,8 +76,8 @@ final class RewardsManagementTest extends HttpTestCase {
         $this->loginAs('loja@teste.test');
 
         // um resgate do "Usado"
-        $this->db->exec("INSERT INTO customers (name, phone) VALUES ('Bia', '11911110001')");
-        $this->db->exec("INSERT INTO loyalty_cards (merchant_id, customer_id, current_points) SELECT $merchant, id, 50 FROM customers");
+        $this->db->exec("INSERT INTO customers (phone) VALUES ('11911110001')");
+        $this->db->exec("INSERT INTO loyalty_cards (merchant_id, customer_id, customer_name, current_points) SELECT $merchant, id, 'Bia', 50 FROM customers");
         $this->post('merchant/customer', ['action' => 'redeem', 'phone' => '11911110001', 'reward_id' => $usado['id']], true, 'merchant/customer&phone=11911110001');
 
         [, $location] = $this->post('merchant/rewards', ['action' => 'delete', 'reward_id' => $livre['id']]);

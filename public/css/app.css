@@ -356,15 +356,7 @@ th.num {
     letter-spacing: 0.03em;
 }
 
-.confirm-name {
-    font-size: 1.5rem;
-    font-weight: 800;
-    margin-top: 0.5rem;
-}
 
-.confirm-phone {
-    margin-bottom: 1.5rem;
-}
 
 @media (min-width: 640px) {
     .phone-search {
@@ -660,4 +652,79 @@ span.btn-secondary {
 
 .poster-help {
     margin-bottom: 1rem;
+}
+
+/* consulta publica (uma loja por vez) */
+.balance-store {
+    color: var(--text-main);
+}
+
+.balance-help {
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+}
+
+.balance-result {
+    margin-top: 2rem;
+}
+
+.balance-result > p {
+    margin-bottom: 1rem;
+}
+
+.balance-card {
+    padding: 1rem;
+}
+
+.balance-card-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.balance-rewards {
+    margin: 0.75rem 0 0 1.25rem;
+    font-size: 0.85rem;
+}
+
+/* aviso de consentimento pendente (cadastro antigo) */
+.consent-pending {
+    border-color: var(--warning);
+    background: var(--warning-soft);
+}
+
+.consent-pending h2 {
+    color: var(--warning-text);
+}
+
+.consent-pending p {
+    margin-bottom: 1rem;
+}
+
+/* acao destrutiva (excluir dados): fechada por padrao, abre com um toque */
+.danger-zone summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--error-text);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.danger-zone[open] summary {
+    margin-bottom: 0.75rem;
+}
+
+.danger-zone p {
+    margin-bottom: 1rem;
+}
+
+.poster-code {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.poster-code strong {
+    font-size: 1.25rem;
+    letter-spacing: 0.15em;
 }

@@ -12,22 +12,29 @@ class LoyaltyCardModel {
     }
 
     // devolve o id do cartao do cliente nesta loja, criando se ainda nao existir.
-    // o ON DUPLICATE KEY com LAST_INSERT_ID(id) faz o lastInsertId() devolver o id existente.
-    public function findOrCreate($merchantId, $customerId) {
-        $sql = 'INSERT INTO loyalty_cards (merchant_id, customer_id) VALUES (:merchant_id, :customer_id)
+    // o nome e o que o cliente informou a ESTA loja. com $consentVersion, grava o consentimento agora.
+    // o ON DUPLICATE KEY com LAST_INSERT_ID(id) faz o lastInsertId() devolver o id existente
+    // (cartao que ja existe nao tem o nome nem o consentimento trocados).
+    public function findOrCreate($merchantId, $customerId, ?string $customerName = null, ?string $consentVersion = null) {
+        $sql = 'INSERT INTO loyalty_cards (merchant_id, customer_id, customer_name, consent_at, consent_version)
+                VALUES (:merchant_id, :customer_id, :customer_name,
+                        CASE WHEN :v1 IS NULL THEN NULL ELSE CURRENT_TIMESTAMP END, :v2)
                 ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)';
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
-            ':merchant_id' => $merchantId,
-            ':customer_id' => $customerId,
+            ':merchant_id'   => $merchantId,
+            ':customer_id'   => $customerId,
+            ':customer_name' => $customerName,
+            ':v1'            => $consentVersion,
+            ':v2'            => $consentVersion,
         ]);
 
         return (int)$this->db->lastInsertId();
     }
 
-    // cartao do cliente (pelo telefone) nesta loja
+    // cartao do cliente (pelo telefone) nesta loja. cartao anonimizado nao tem mais telefone, entao nao aparece.
     public function findByMerchantAndPhone($merchantId, $phone) {
-        $sql = 'SELECT lc.id, lc.current_points, lc.total_accumulated, c.name AS customer_name, c.phone
+        $sql = 'SELECT lc.id, lc.current_points, lc.total_accumulated, lc.customer_name, lc.consent_at, lc.consent_version, c.phone
                 FROM loyalty_cards lc
                 JOIN customers c ON c.id = lc.customer_id
                 WHERE lc.merchant_id = :merchant_id AND c.phone = :phone';
@@ -110,7 +117,7 @@ class LoyaltyCardModel {
 
         // "\x5c" e a barra invertida (o escape padrao do LIKE no MySQL)
         $escaped = str_replace(["\x5c", '%', '_'], ["\x5c\x5c", "\x5c%", "\x5c_"], $search);
-        return [' AND c.name LIKE :q', [':q' => '%' . $escaped . '%']];
+        return [' AND lc.customer_name LIKE :q', [':q' => '%' . $escaped . '%']];
     }
 
     public function countByMerchant($merchantId, string $search = ''): int {
@@ -127,7 +134,7 @@ class LoyaltyCardModel {
     // uma pagina de clientes da loja (com busca opcional), do uso mais recente pro mais antigo
     public function searchByMerchant($merchantId, string $search, int $limit, int $offset) {
         [$where, $params] = $this->searchClause($search);
-        $sql = 'SELECT c.name, c.phone, lc.current_points, lc.total_accumulated, lc.last_use_at
+        $sql = 'SELECT lc.customer_name AS name, c.phone, lc.current_points, lc.total_accumulated, lc.last_use_at
                 FROM loyalty_cards lc
                 JOIN customers c ON c.id = lc.customer_id
                 WHERE lc.merchant_id = :merchant_id' . $where . '
@@ -139,18 +146,62 @@ class LoyaltyCardModel {
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    // consulta publica: cartoes do cliente em todas as lojas
-    public function listByPhone($phone) {
-        $sql = 'SELECT lc.merchant_id, lc.current_points, m.store_name, c.name AS customer_name
-                FROM loyalty_cards lc
-                JOIN customers c ON c.id = lc.customer_id
-                JOIN merchants m ON m.id = lc.merchant_id
-                WHERE c.phone = :phone AND m.status = \'active\'
-                ORDER BY m.store_name';
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([':phone' => $phone]);
+    // registra o consentimento de um cartao antigo (criado antes de o consentimento ser gravado)
+    public function recordConsent($cardId, string $version) {
+        $stmt = $this->db->prepare(
+            'UPDATE loyalty_cards SET consent_at = CURRENT_TIMESTAMP, consent_version = :version
+             WHERE id = :id AND anonymized_at IS NULL'
+        );
+        $stmt->execute([':version' => $version, ':id' => $cardId]);
+    }
 
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    // exclusao a pedido do cliente (LGPD), tudo ou nada:
+    // - o cartao perde nome, telefone (customer_id), consentimento e saldo; fica so como numero nos relatorios
+    // - as descricoes de ganho (texto livre do lojista, pode ter dado pessoal) sao trocadas; os resgates
+    //   ficam ("Resgate: <premio>" nao identifica ninguem)
+    // - o telefone (customers) e apagado quando nao sobra cartao dele em nenhuma loja
+    // devolve false se o cartao nao for desta loja ou ja estiver anonimizado.
+    public function anonymize($cardId, $merchantId): bool {
+        $this->db->beginTransaction();
+        try {
+            $stmt = $this->db->prepare(
+                'SELECT customer_id FROM loyalty_cards
+                 WHERE id = :id AND merchant_id = :merchant_id AND anonymized_at IS NULL
+                 FOR UPDATE'
+            );
+            $stmt->execute([':id' => $cardId, ':merchant_id' => $merchantId]);
+            $customerId = $stmt->fetchColumn();
+
+            if ($customerId === false) {
+                $this->db->rollBack();
+                return false;
+            }
+
+            $this->db->prepare(
+                'UPDATE loyalty_cards
+                 SET customer_id = NULL, customer_name = NULL, consent_at = NULL, consent_version = NULL,
+                     current_points = 0, anonymized_at = CURRENT_TIMESTAMP
+                 WHERE id = :id'
+            )->execute([':id' => $cardId]);
+
+            $this->db->prepare(
+                "UPDATE points_log SET description = 'Cliente excluído' WHERE card_id = :id AND type = 'earn'"
+            )->execute([':id' => $cardId]);
+
+            if ($customerId !== null) {
+                // so apaga o telefone se nenhuma outra loja ainda tem cartao com ele
+                $this->db->prepare(
+                    'DELETE FROM customers
+                     WHERE id = :c1 AND NOT EXISTS (SELECT 1 FROM loyalty_cards WHERE customer_id = :c2)'
+                )->execute([':c1' => $customerId, ':c2' => $customerId]);
+            }
+
+            $this->db->commit();
+            return true;
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
     }
 
     private function log($cardId, $type, $quantity, $description, $rewardId) {

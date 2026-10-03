@@ -32,9 +32,9 @@ final class OnboardingTest extends HttpTestCase {
     public function testGuiaSomeQuandoTudoEstaFeito(): void {
         $m = $this->createMerchant('loja@teste.test');
         $this->createReward($m, 'Cafe', 20);
-        $this->db->exec("INSERT INTO customers (name, phone) VALUES ('Bia', '11911110001')");
+        $this->db->exec("INSERT INTO customers (phone) VALUES ('11911110001')");
         $cards = new LoyaltyCardModel($this->db);
-        $cards->addPoints($cards->findOrCreate($m, (int)$this->db->lastInsertId()), 5, 'Compra');
+        $cards->addPoints($cards->findOrCreate($m, (int)$this->db->lastInsertId(), "Bia", \App\Support\Privacy::VERSION), 5, 'Compra');
         $this->loginAs('loja@teste.test');
 
         $this->get('merchant/dashboard');

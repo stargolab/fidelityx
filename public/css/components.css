@@ -28,14 +28,14 @@
 
 .form-group input:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.3);
+    box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 /* Botão */
 .btn-primary {
     width: 100%;
     background: var(--primary);
-    color: #111827;
+    color: var(--on-primary);
     /* Texto escuro no botão claro */
     border: none;
     padding: 1rem;
@@ -67,14 +67,20 @@
 .form-group select:focus,
 .form-group textarea:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.3);
+    box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
-/* Linha com 2+ campos lado a lado (quebra sozinha no mobile) */
+/* Linha com 2+ campos: um embaixo do outro no celular, lado a lado a partir de 640px */
 .form-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: 1fr;
     gap: 0 15px;
+}
+
+@media (min-width: 640px) {
+    .form-row {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
 }
 
 /* Divisor com titulo no meio */
@@ -106,15 +112,15 @@
 }
 
 .alert-error {
-    background: rgba(248, 113, 113, 0.1);
-    border-color: #f87171;
-    color: #fca5a5;
+    background: var(--error-soft);
+    border-color: var(--error);
+    color: var(--error-text);
 }
 
 .alert-success {
-    background: rgba(52, 211, 153, 0.1);
-    border-color: #34d399;
-    color: #6ee7b7;
+    background: var(--success-soft);
+    border-color: var(--success);
+    color: var(--success-text);
 }
 
 /* checkbox com texto ao lado (o input geral de .form-group ocupa 100%, aqui nao) */
@@ -122,6 +128,7 @@
     display: flex;
     align-items: flex-start;
     gap: 0.6rem;
+    min-height: 44px;
     font-weight: 400;
     cursor: pointer;
 }

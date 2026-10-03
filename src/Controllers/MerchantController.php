@@ -5,9 +5,13 @@ namespace App\Controllers;
 use App\Models\CustomerModel;
 use App\Models\LoyaltyCardModel;
 use App\Models\MerchantModel;
+use App\Models\PointsLogModel;
 use App\Models\RewardModel;
 use App\Support\Csrf;
+use App\Support\Paginator;
+use App\Support\QrSvg;
 use App\Support\RateLimiter;
+use App\Support\RewardProgress;
 use App\Support\View;
 use App\Validators\DocumentValidator;
 use App\Validators\PhoneValidator;
@@ -29,6 +33,7 @@ class MerchantController {
     ];
 
     private const MAX_POINTS_PER_ENTRY = 10000;
+    private const PER_PAGE = 20;
     private const MAX_LOGIN_FAILURES = 5;
     private const LOGIN_WINDOW_SECONDS = 900;
 
@@ -83,7 +88,7 @@ class MerchantController {
         }
 
         if (!isset($_GET['phone'])) {
-            View::render('merchant/dashboard');
+            View::render('merchant/dashboard', ['steps' => $this->onboardingSteps($merchantId)]);
             return;
         }
 
@@ -106,6 +111,76 @@ class MerchantController {
             'phone'     => $phone,
             'firstName' => strtok($customer['name'], ' '),
         ]);
+    }
+
+    // guia de primeiros passos da home: cada passo sabe se ja foi feito pelos dados da propria loja.
+    // devolve lista vazia quando tudo esta feito (a view some com o guia).
+    private function onboardingSteps(int $merchantId): array {
+        $steps = [
+            [
+                'label' => 'Cadastre seu primeiro prêmio',
+                'hint'  => 'É o que o cliente vai querer conquistar com os pontos.',
+                'url'   => url('merchant/rewards'),
+                'cta'   => 'Cadastrar prêmio',
+                'done'  => (new RewardModel($this->db))->countByMerchant($merchantId) > 0,
+            ],
+            [
+                'label' => 'Lance os primeiros pontos',
+                'hint'  => 'Digite o telefone de um cliente no campo abaixo e lance os pontos da compra.',
+                'url'   => url('merchant/dashboard') . '#phone',
+                'cta'   => 'Buscar cliente',
+                'done'  => (new PointsLogModel($this->db))->countByMerchant($merchantId) > 0,
+            ],
+            [
+                // nao da pra saber se imprimiu: e uma dica (opcional) que nao segura o guia na tela
+                'label'    => 'Imprima o cartaz com o QR code',
+                'hint'     => 'O cliente aponta o celular e consulta os pontos sozinho.',
+                'url'      => url('merchant/poster'),
+                'cta'      => 'Abrir cartaz',
+                'done'     => false,
+                'optional' => true,
+            ],
+        ];
+
+        foreach ($steps as $step) {
+            if (!$step['done'] && empty($step['optional'])) {
+                return $steps;
+            }
+        }
+
+        return [];
+    }
+
+    // cartaz para imprimir: nome da loja + qr code que leva a consulta publica de saldo.
+    // o qr e gerado no servidor (svg), sem servico externo.
+    public function renderPoster() {
+        $this->authGuard();
+
+        $balanceUrl = $this->publicBaseUrl() . url('customer/balance');
+
+        View::render('merchant/poster', [
+            'balanceUrl' => $balanceUrl,
+            'qrSvg'      => QrSvg::svg($balanceUrl),
+        ]);
+    }
+
+    // endereco publico do sistema, para o qr apontar pro lugar certo.
+    // APP_URL do .env manda (atras de proxy o host da requisicao pode nao ser o publico);
+    // sem ele usa o host da requisicao.
+    private function publicBaseUrl(): string {
+        $configured = rtrim((string)($_ENV['APP_URL'] ?? ''), '/');
+        if ($configured !== '' && filter_var($configured, FILTER_VALIDATE_URL)
+            && in_array(parse_url($configured, PHP_URL_SCHEME), ['http', 'https'], true)) {
+            return $configured;
+        }
+
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = (string)($_SERVER['HTTP_HOST'] ?? '');
+        if (!preg_match('/^[A-Za-z0-9.-]+(:\d{1,5})?$/', $host)) {
+            $host = 'localhost';
+        }
+
+        return $scheme . '://' . $host;
     }
 
     // lojista confirmou o cliente de outra loja: cria o cartao desta loja e segue para a tela do cliente
@@ -145,16 +220,56 @@ class MerchantController {
             redirect('merchant/dashboard', ['error' => 'cliente_nao_encontrado']);
         }
 
-        // so os premios que o saldo ja paga
+        // so os premios que o saldo ja paga; o progresso olha todos os ativos (o proximo ainda nao pago)
         $balance = (int)$card['current_points'];
+        $activeRewards = (new RewardModel($this->db))->listByMerchant($merchantId, true);
         $rewards = array_values(array_filter(
-            (new RewardModel($this->db))->listByMerchant($merchantId, true),
+            $activeRewards,
             fn($reward) => (int)$reward['points_cost'] <= $balance
         ));
 
         View::render('merchant/customer', [
-            'card'    => $card,
-            'rewards' => $rewards,
+            'card'     => $card,
+            'rewards'  => $rewards,
+            'progress' => RewardProgress::next($balance, $activeRewards),
+        ]);
+    }
+
+    // relatorios: indicadores da loja + historico de todas as movimentacoes, paginado
+    public function renderReports() {
+        $merchantId = $this->authGuard();
+
+        $logModel = new PointsLogModel($this->db);
+        $paginator = new Paginator($logModel->countByMerchant($merchantId), $_GET['page'] ?? 1, self::PER_PAGE);
+
+        View::render('merchant/reports', [
+            'stats'     => $logModel->statsByMerchant($merchantId),
+            'entries'   => $logModel->pageByMerchant($merchantId, $paginator->perPage, $paginator->offset()),
+            'paginator' => $paginator,
+        ]);
+    }
+
+    // extrato do cliente: todas as movimentacoes dele nesta loja, paginadas.
+    // o cartao e buscado pelo lojista da sessao + telefone, entao nao ha como ver extrato de outra loja.
+    public function renderStatement() {
+        $merchantId = $this->authGuard();
+
+        $phone = PhoneValidator::sanitize($_GET['phone'] ?? '');
+        $card = PhoneValidator::isValid($phone)
+            ? (new LoyaltyCardModel($this->db))->findByMerchantAndPhone($merchantId, $phone)
+            : null;
+
+        if (!$card) {
+            redirect('merchant/dashboard', ['error' => 'cliente_nao_encontrado']);
+        }
+
+        $logModel = new PointsLogModel($this->db);
+        $paginator = new Paginator($logModel->countByCard((int)$card['id']), $_GET['page'] ?? 1, self::PER_PAGE);
+
+        View::render('merchant/statement', [
+            'card'      => $card,
+            'entries'   => $logModel->pageByCard((int)$card['id'], $paginator->perPage, $paginator->offset()),
+            'paginator' => $paginator,
         ]);
     }
 
@@ -175,8 +290,15 @@ class MerchantController {
     public function renderCustomers() {
         $merchantId = $this->authGuard();
 
+        $search = mb_substr(trim((string)($_GET['q'] ?? '')), 0, 100);
+
+        $cardModel = new LoyaltyCardModel($this->db);
+        $paginator = new Paginator($cardModel->countByMerchant($merchantId, $search), $_GET['page'] ?? 1, self::PER_PAGE);
+
         View::render('merchant/customers', [
-            'customers' => (new LoyaltyCardModel($this->db))->listByMerchant($merchantId),
+            'customers' => $cardModel->searchByMerchant($merchantId, $search, $paginator->perPage, $paginator->offset()),
+            'paginator' => $paginator,
+            'search'    => $search,
         ]);
     }
 
@@ -438,7 +560,7 @@ class MerchantController {
         redirect('merchant/customer', ['phone' => $phone, 'success' => 'pontos_lancados']);
     }
 
-    // criar premio ou ativar/desativar um existente
+    // criar, ativar/desativar ou excluir premio
     private function handleRewards($merchantId, RewardModel $rewardModel) {
         Csrf::verify();
 
@@ -450,6 +572,67 @@ class MerchantController {
             redirect('merchant/rewards', ['success' => 'premio_atualizado']);
         }
 
+        if (($_POST['action'] ?? '') === 'delete') {
+            $rewardId = filter_var($_POST['reward_id'] ?? '', FILTER_VALIDATE_INT);
+            $result = $rewardId ? $rewardModel->deleteOrDeactivate($rewardId, $merchantId) : null;
+
+            redirect('merchant/rewards', match ($result) {
+                'deleted'     => ['success' => 'premio_excluido'],
+                'deactivated' => ['success' => 'premio_desativado_resgatado'],
+                default       => ['error' => 'premio_invalido'],
+            });
+        }
+
+        $fields = $this->readRewardFields();
+        if ($fields === null) {
+            redirect('merchant/rewards', ['error' => 'campos_invalidos']);
+        }
+
+        $rewardModel->create($merchantId, $fields['name'], $fields['description'], $fields['cost']);
+
+        redirect('merchant/rewards', ['success' => 'premio_criado']);
+    }
+
+    // tela de edicao do premio (nome, descricao e custo); o id vem na url e o dono e checado pela sessao
+    public function renderRewardEdit() {
+        $merchantId = $this->authGuard();
+        $rewardModel = new RewardModel($this->db);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handleRewardEdit($merchantId, $rewardModel);
+            return;
+        }
+
+        $rewardId = filter_var($_GET['id'] ?? '', FILTER_VALIDATE_INT);
+        $reward = $rewardId ? $rewardModel->findForMerchant($rewardId, $merchantId) : null;
+
+        if (!$reward) {
+            redirect('merchant/rewards', ['error' => 'premio_invalido']);
+        }
+
+        View::render('merchant/reward-edit', ['reward' => $reward]);
+    }
+
+    private function handleRewardEdit($merchantId, RewardModel $rewardModel) {
+        Csrf::verify();
+
+        $rewardId = filter_var($_POST['reward_id'] ?? '', FILTER_VALIDATE_INT);
+        if (!$rewardId || !$rewardModel->findForMerchant($rewardId, $merchantId)) {
+            redirect('merchant/rewards', ['error' => 'premio_invalido']);
+        }
+
+        $fields = $this->readRewardFields();
+        if ($fields === null) {
+            redirect('merchant/reward-edit', ['id' => $rewardId, 'error' => 'campos_invalidos']);
+        }
+
+        $rewardModel->update($rewardId, $merchantId, $fields['name'], $fields['description'], $fields['cost']);
+
+        redirect('merchant/rewards', ['success' => 'premio_editado']);
+    }
+
+    // nome, descricao e custo do formulario de premio; null se algo estiver invalido
+    private function readRewardFields(): ?array {
         $name        = trim((string)($_POST['name'] ?? ''));
         $description = trim((string)($_POST['description'] ?? ''));
         $cost        = filter_var($_POST['points_cost'] ?? '', FILTER_VALIDATE_INT, [
@@ -457,12 +640,10 @@ class MerchantController {
         ]);
 
         if ($name === '' || mb_strlen($name) > 120 || mb_strlen($description) > 255 || $cost === false) {
-            redirect('merchant/rewards', ['error' => 'campos_invalidos']);
+            return null;
         }
 
-        $rewardModel->create($merchantId, $name, $description === '' ? null : $description, $cost);
-
-        redirect('merchant/rewards', ['success' => 'premio_criado']);
+        return ['name' => $name, 'description' => $description === '' ? null : $description, 'cost' => $cost];
     }
 
     // barra quem nao esta logado e devolve o id do lojista da sessao.

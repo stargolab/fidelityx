@@ -58,8 +58,9 @@ $action = $urlParts[1] ?? null;
 switch ($domain) {
 
     case 'home':
-        // por enquanto a "home" é o login do lojista
-        redirect('merchant/login');
+        // apresentacao publica do produto (lojista logado vai direto pro painel)
+        (new \App\Controllers\HomeController())->render();
+        break;
 
     case 'customer':
         // exemplo do psr-4 citado acima, sem require_once
@@ -82,7 +83,11 @@ switch ($domain) {
             'logout'    => $controller->logout(),
             'dashboard' => $controller->renderDashboard(),
             'customer'  => $controller->renderCustomer(),
+            'statement' => $controller->renderStatement(),
+            'poster'    => $controller->renderPoster(),
+            'reports'   => $controller->renderReports(),
             'rewards'   => $controller->renderRewards(),
+            'reward-edit' => $controller->renderRewardEdit(),
             'customers' => $controller->renderCustomers(),
             default     => (new ErrorController())->handle(404),
         };

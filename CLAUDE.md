@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Projeto
 
-FidelityX: SaaS de fidelidade para lojistas locais. PHP 8.1+ sem framework (MVC manual), MySQL/MariaDB via PDO, única dependência Composer é `vlucas/phpdotenv`. Código, comentários, mensagens e commits em português (comentários em minúsculas e sem acento, no estilo existente).
+FidelityX: SaaS de fidelidade para lojistas locais. PHP 8.1+ sem framework (MVC manual), MySQL/MariaDB via PDO, dependências Composer de produção: `vlucas/phpdotenv` e `chillerlan/php-qrcode` (QR do cartaz). Código, comentários, mensagens e commits em português (comentários em minúsculas e sem acento, no estilo existente).
 
 ## Comandos
 
@@ -18,7 +18,7 @@ composer test -- --testsuite Unit      # só os testes sem banco
 tsc                                    # compila src/ts -> public/js (tsconfig.json)
 ```
 
-Banco: `mysql -u root -p < database/schema.sql` em instalação nova; bancos anteriores ao MVP precisam de `database/migrations/001_mvp.sql` uma vez. Credenciais em `.env` (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`). No ambiente local do autor o PHP e o MySQL vêm do XAMPP (`C:\xampp\mysql\bin\mysql.exe`).
+Banco: `mysql -u root -p < database/schema.sql` em instalação nova; bancos anteriores ao MVP precisam de `database/migrations/001_mvp.sql` uma vez. Credenciais em `.env` (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`; `APP_URL` opcional: endereço público usado no QR do cartaz, vazio usa o host da requisição). No ambiente local do autor o PHP e o MySQL vêm do XAMPP (`C:\xampp\mysql\bin\mysql.exe`).
 
 **Testes (PHPUnit 10.5)** em `tests/`: `Unit` (validators, sem banco), `Integration` (models e `RateLimiter` contra o banco) e `Feature` (fluxo completo por HTTP: o teste sobe um `php -S` próprio numa porta livre e usa cookie + `_csrf` como o navegador). O bootstrap **apaga e recria** o banco `fidelityx_test` a partir do `schema.sql` (o `phpunit.xml` força esse nome e o bootstrap recusa nome que não termine em `_test`); credenciais vêm do `.env` local ou das variáveis de ambiente no CI. Cada teste começa com as tabelas vazias (`DatabaseTestCase`). Regra nova de negócio ou bug corrigido = teste junto. O GitHub Actions (`.github/workflows/ci.yml`) roda lint + PHPUnit em PHP 8.1 e 8.3 com MySQL 8 em todo PR e push na `main`. O MySQL do XAMPP roda sem `sql_mode` estrito (trunca texto longo sem erro), o do CI é estrito: não escreva teste que dependa disso.
 
@@ -40,7 +40,7 @@ Banco: `mysql -u root -p < database/schema.sql` em instalação nova; bancos ant
 - `points_log` é o histórico (`earn`/`redeem`, `reward_id` nos resgates). Toda mudança de saldo passa por `LoyaltyCardModel::addPoints` / `redeem`, que atualizam o cartão e gravam o log na mesma transação; `redeem` usa `SELECT ... FOR UPDATE` para impedir gasto duplo. Não altere saldo fora desses métodos.
 - `merchants` guarda CPF **ou** CNPJ (normalizados, UNIQUE). Validação só por dígito verificador, sem API externa (ver `docs/adr/001-documents-validation.md`).
 
-**Área pública** — `customer/balance` consulta saldo pelo telefone sem login, com limite por IP (5/min → 429) e exibindo só o primeiro nome do cliente.
+**Área pública** — a home (`HomeController`, view `views/home.php`, `public/css/home.css`) apresenta o produto e leva ao cadastro; lojista logado vai direto ao painel. `customer/balance` consulta saldo pelo telefone sem login, com limite por IP (5/min → 429) e exibindo só o primeiro nome do cliente.
 
 **Limite de tentativas** — `App\Support\RateLimiter` conta tentativas na tabela `rate_limit_hits` (chave guardada só como hash SHA-256), então o limite sobrevive a apagar o cookie. Usos: login (5 erros em 15 min por e-mail ou IP → 429) e consulta pública (5/min por IP). O IP vem de `REMOTE_ADDR`; atrás de proxy/load balancer isso precisa ser revisto.
 
@@ -48,7 +48,7 @@ Banco: `mysql -u root -p < database/schema.sql` em instalação nova; bancos ant
 
 - Commits no padrão `tipo(escopo): descrição` (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`); branches `tipo/nome` com o mesmo tipo do commit (ex.: `feat/logout`, `fix/csrf-token`). Nunca commitar direto na `main`: tudo entra por PR, e o PR referencia a issue com `close #N` quando houver.
 - SQL sempre com prepared statements; o PDO usa `ATTR_EMULATE_PREPARES = false`, então o mesmo placeholder não pode aparecer duas vezes na query (use `:p1`, `:p2`).
-- O front-end em TypeScript (`src/ts/`) ainda é placeholder; a sanitização de máscaras é feita no back-end.
+- Máscaras de telefone e CPF/CNPJ ficam em `src/ts/masks.ts` (`data-mask="phone"` / `"document"` no input), compiladas com `tsc` para `public/js/masks.js`, que é versionado: rode `tsc` ao mexer no `.ts`. É só apresentação; o back-end continua limpando os dígitos.
 
 ## Backlog
 

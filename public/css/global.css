@@ -25,6 +25,10 @@
 
    Foco
      --focus-ring       anel de foco de inputs (acessibilidade: o foco precisa ser visivel)
+
+   Papel (cartaz impresso)
+     --paper            fundo da folha do cartaz e da impressao (qr code precisa de fundo claro)
+     --ink              texto sobre --paper (contraste maximo na impressao)
 */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
 
@@ -56,6 +60,10 @@
 
     /* foco */
     --focus-ring: rgba(129, 140, 248, 0.35);
+
+    /* folha impressa (cartaz com qr code): fundo claro e texto escuro, mesmo na tela */
+    --paper: #ffffff;
+    --ink: #111827;
 
     /* utilitarios */
     --radius: 12px;

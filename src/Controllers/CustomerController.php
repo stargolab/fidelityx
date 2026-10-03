@@ -6,6 +6,7 @@ use App\Models\LoyaltyCardModel;
 use App\Models\RewardModel;
 use App\Support\Csrf;
 use App\Support\RateLimiter;
+use App\Support\RewardProgress;
 use App\Support\View;
 use App\Validators\PhoneValidator;
 
@@ -45,6 +46,7 @@ class CustomerController {
 
                 foreach ($cards as &$card) {
                     $card['rewards'] = $rewardModel->listByMerchant($card['merchant_id'], true);
+                    $card['progress'] = RewardProgress::next((int)$card['current_points'], $card['rewards']);
                 }
                 unset($card);
             }

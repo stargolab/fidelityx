@@ -134,8 +134,16 @@
         padding-bottom: 0;
     }
 
+    /* com 5 itens + loja + Sair, entre 640 e 1023px a linha nao cabe: os links quebram em vez de vazar */
+    .app-nav .nav-menu,
+    .js .app-nav .nav-menu {
+        flex-wrap: wrap;
+        min-width: 0;
+    }
+
     .app-nav .nav-links {
         flex-direction: row;
+        flex-wrap: wrap;
         flex: 1;
     }
 
@@ -362,4 +370,294 @@ th.num {
     .phone-search {
         max-width: 420px;
     }
+}
+
+/* acoes da linha de uma tabela (editar / ativar / excluir): lado a lado, cada uma com 44px de altura */
+.row-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+/* link com cara de botao secundario */
+a.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.btn-danger {
+    color: var(--error-text);
+}
+
+.btn-danger:hover {
+    border-color: var(--error);
+}
+
+.form-hint {
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+}
+
+a.btn-secondary:hover {
+    color: var(--text-main);
+}
+
+/* busca em listas: campo em cima e botoes embaixo no celular; tudo numa linha a partir de 640px */
+.search-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.search-form .form-group {
+    margin-bottom: 0;
+}
+
+.search-form input[type="search"] {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    min-height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    background: var(--bg-card);
+    color: var(--text-main);
+}
+
+.list-count {
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+
+/* paginacao: anterior / pagina X de Y / proxima */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+}
+
+a.btn-secondary,
+span.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-secondary.disabled {
+    color: var(--text-muted);
+    cursor: default;
+}
+
+@media (min-width: 640px) {
+    .search-form {
+        flex-direction: row;
+        align-items: flex-end;
+    }
+
+    .search-form .form-group {
+        flex: 1;
+        max-width: 420px;
+    }
+}
+
+/* link do extrato na tela do cliente: area de toque de 44px sem aumentar a tela */
+.customer-statement-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 0.9rem;
+}
+
+/* guia de primeiros passos: lista numerada de passos com marca de feito; no celular o botao desce pra baixo do texto */
+.steps {
+    list-style: none;
+}
+
+.step {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.step:last-child {
+    border-bottom: none;
+}
+
+.step-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    color: var(--success-text);
+    font-weight: 800;
+}
+
+.step-done .step-mark {
+    border-color: var(--success);
+    background: var(--success-soft);
+}
+
+.step-done .step-text {
+    color: var(--text-muted);
+}
+
+.step-text {
+    flex: 1 1 12rem;
+}
+
+.step .btn-secondary {
+    flex: 1 1 100%;
+}
+
+/* texto so para leitor de tela */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+    .step .btn-secondary {
+        flex: 0 0 auto;
+    }
+}
+
+/* progresso ate o proximo premio: barra fina com o preenchimento na cor da marca */
+.reward-progress {
+    margin-top: 0.75rem;
+}
+
+.reward-progress-text {
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+}
+
+.progress {
+    height: 0.6rem;
+    background: var(--bg-body);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 999px;
+}
+
+/* cartaz: folha clara (--paper) com nome da loja e qr code; centralizado e legivel de longe */
+.poster {
+    max-width: 520px;
+    margin: 0 auto 1.5rem;
+    padding: 1.5rem 1rem;
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: var(--radius);
+    text-align: center;
+}
+
+.poster-store {
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+    overflow-wrap: anywhere;
+}
+
+.poster-lead {
+    font-size: 1.1rem;
+    margin-bottom: 1.25rem;
+}
+
+.poster-qr {
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto 1.25rem;
+}
+
+.poster-qr svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.poster-cta {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.poster-url {
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
+}
+
+@media (min-width: 640px) {
+    .poster {
+        padding: 2.5rem 2rem;
+    }
+
+    .poster-store {
+        font-size: 2.25rem;
+    }
+}
+
+/* impressao: some o painel (menu, botoes, avisos) e fica so a folha do cartaz */
+@media print {
+    .app-nav,
+    .no-print,
+    .alert {
+        display: none !important;
+    }
+
+    body {
+        background: var(--paper);
+    }
+
+    .app-main {
+        max-width: none;
+        padding: 0;
+    }
+
+    .app-main h1 {
+        display: none;
+    }
+
+    .poster {
+        max-width: none;
+        margin: 0;
+        padding: 2cm 1cm;
+    }
+
+    .poster-store {
+        font-size: 2.75rem;
+    }
+
+    .poster-lead,
+    .poster-cta {
+        font-size: 1.5rem;
+    }
+
+    .poster-qr {
+        max-width: 12cm;
+    }
+}
+
+.poster-help {
+    margin-bottom: 1rem;
 }

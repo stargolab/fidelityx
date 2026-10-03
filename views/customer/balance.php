@@ -28,7 +28,7 @@
 
             <div class="form-group">
                 <label for="phone">Seu telefone</label>
-                <input type="tel" name="phone" id="phone" placeholder="(11) 99999-9999" value="<?= e(format_phone($phone)) ?>" required>
+                <input type="tel" name="phone" id="phone" placeholder="(11) 99999-9999" maxlength="15" data-mask="phone" value="<?= e(format_phone($phone)) ?>" required>
             </div>
 
             <button type="submit" class="btn-primary">Consultar</button>
@@ -47,6 +47,8 @@
                                 <strong><?= e($card['store_name']) ?></strong>
                                 <strong><?= (int)$card['current_points'] ?> pts</strong>
                             </div>
+
+                            <?php $progress = $card['progress']; require __DIR__ . '/../partials/reward-progress.php'; ?>
 
                             <?php if ($card['rewards']): ?>
                                 <ul class="muted" style="margin: 0.5rem 0 0 1.25rem; font-size: 0.85rem;">
@@ -69,5 +71,6 @@
         </footer>
     </div>
 
+    <script src="/js/masks.js"></script>
 </body>
 </html>

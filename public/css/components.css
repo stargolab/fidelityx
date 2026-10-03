@@ -70,11 +70,17 @@
     box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
-/* Linha com 2+ campos lado a lado (quebra sozinha no mobile) */
+/* Linha com 2+ campos: um embaixo do outro no celular, lado a lado a partir de 640px */
 .form-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: 1fr;
     gap: 0 15px;
+}
+
+@media (min-width: 640px) {
+    .form-row {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
 }
 
 /* Divisor com titulo no meio */
@@ -122,6 +128,7 @@
     display: flex;
     align-items: flex-start;
     gap: 0.6rem;
+    min-height: 44px;
     font-weight: 400;
     cursor: pointer;
 }

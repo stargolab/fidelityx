@@ -22,6 +22,13 @@ class RewardModel {
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    public function countByMerchant($merchantId): int {
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM rewards WHERE merchant_id = :merchant_id');
+        $stmt->execute([':merchant_id' => $merchantId]);
+
+        return (int)$stmt->fetchColumn();
+    }
+
     public function findActiveForMerchant($rewardId, $merchantId) {
         $sql = 'SELECT id, name, points_cost FROM rewards
                 WHERE id = :id AND merchant_id = :merchant_id AND active = 1';

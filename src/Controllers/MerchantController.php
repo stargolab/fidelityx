@@ -86,7 +86,7 @@ class MerchantController {
         }
 
         if (!isset($_GET['phone'])) {
-            View::render('merchant/dashboard');
+            View::render('merchant/dashboard', ['steps' => $this->onboardingSteps($merchantId)]);
             return;
         }
 
@@ -109,6 +109,35 @@ class MerchantController {
             'phone'     => $phone,
             'firstName' => strtok($customer['name'], ' '),
         ]);
+    }
+
+    // guia de primeiros passos da home: cada passo sabe se ja foi feito pelos dados da propria loja.
+    // devolve lista vazia quando tudo esta feito (a view some com o guia).
+    private function onboardingSteps(int $merchantId): array {
+        $steps = [
+            [
+                'label' => 'Cadastre seu primeiro prêmio',
+                'hint'  => 'É o que o cliente vai querer conquistar com os pontos.',
+                'url'   => url('merchant/rewards'),
+                'cta'   => 'Cadastrar prêmio',
+                'done'  => (new RewardModel($this->db))->countByMerchant($merchantId) > 0,
+            ],
+            [
+                'label' => 'Lance os primeiros pontos',
+                'hint'  => 'Digite o telefone de um cliente no campo abaixo e lance os pontos da compra.',
+                'url'   => url('merchant/dashboard') . '#phone',
+                'cta'   => 'Buscar cliente',
+                'done'  => (new PointsLogModel($this->db))->countByMerchant($merchantId) > 0,
+            ],
+        ];
+
+        foreach ($steps as $step) {
+            if (!$step['done']) {
+                return $steps;
+            }
+        }
+
+        return [];
     }
 
     // lojista confirmou o cliente de outra loja: cria o cartao desta loja e segue para a tela do cliente

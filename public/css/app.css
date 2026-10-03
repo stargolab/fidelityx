@@ -464,3 +464,67 @@ span.btn-secondary {
     min-height: 44px;
     font-size: 0.9rem;
 }
+
+/* guia de primeiros passos: lista numerada de passos com marca de feito; no celular o botao desce pra baixo do texto */
+.steps {
+    list-style: none;
+}
+
+.step {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.step:last-child {
+    border-bottom: none;
+}
+
+.step-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    color: var(--success-text);
+    font-weight: 800;
+}
+
+.step-done .step-mark {
+    border-color: var(--success);
+    background: var(--success-soft);
+}
+
+.step-done .step-text {
+    color: var(--text-muted);
+}
+
+.step-text {
+    flex: 1 1 12rem;
+}
+
+.step .btn-secondary {
+    flex: 1 1 100%;
+}
+
+/* texto so para leitor de tela */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+    .step .btn-secondary {
+        flex: 0 0 auto;
+    }
+}

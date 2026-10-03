@@ -235,6 +235,20 @@ class MerchantController {
         ]);
     }
 
+    // relatorios: indicadores da loja + historico de todas as movimentacoes, paginado
+    public function renderReports() {
+        $merchantId = $this->authGuard();
+
+        $logModel = new PointsLogModel($this->db);
+        $paginator = new Paginator($logModel->countByMerchant($merchantId), $_GET['page'] ?? 1, self::PER_PAGE);
+
+        View::render('merchant/reports', [
+            'stats'     => $logModel->statsByMerchant($merchantId),
+            'entries'   => $logModel->pageByMerchant($merchantId, $paginator->perPage, $paginator->offset()),
+            'paginator' => $paginator,
+        ]);
+    }
+
     // extrato do cliente: todas as movimentacoes dele nesta loja, paginadas.
     // o cartao e buscado pelo lojista da sessao + telefone, entao nao ha como ver extrato de outra loja.
     public function renderStatement() {

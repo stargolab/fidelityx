@@ -134,8 +134,16 @@
         padding-bottom: 0;
     }
 
+    /* com 5 itens + loja + Sair, entre 640 e 1023px a linha nao cabe: os links quebram em vez de vazar */
+    .app-nav .nav-menu,
+    .js .app-nav .nav-menu {
+        flex-wrap: wrap;
+        min-width: 0;
+    }
+
     .app-nav .nav-links {
         flex-direction: row;
+        flex-wrap: wrap;
         flex: 1;
     }
 
@@ -648,4 +656,8 @@ span.btn-secondary {
     .poster-qr {
         max-width: 12cm;
     }
+}
+
+.poster-help {
+    margin-bottom: 1rem;
 }

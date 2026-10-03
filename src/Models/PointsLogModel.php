@@ -68,9 +68,10 @@ class PointsLogModel {
                         WHERE lc.merchant_id = :m2 AND pl.type = 'earn') AS points_issued,
                     (SELECT COUNT(*) FROM points_log pl
                         JOIN loyalty_cards lc ON lc.id = pl.card_id
-                        WHERE lc.merchant_id = :m3 AND pl.type = 'redeem') AS redemptions";
+                        WHERE lc.merchant_id = :m3 AND pl.type = 'redeem') AS redemptions,
+                    (SELECT COALESCE(SUM(current_points), 0) FROM loyalty_cards WHERE merchant_id = :m4) AS points_balance";
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([':m1' => $merchantId, ':m2' => $merchantId, ':m3' => $merchantId]);
+        $stmt->execute([':m1' => $merchantId, ':m2' => $merchantId, ':m3' => $merchantId, ':m4' => $merchantId]);
 
         return $stmt->fetch(\PDO::FETCH_ASSOC);
     }

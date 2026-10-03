@@ -2,7 +2,7 @@
 <?php require __DIR__ . '/../partials/merchant-header.php'; ?>
 
 <section class="card no-print">
-    <p class="muted">Imprima e deixe no balcão: o cliente aponta a câmera do celular e vê os pontos dele, sem instalar nada.
+    <p class="muted poster-help">Imprima e deixe no balcão: o cliente aponta a câmera do celular e vê os pontos dele, sem instalar nada.
         Na janela de impressão, escolha "Salvar como PDF" se quiser o arquivo.</p>
     <button type="button" class="btn-primary btn-inline" onclick="window.print()">Imprimir ou salvar em PDF</button>
 </section>

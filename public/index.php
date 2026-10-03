@@ -84,6 +84,7 @@ switch ($domain) {
             'customer'  => $controller->renderCustomer(),
             'statement' => $controller->renderStatement(),
             'poster'    => $controller->renderPoster(),
+            'reports'   => $controller->renderReports(),
             'rewards'   => $controller->renderRewards(),
             'reward-edit' => $controller->renderRewardEdit(),
             'customers' => $controller->renderCustomers(),

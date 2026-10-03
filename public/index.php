@@ -83,6 +83,7 @@ switch ($domain) {
             'dashboard' => $controller->renderDashboard(),
             'customer'  => $controller->renderCustomer(),
             'statement' => $controller->renderStatement(),
+            'poster'    => $controller->renderPoster(),
             'rewards'   => $controller->renderRewards(),
             'reward-edit' => $controller->renderRewardEdit(),
             'customers' => $controller->renderCustomers(),

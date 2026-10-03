@@ -188,6 +188,8 @@ DB_USER=root
 DB_PASS=sua_senha
 ```
 
+Opcional: `APP_URL=https://seu-dominio` (endereço público do sistema, usado no QR code do cartaz; vazio usa o host da requisição).
+
 > Depois de atualizar o projeto (`git pull`), rode `composer dump-autoload` para registrar arquivos novos do autoload.
 
 #### 5. Inicie o Servidor Local

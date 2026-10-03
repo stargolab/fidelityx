@@ -5,6 +5,7 @@ $navItems = [
     'dashboard' => 'Início',
     'rewards'   => 'Prêmios',
     'customers' => 'Clientes',
+    'poster'    => 'Cartaz',
 ];
 ?>
 <!DOCTYPE html>

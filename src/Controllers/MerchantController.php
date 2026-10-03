@@ -9,6 +9,7 @@ use App\Models\PointsLogModel;
 use App\Models\RewardModel;
 use App\Support\Csrf;
 use App\Support\Paginator;
+use App\Support\QrSvg;
 use App\Support\RateLimiter;
 use App\Support\RewardProgress;
 use App\Support\View;
@@ -130,15 +131,56 @@ class MerchantController {
                 'cta'   => 'Buscar cliente',
                 'done'  => (new PointsLogModel($this->db))->countByMerchant($merchantId) > 0,
             ],
+            [
+                // nao da pra saber se imprimiu: e uma dica (opcional) que nao segura o guia na tela
+                'label'    => 'Imprima o cartaz com o QR code',
+                'hint'     => 'O cliente aponta o celular e consulta os pontos sozinho.',
+                'url'      => url('merchant/poster'),
+                'cta'      => 'Abrir cartaz',
+                'done'     => false,
+                'optional' => true,
+            ],
         ];
 
         foreach ($steps as $step) {
-            if (!$step['done']) {
+            if (!$step['done'] && empty($step['optional'])) {
                 return $steps;
             }
         }
 
         return [];
+    }
+
+    // cartaz para imprimir: nome da loja + qr code que leva a consulta publica de saldo.
+    // o qr e gerado no servidor (svg), sem servico externo.
+    public function renderPoster() {
+        $this->authGuard();
+
+        $balanceUrl = $this->publicBaseUrl() . url('customer/balance');
+
+        View::render('merchant/poster', [
+            'balanceUrl' => $balanceUrl,
+            'qrSvg'      => QrSvg::svg($balanceUrl),
+        ]);
+    }
+
+    // endereco publico do sistema, para o qr apontar pro lugar certo.
+    // APP_URL do .env manda (atras de proxy o host da requisicao pode nao ser o publico);
+    // sem ele usa o host da requisicao.
+    private function publicBaseUrl(): string {
+        $configured = rtrim((string)($_ENV['APP_URL'] ?? ''), '/');
+        if ($configured !== '' && filter_var($configured, FILTER_VALIDATE_URL)
+            && in_array(parse_url($configured, PHP_URL_SCHEME), ['http', 'https'], true)) {
+            return $configured;
+        }
+
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = (string)($_SERVER['HTTP_HOST'] ?? '');
+        if (!preg_match('/^[A-Za-z0-9.-]+(:\d{1,5})?$/', $host)) {
+            $host = 'localhost';
+        }
+
+        return $scheme . '://' . $host;
     }
 
     // lojista confirmou o cliente de outra loja: cria o cartao desta loja e segue para a tela do cliente

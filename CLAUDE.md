@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Projeto
 
-FidelityX: SaaS de fidelidade para lojistas locais. PHP 8.1+ sem framework (MVC manual), MySQL/MariaDB via PDO, única dependência Composer é `vlucas/phpdotenv`. Código, comentários, mensagens e commits em português (comentários em minúsculas e sem acento, no estilo existente).
+FidelityX: SaaS de fidelidade para lojistas locais. PHP 8.1+ sem framework (MVC manual), MySQL/MariaDB via PDO, dependências Composer de produção: `vlucas/phpdotenv` e `chillerlan/php-qrcode` (QR do cartaz). Código, comentários, mensagens e commits em português (comentários em minúsculas e sem acento, no estilo existente).
 
 ## Comandos
 
@@ -18,7 +18,7 @@ composer test -- --testsuite Unit      # só os testes sem banco
 tsc                                    # compila src/ts -> public/js (tsconfig.json)
 ```
 
-Banco: `mysql -u root -p < database/schema.sql` em instalação nova; bancos anteriores ao MVP precisam de `database/migrations/001_mvp.sql` uma vez. Credenciais em `.env` (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`). No ambiente local do autor o PHP e o MySQL vêm do XAMPP (`C:\xampp\mysql\bin\mysql.exe`).
+Banco: `mysql -u root -p < database/schema.sql` em instalação nova; bancos anteriores ao MVP precisam de `database/migrations/001_mvp.sql` uma vez. Credenciais em `.env` (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`; `APP_URL` opcional: endereço público usado no QR do cartaz, vazio usa o host da requisição). No ambiente local do autor o PHP e o MySQL vêm do XAMPP (`C:\xampp\mysql\bin\mysql.exe`).
 
 **Testes (PHPUnit 10.5)** em `tests/`: `Unit` (validators, sem banco), `Integration` (models e `RateLimiter` contra o banco) e `Feature` (fluxo completo por HTTP: o teste sobe um `php -S` próprio numa porta livre e usa cookie + `_csrf` como o navegador). O bootstrap **apaga e recria** o banco `fidelityx_test` a partir do `schema.sql` (o `phpunit.xml` força esse nome e o bootstrap recusa nome que não termine em `_test`); credenciais vêm do `.env` local ou das variáveis de ambiente no CI. Cada teste começa com as tabelas vazias (`DatabaseTestCase`). Regra nova de negócio ou bug corrigido = teste junto. O GitHub Actions (`.github/workflows/ci.yml`) roda lint + PHPUnit em PHP 8.1 e 8.3 com MySQL 8 em todo PR e push na `main`. O MySQL do XAMPP roda sem `sql_mode` estrito (trunca texto longo sem erro), o do CI é estrito: não escreva teste que dependa disso.
 

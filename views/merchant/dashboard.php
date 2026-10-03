@@ -10,7 +10,7 @@
                 <li class="step<?= $step['done'] ? ' step-done' : '' ?>">
                     <span class="step-mark" aria-hidden="true"><?= $step['done'] ? '✓' : '' ?></span>
                     <div class="step-text">
-                        <strong><?= e($step['label']) ?></strong><?php if ($step['done']): ?> <span class="visually-hidden">(feito)</span><?php endif; ?>
+                        <strong><?= e($step['label']) ?></strong><?php if ($step['done']): ?> <span class="visually-hidden">(feito)</span><?php elseif (!empty($step['optional'])): ?> <span class="muted">(opcional)</span><?php endif; ?>
                         <?php if (!$step['done']): ?>
                             <div class="muted"><?= e($step['hint']) ?></div>
                         <?php endif; ?>

@@ -552,3 +552,100 @@ span.btn-secondary {
     background: var(--primary);
     border-radius: 999px;
 }
+
+/* cartaz: folha clara (--paper) com nome da loja e qr code; centralizado e legivel de longe */
+.poster {
+    max-width: 520px;
+    margin: 0 auto 1.5rem;
+    padding: 1.5rem 1rem;
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: var(--radius);
+    text-align: center;
+}
+
+.poster-store {
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+    overflow-wrap: anywhere;
+}
+
+.poster-lead {
+    font-size: 1.1rem;
+    margin-bottom: 1.25rem;
+}
+
+.poster-qr {
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto 1.25rem;
+}
+
+.poster-qr svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.poster-cta {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.poster-url {
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
+}
+
+@media (min-width: 640px) {
+    .poster {
+        padding: 2.5rem 2rem;
+    }
+
+    .poster-store {
+        font-size: 2.25rem;
+    }
+}
+
+/* impressao: some o painel (menu, botoes, avisos) e fica so a folha do cartaz */
+@media print {
+    .app-nav,
+    .no-print,
+    .alert {
+        display: none !important;
+    }
+
+    body {
+        background: var(--paper);
+    }
+
+    .app-main {
+        max-width: none;
+        padding: 0;
+    }
+
+    .app-main h1 {
+        display: none;
+    }
+
+    .poster {
+        max-width: none;
+        margin: 0;
+        padding: 2cm 1cm;
+    }
+
+    .poster-store {
+        font-size: 2.75rem;
+    }
+
+    .poster-lead,
+    .poster-cta {
+        font-size: 1.5rem;
+    }
+
+    .poster-qr {
+        max-width: 12cm;
+    }
+}

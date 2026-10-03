@@ -152,3 +152,19 @@ CREATE TABLE IF NOT EXISTS points_log (
     ON DELETE SET NULL
     ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================
+-- rate_limit_hits // tentativas para limitar abuso (login, consulta publica)
+-- =========================
+-- a chave (e-mail ou ip) fica so como hash sha-256: da pra contar sem guardar o dado pessoal.
+CREATE TABLE IF NOT EXISTS rate_limit_hits (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+  bucket VARCHAR(40) NOT NULL, -- ex.: login_email, login_ip, balance_ip
+  key_hash CHAR(64) NOT NULL,
+
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  KEY idx_rate_limit_lookup (bucket, key_hash, created_at),
+  KEY idx_rate_limit_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

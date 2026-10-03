@@ -32,6 +32,8 @@ Banco: `mysql -u root -p < database/schema.sql` em instalação nova; bancos ant
 
 **Views** — PHP puro em `views/`, recebem variáveis via `extract()` do `View::render($view, $data)`. Toda saída passa por `e()`. Links e actions usam `url('rota', [...])`; formulários POST incluem `<?= Csrf::field() ?>`. Páginas do painel incluem `partials/merchant-header.php` / `merchant-footer.php` (definir `$title` antes). Helpers globais (`e`, `redirect`, `url`, `format_phone`, `format_datetime`) ficam em `src/Support/helpers.php`, carregado pelo autoload `files` do Composer.
 
+**Fuso horário** — `app_timezone()` (`APP_TIMEZONE` do `.env`, padrão `America/Sao_Paulo`) é aplicado no PHP pelo `index.php` e pelo `tests/bootstrap.php`, e o `Database` faz `SET time_zone` com o mesmo offset em toda conexão. Não dependa do fuso do `php.ini` nem do servidor MySQL.
+
 **Erros** — `ErrorController::handle($code)` renderiza `views/errors/{code}.php` (fallback `default.php`). Exceções não tratadas são logadas e viram 500 pelo `set_exception_handler` do `index.php`; detalhes técnicos vão só para `error_log`.
 
 **Modelo de dados** (detalhes em `docs/db/schema-explanation.md`):

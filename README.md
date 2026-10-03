@@ -188,7 +188,7 @@ DB_USER=root
 DB_PASS=sua_senha
 ```
 
-Opcional: `APP_URL=https://seu-dominio` (endereço público do sistema, usado no QR code do cartaz; vazio usa o host da requisição).
+Opcional: `APP_TIMEZONE=America/Sao_Paulo` (fuso da aplicação; vazio usa esse) e `APP_URL=https://seu-dominio` (endereço público do sistema, usado no QR code do cartaz; vazio usa o host da requisição).
 
 > Depois de atualizar o projeto (`git pull`), rode `composer dump-autoload` para registrar arquivos novos do autoload.
 

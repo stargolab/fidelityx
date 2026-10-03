@@ -41,6 +41,9 @@ $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->load();
 // a .env será usada no Database.php!
 
+// fuso fixo da aplicacao (o Database aplica o mesmo na conexao com o MySQL)
+date_default_timezone_set(app_timezone());
+
 // namespace
 use App\Database;
 

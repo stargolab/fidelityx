@@ -1,6 +1,6 @@
 # Schema do banco — FidelityX
 
-MySQL 8.0+ / MariaDB 10.4+ · InnoDB · `utf8mb4_unicode_ci` · horários em UTC.
+MySQL 8.0+ / MariaDB 10.4+ · InnoDB · `utf8mb4_unicode_ci` · colunas `TIMESTAMP` (guardadas em UTC pelo MySQL e lidas no fuso da aplicação, `APP_TIMEZONE`, padrão `America/Sao_Paulo`).
 Arquivo: [`database/schema.sql`](../../database/schema.sql). Bancos criados antes do MVP: rodar [`database/migrations/001_mvp.sql`](../../database/migrations/001_mvp.sql).
 
 ## Visão geral

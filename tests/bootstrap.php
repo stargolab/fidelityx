@@ -17,6 +17,9 @@ foreach (['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASS'] as $key) {
 // local: completa o que faltar com o .env (immutable: nao troca o que ja existe, como o DB_NAME de teste)
 Dotenv\Dotenv::createImmutable(dirname(__DIR__))->safeLoad();
 
+// mesmo fuso do index.php (o php.ini de cada maquina pode ter outro)
+date_default_timezone_set(app_timezone());
+
 $dbName = $_ENV['DB_NAME'] ?? '';
 if (!preg_match('/^[a-z0-9_]+_test$/', $dbName)) {
     // trava de seguranca: o bootstrap apaga e recria o banco, entao nunca pode apontar pro banco de verdade

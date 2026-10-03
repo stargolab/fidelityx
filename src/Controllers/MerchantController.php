@@ -7,6 +7,7 @@ use App\Models\LoyaltyCardModel;
 use App\Models\MerchantModel;
 use App\Models\RewardModel;
 use App\Support\Csrf;
+use App\Support\RateLimiter;
 use App\Support\View;
 use App\Validators\DocumentValidator;
 use App\Validators\PhoneValidator;
@@ -28,6 +29,8 @@ class MerchantController {
     ];
 
     private const MAX_POINTS_PER_ENTRY = 10000;
+    private const MAX_LOGIN_FAILURES = 5;
+    private const LOGIN_WINDOW_SECONDS = 900;
 
     private $db;
     private $merchantModel;
@@ -358,11 +361,25 @@ class MerchantController {
             redirect('merchant/login', ['error' => 'campos_obrigatorios']);
         }
 
+        // 5 erros em 15 min pro mesmo e-mail ou ip bloqueiam o login ate a janela passar
+        $limiter = new RateLimiter($this->db);
+        $ip = RateLimiter::clientIp();
+        if ($limiter->tooMany('login_email', $email, self::MAX_LOGIN_FAILURES, self::LOGIN_WINDOW_SECONDS)
+            || $limiter->tooMany('login_ip', $ip, self::MAX_LOGIN_FAILURES, self::LOGIN_WINDOW_SECONDS)) {
+            (new ErrorController())->handle(429);
+            exit;
+        }
+
         $merchant = $this->merchantModel->findByEmail($email);
 
         if(!$merchant || !password_verify($password, $merchant['password_hash'])){
+            $limiter->hit('login_email', $email);
+            $limiter->hit('login_ip', $ip);
             redirect('merchant/login', ['error' => 'credenciais_invalidas']);
         }
+
+        // login certo zera os erros do e-mail (os do ip continuam contando)
+        $limiter->clear('login_email', $email);
 
         if($merchant['status'] === 'inactive'){
             redirect('merchant/login', ['error' => 'conta_inativa']);

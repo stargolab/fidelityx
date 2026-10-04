@@ -41,10 +41,16 @@ class MerchantModel{
 
     // dados que o authGuard confere a cada requisicao
     public function findById($merchantId) {
-        $stmt = $this->db->prepare('SELECT id, owner_name, store_name, status FROM merchants WHERE id = :id');
+        $stmt = $this->db->prepare('SELECT id, owner_name, store_name, status, points_rule_cents FROM merchants WHERE id = :id');
         $stmt->execute([':id' => $merchantId]);
 
         return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    // regra de pontos pelo valor da compra (centavos por ponto); null remove a regra
+    public function updatePointsRule($merchantId, ?int $ruleCents): void {
+        $stmt = $this->db->prepare('UPDATE merchants SET points_rule_cents = :rule WHERE id = :id');
+        $stmt->execute([':rule' => $ruleCents, ':id' => $merchantId]);
     }
 
     public function findPublicCode($merchantId): ?string {

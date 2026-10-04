@@ -26,7 +26,11 @@ Recentemente refatorado para adotar o padrão **MVC com separação clara de res
 - ✅ **Cadastro de Lojistas** — Registro completo com validação de documentos (CPF/CNPJ), e-mail, telefone e confirmação de senha; máscaras de telefone e documento
 - ✅ **Autenticação Segura** — Login com hash BCRYPT, renovação do ID de sessão, logout, bloqueio de contas inativas e limite de 5 erros em 15 min
 - ✅ **Atendimento pelo telefone** — A home é um único campo de telefone: cliente da loja vai direto para a tela do cliente; qualquer outro telefone vai para o cadastro rápido
-- ✅ **Tela do cliente** — Nome e saldo no topo, progresso até o próximo prêmio, lançar pontos (atalhos +1/+5/+10) e resgatar os prêmios que o saldo já paga
+- ✅ **Tela do cliente** — Nome e saldo no topo, progresso até o próximo prêmio, lançar pontos (atalhos +1/+5/+10 ou pelo valor da compra) e resgatar os prêmios que o saldo já paga
+- ✅ **Confirmação e Desfazer** — Depois de lançar, mostra os pontos, o saldo novo e quanto falta para o próximo prêmio, com Desfazer por 30 s
+- ✅ **Estorno** — Lançamento errado das últimas 24 h é estornado pelo extrato; o estorno vira um registro novo e o saldo nunca fica negativo
+- ✅ **Regra de pontos** — A loja define "a cada R$ X, 1 ponto" e no balcão digita só o valor da compra (arredonda para baixo)
+- ✅ **Clientes recentes** — Os 5 últimos clientes atendidos aparecem na home, a um toque
 - ✅ **Cadastro rápido** — Telefone já preenchido, só o nome e o consentimento do cliente (gravado com data e versão do texto)
 - ✅ **Prêmios** — Criar, editar, ativar/desativar e excluir (prêmio já resgatado só é desativado)
 - ✅ **Resgate** — Confere o saldo e debita em transação, sem risco de gastar o mesmo ponto duas vezes
@@ -47,14 +51,15 @@ Recentemente refatorado para adotar o padrão **MVC com separação clara de res
 |---|---|---|
 | `home` (ou raiz) · `privacy` | público | Página inicial e política de privacidade |
 | `merchant/register` · `merchant/login` · `merchant/logout` | público | Conta do lojista |
-| `merchant/dashboard` | lojista | Home: guia de primeiros passos e busca pelo telefone (`?phone=`) |
-| `merchant/customer?phone=` | lojista | Tela do cliente: lançar pontos, resgatar, registrar consentimento e excluir dados |
+| `merchant/dashboard` | lojista | Home: busca pelo telefone (`?phone=`), clientes recentes e guia de primeiros passos |
+| `merchant/customer?phone=` | lojista | Tela do cliente: lançar pontos (ou pelo valor), desfazer/estornar, resgatar, registrar consentimento e excluir dados |
 | `merchant/customer-new?phone=` | lojista | Cadastro rápido de cliente nesta loja |
 | `merchant/statement?phone=` | lojista | Extrato de pontos do cliente |
 | `merchant/customers?q=&page=` | lojista | Clientes e saldos, com busca e paginação |
 | `merchant/rewards` · `merchant/reward-edit?id=` | lojista | Catálogo de prêmios e edição |
 | `merchant/reports?page=` | lojista | Indicadores e histórico de movimentações |
 | `merchant/poster` | lojista | Cartaz com QR code e código da loja |
+| `merchant/points-rule` | lojista | Regra de pontos pelo valor da compra |
 | `customer/balance?loja=` | público | Consulta de saldo pelo telefone, na loja do código |
 
 ---
@@ -177,6 +182,7 @@ O arquivo [database/schema.sql](database/schema.sql) cria automaticamente:
 > `mysql -u root -p fidelityx < database/migrations/002_rate_limit.sql` (limite de tentativas de login e da consulta pública)
 > `mysql -u root -p fidelityx < database/migrations/003_lgpd.sql` (dados do cliente por loja, consentimento e código público da loja)
 > `mysql -u root -p fidelityx < database/migrations/004_estorno.sql` (estorno de lançamento de pontos)
+> `mysql -u root -p fidelityx < database/migrations/005_regra_pontos.sql` (pontos pelo valor da compra)
 >
 > Detalhes das tabelas em [docs/db/schema-explanation.md](docs/db/schema-explanation.md).
 

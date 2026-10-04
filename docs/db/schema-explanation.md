@@ -1,7 +1,7 @@
 # Schema do banco — FidelityX
 
 MySQL 8.0+ / MariaDB 10.4+ · InnoDB · `utf8mb4_unicode_ci` · colunas `TIMESTAMP` (guardadas em UTC pelo MySQL e lidas no fuso da aplicação, `APP_TIMEZONE`, padrão `America/Sao_Paulo`).
-Arquivo: [`database/schema.sql`](../../database/schema.sql). Bancos já existentes: rodar, em ordem, as migrations de [`database/migrations/`](../../database/migrations/) que ainda não rodaram (`001_mvp`, `002_rate_limit`, `003_lgpd`, `004_estorno`).
+Arquivo: [`database/schema.sql`](../../database/schema.sql). Bancos já existentes: rodar, em ordem, as migrations de [`database/migrations/`](../../database/migrations/) que ainda não rodaram (`001_mvp`, `002_rate_limit`, `003_lgpd`, `004_estorno`, `005_regra_pontos`).
 
 ## Visão geral
 
@@ -23,6 +23,7 @@ merchants 1───N loyalty_cards N───1 customers
 ### `merchants` — lojistas
 | Coluna | Observação |
 |---|---|
+| `points_rule_cents` | Regra de pontos pelo valor da compra: a cada tantos centavos, 1 ponto (sempre arredonda para baixo, `Money::pointsFor`). `NULL` = sem regra, o lojista digita os pontos. |
 | `public_code` | `UNIQUE`, 8 caracteres. Código público da loja: vai no QR do cartaz e identifica a loja na consulta de saldo. Gerado no cadastro (`App\Support\PublicCode`). |
 | `email`, `cpf`, `cnpj` | `UNIQUE`. Só um dos dois documentos é preenchido, apenas com números. |
 | `password_hash` | BCRYPT (`password_hash`). |

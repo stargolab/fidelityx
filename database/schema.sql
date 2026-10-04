@@ -23,6 +23,9 @@ CREATE TABLE IF NOT EXISTS merchants (
   category VARCHAR(30) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   plan ENUM('free', 'pro') NOT NULL DEFAULT 'free',
+  -- regra de pontos pelo valor da compra: a cada points_rule_cents centavos, 1 ponto (arredonda pra baixo).
+  -- NULL = sem regra (o lojista digita os pontos direto)
+  points_rule_cents INT UNSIGNED NULL,
   status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
 
   -- para futuras implementações (NULL)

@@ -26,6 +26,9 @@ $flashMessages = [
         'saldo_insuficiente'    => 'Saldo de pontos insuficiente para este prêmio.',
         'confirmacao_obrigatoria' => 'Marque a confirmação de que o cliente pediu a exclusão.',
         'estorno_invalido'      => 'Lançamento não encontrado para este cliente.',
+        'regra_invalida'        => 'Informe um valor de R$ 0,01 a R$ 1.000.000,00.',
+        'valor_invalido'        => 'Informe o valor da compra, ex.: 12,90.',
+        'valor_sem_pontos'      => 'O valor da compra não chega a 1 ponto pela regra da loja.',
         'estorno_repetido'      => 'Este lançamento já foi estornado.',
         'estorno_expirado'      => 'Só dá para estornar lançamentos das últimas 24 horas.',
         'estorno_sem_saldo'     => 'Não dá para estornar: o cliente já usou parte desses pontos.',
@@ -44,6 +47,8 @@ $flashMessages = [
         'consentimento_registrado' => 'Consentimento registrado.',
         'cliente_excluido'  => 'Dados do cliente excluídos.',
         'lancamento_estornado' => 'Lançamento estornado. Os pontos saíram do saldo.',
+        'regra_salva'       => 'Regra de pontos salva.',
+        'regra_removida'    => 'Regra de pontos removida.',
     ],
 ];
 

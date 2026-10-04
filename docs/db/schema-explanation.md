@@ -1,7 +1,7 @@
 # Schema do banco — FidelityX
 
 MySQL 8.0+ / MariaDB 10.4+ · InnoDB · `utf8mb4_unicode_ci` · colunas `TIMESTAMP` (guardadas em UTC pelo MySQL e lidas no fuso da aplicação, `APP_TIMEZONE`, padrão `America/Sao_Paulo`).
-Arquivo: [`database/schema.sql`](../../database/schema.sql). Bancos já existentes: rodar, em ordem, as migrations de [`database/migrations/`](../../database/migrations/) que ainda não rodaram (`001_mvp`, `002_rate_limit`, `003_lgpd`).
+Arquivo: [`database/schema.sql`](../../database/schema.sql). Bancos já existentes: rodar, em ordem, as migrations de [`database/migrations/`](../../database/migrations/) que ainda não rodaram (`001_mvp`, `002_rate_limit`, `003_lgpd`, `004_estorno`).
 
 ## Visão geral
 
@@ -58,8 +58,9 @@ merchants 1───N loyalty_cards N───1 customers
 ### `points_log` — histórico
 | Coluna | Observação |
 |---|---|
-| `type` | `earn` (ganho) ou `redeem` (resgate). `quantity` é sempre positivo. |
+| `type` | `earn` (ganho), `redeem` (resgate) ou `reversal` (estorno de um ganho). `quantity` é sempre positivo. |
 | `reward_id` | Preenchido em resgates. Vira `NULL` se o prêmio for apagado. |
+| `reverses_id` | Preenchido em estornos (`reversal`): o lançamento estornado. `UNIQUE`, então cada lançamento é estornado no máximo uma vez. |
 | `ip_address` | IP de quem fez a operação. |
 
 ### `rate_limit_hits` — tentativas (limite de abuso)

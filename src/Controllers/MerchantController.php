@@ -535,6 +535,24 @@ class MerchantController {
             redirect('merchant/dashboard', ['success' => 'cliente_excluido']);
         }
 
+        // estorno de lancamento (do extrato ou do Desfazer da confirmacao). volta pra tela de onde veio.
+        if (($_POST['action'] ?? '') === 'reverse') {
+            $back = ($_POST['back'] ?? '') === 'statement' ? 'merchant/statement' : 'merchant/customer';
+            $logId = filter_var($_POST['log_id'] ?? '', FILTER_VALIDATE_INT);
+            // o lancamento precisa ser do cartao deste cliente (o model confere tambem a loja)
+            $result = $logId && $this->logBelongsToCard($logId, (int)$card['id'])
+                ? $cardModel->reverse($logId, $merchantId)
+                : 'not_found';
+
+            redirect($back, ['phone' => $phone] + match ($result) {
+                'ok'           => ['success' => 'lancamento_estornado'],
+                'already'      => ['error' => 'estorno_repetido'],
+                'expired'      => ['error' => 'estorno_expirado'],
+                'insufficient' => ['error' => 'estorno_sem_saldo'],
+                default        => ['error' => 'estorno_invalido'],
+            });
+        }
+
         if (($_POST['action'] ?? '') === 'redeem') {
             $rewardId = filter_var($_POST['reward_id'] ?? '', FILTER_VALIDATE_INT);
             $reward = $rewardId ? (new RewardModel($this->db))->findActiveForMerchant($rewardId, $merchantId) : null;
@@ -563,6 +581,12 @@ class MerchantController {
         $cardModel->addPoints($card['id'], $points, $description);
 
         redirect('merchant/customer', ['phone' => $phone, 'success' => 'pontos_lancados']);
+    }
+
+    private function logBelongsToCard(int $logId, int $cardId): bool {
+        $stmt = $this->db->prepare('SELECT 1 FROM points_log WHERE id = :id AND card_id = :card_id');
+        $stmt->execute([':id' => $logId, ':card_id' => $cardId]);
+        return (bool)$stmt->fetchColumn();
     }
 
     // criar, ativar/desativar ou excluir premio

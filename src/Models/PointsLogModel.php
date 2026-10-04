@@ -32,10 +32,14 @@ class PointsLogModel {
 
     // extrato de um cartao: movimentacoes do cliente nesta loja, da mais recente pra mais antiga
     public function pageByCard($cardId, int $limit, int $offset) {
-        $sql = 'SELECT type, quantity, description, created_at
-                FROM points_log
-                WHERE card_id = :card_id
-                ORDER BY created_at DESC, id DESC
+        // can_reverse: lancamento que ainda pode ser estornado (o model confere tudo de novo no POST)
+        $sql = 'SELECT pl.id, pl.type, pl.quantity, pl.description, pl.created_at,
+                       (pl.type = \'earn\'
+                        AND pl.created_at >= NOW() - INTERVAL ' . LoyaltyCardModel::REVERSAL_WINDOW_HOURS . ' HOUR
+                        AND NOT EXISTS (SELECT 1 FROM points_log r WHERE r.reverses_id = pl.id)) AS can_reverse
+                FROM points_log pl
+                WHERE pl.card_id = :card_id
+                ORDER BY pl.created_at DESC, pl.id DESC
                 LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset;
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':card_id' => $cardId]);
@@ -64,9 +68,9 @@ class PointsLogModel {
     public function statsByMerchant($merchantId) {
         $sql = "SELECT
                     (SELECT COUNT(*) FROM loyalty_cards WHERE merchant_id = :m1 AND anonymized_at IS NULL) AS customers,
-                    (SELECT COALESCE(SUM(pl.quantity), 0) FROM points_log pl
+                    (SELECT COALESCE(SUM(CASE pl.type WHEN 'earn' THEN pl.quantity ELSE -pl.quantity END), 0) FROM points_log pl
                         JOIN loyalty_cards lc ON lc.id = pl.card_id
-                        WHERE lc.merchant_id = :m2 AND pl.type = 'earn') AS points_issued,
+                        WHERE lc.merchant_id = :m2 AND pl.type IN ('earn', 'reversal')) AS points_issued,
                     (SELECT COUNT(*) FROM points_log pl
                         JOIN loyalty_cards lc ON lc.id = pl.card_id
                         WHERE lc.merchant_id = :m3 AND pl.type = 'redeem') AS redemptions,

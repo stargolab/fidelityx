@@ -176,6 +176,7 @@ O arquivo [database/schema.sql](database/schema.sql) cria automaticamente:
 > `mysql -u root -p fidelityx < database/migrations/001_mvp.sql` (bancos anteriores ao MVP)
 > `mysql -u root -p fidelityx < database/migrations/002_rate_limit.sql` (limite de tentativas de login e da consulta pública)
 > `mysql -u root -p fidelityx < database/migrations/003_lgpd.sql` (dados do cliente por loja, consentimento e código público da loja)
+> `mysql -u root -p fidelityx < database/migrations/004_estorno.sql` (estorno de lançamento de pontos)
 >
 > Detalhes das tabelas em [docs/db/schema-explanation.md](docs/db/schema-explanation.md).
 

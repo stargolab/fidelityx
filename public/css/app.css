@@ -280,6 +280,11 @@ th.num {
     color: var(--primary-hover);
 }
 
+.badge-reversal {
+    background: var(--warning-soft);
+    color: var(--warning-text);
+}
+
 .btn-secondary {
     min-height: 44px;
     background: transparent;

@@ -25,6 +25,10 @@ $flashMessages = [
         'premio_invalido'       => 'Prêmio inválido ou inativo.',
         'saldo_insuficiente'    => 'Saldo de pontos insuficiente para este prêmio.',
         'confirmacao_obrigatoria' => 'Marque a confirmação de que o cliente pediu a exclusão.',
+        'estorno_invalido'      => 'Lançamento não encontrado para este cliente.',
+        'estorno_repetido'      => 'Este lançamento já foi estornado.',
+        'estorno_expirado'      => 'Só dá para estornar lançamentos das últimas 24 horas.',
+        'estorno_sem_saldo'     => 'Não dá para estornar: o cliente já usou parte desses pontos.',
     ],
     'success' => [
         'cadastrado'        => 'Cadastro realizado! Faça login para continuar.',
@@ -40,6 +44,7 @@ $flashMessages = [
         'resgate_realizado' => 'Resgate realizado com sucesso.',
         'consentimento_registrado' => 'Consentimento registrado.',
         'cliente_excluido'  => 'Dados do cliente excluídos.',
+        'lancamento_estornado' => 'Lançamento estornado. Os pontos saíram do saldo.',
     ],
 ];
 

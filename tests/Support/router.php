@@ -16,5 +16,10 @@ foreach (['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASS'] as $key) {
     }
 }
 
+// warnings e notices aparecem no html: um teste que procura texto na pagina pega o erro na hora
+// (no CI o php.ini pode vir com display_errors desligado)
+ini_set('display_errors', '1');
+error_reporting(E_ALL);
+
 chdir($_SERVER['DOCUMENT_ROOT']);
 require $_SERVER['DOCUMENT_ROOT'] . '/index.php';

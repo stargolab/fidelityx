@@ -13,6 +13,7 @@ use App\Support\Privacy;
 use App\Support\QrSvg;
 use App\Support\RateLimiter;
 use App\Support\RewardProgress;
+use App\Support\SessionGuard;
 use App\Support\View;
 use App\Validators\DocumentValidator;
 use App\Validators\PhoneValidator;
@@ -332,13 +333,14 @@ class MerchantController {
         redirect('merchant/customer', ['phone' => $phone, 'success' => 'cliente_cadastrado']);
     }
 
+    // so por POST com csrf: um link ou uma imagem em outro site nao consegue deslogar o lojista
     public function logout() {
-        $_SESSION = [];
-        if (ini_get('session.use_cookies')) {
-            $params = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect(isset($_SESSION['merchant_id']) ? 'merchant/dashboard' : 'merchant/login');
         }
-        session_destroy();
+        Csrf::verify();
+
+        SessionGuard::destroy();
 
         redirect('merchant/login', ['success' => 'logout']);
     }

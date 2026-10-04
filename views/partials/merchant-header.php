@@ -35,7 +35,11 @@ $navItems = [
                 <?php endforeach; ?>
             </div>
             <span class="nav-store"><?= e($_SESSION['store_name'] ?? '') ?></span>
-            <a href="<?= e(url('merchant/logout')) ?>">Sair</a>
+            <?php // logout e POST com csrf (um link de outro site nao desloga ninguem) ?>
+            <form action="<?= e(url('merchant/logout')) ?>" method="POST" class="nav-logout">
+                <?= \App\Support\Csrf::field() ?>
+                <button type="submit">Sair</button>
+            </form>
         </div>
     </nav>
     <script>

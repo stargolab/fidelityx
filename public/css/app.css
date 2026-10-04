@@ -773,3 +773,42 @@ span.btn-secondary {
 .launch-undo {
     margin-top: 0.75rem;
 }
+
+/* clientes atendidos recentemente (home): cada linha e um link grande, facil de tocar */
+.recent-list {
+    list-style: none;
+}
+
+.recent-list li {
+    border-bottom: 1px solid var(--border);
+}
+
+.recent-list li:last-child {
+    border-bottom: none;
+}
+
+.recent-list a {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 56px;
+    padding: 0.5rem 0;
+    text-decoration: none;
+}
+
+.recent-name {
+    font-weight: 600;
+}
+
+.recent-meta {
+    font-size: 0.85rem;
+}
+
+@media (min-width: 640px) {
+    .recent-list a {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+}

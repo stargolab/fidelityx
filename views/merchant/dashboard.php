@@ -37,4 +37,21 @@
     </form>
 </section>
 
+<?php if (!empty($recent)): ?>
+    <?php // atalho para quem volta no mesmo dia: um toque abre a tela do cliente (task 7) ?>
+    <section class="card" aria-labelledby="recent-title">
+        <h2 id="recent-title">Atendidos recentemente</h2>
+        <ul class="recent-list">
+            <?php foreach ($recent as $customer): ?>
+                <li>
+                    <a href="<?= e(url('merchant/customer', ['phone' => $customer['phone']])) ?>">
+                        <span class="recent-name"><?= e($customer['name']) ?></span>
+                        <span class="muted recent-meta"><?= e(format_phone($customer['phone'])) ?> · <?= e(format_datetime($customer['last_use_at'])) ?></span>
+                    </a>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </section>
+<?php endif; ?>
+
 <?php require __DIR__ . '/../partials/merchant-footer.php'; ?>

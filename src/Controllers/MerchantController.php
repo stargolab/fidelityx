@@ -40,6 +40,7 @@ class MerchantController {
     // se o lancamento tiver ate UNDO_BANNER_SECONDS (o estorno em si vale por 24 h, pelo extrato)
     private const UNDO_SECONDS = 30;
     private const UNDO_BANNER_SECONDS = 120;
+    private const RECENT_CUSTOMERS = 5;
     private const MAX_LOGIN_FAILURES = 5;
     private const LOGIN_WINDOW_SECONDS = 900;
 
@@ -91,7 +92,10 @@ class MerchantController {
         $merchantId = $this->authGuard();
 
         if (!isset($_GET['phone'])) {
-            View::render('merchant/dashboard', ['steps' => $this->onboardingSteps($merchantId)]);
+            View::render('merchant/dashboard', [
+                'steps'  => $this->onboardingSteps($merchantId),
+                'recent' => $this->recentCustomers($merchantId),
+            ]);
             return;
         }
 
@@ -105,6 +109,13 @@ class MerchantController {
         }
 
         redirect('merchant/customer-new', ['phone' => $phone]);
+    }
+
+    // atalho da home: os ultimos clientes atendidos (lancamento, resgate ou estorno), para quem volta no mesmo dia.
+    // cadastro sem nenhuma movimentacao ainda nao conta como atendimento.
+    private function recentCustomers(int $merchantId): array {
+        $rows = (new LoyaltyCardModel($this->db))->searchByMerchant($merchantId, '', self::RECENT_CUSTOMERS, 0);
+        return array_values(array_filter($rows, fn($row) => $row['last_use_at'] !== null));
     }
 
     // guia de primeiros passos da home: cada passo sabe se ja foi feito pelos dados da propria loja.

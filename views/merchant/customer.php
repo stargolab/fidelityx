@@ -15,6 +15,29 @@
     </div>
 </section>
 
+<?php if ($launch): ?>
+    <?php // confirmacao do lancamento: novo saldo, quanto falta e Desfazer por alguns segundos (task 5) ?>
+    <section class="card launch-confirm" role="status">
+        <p class="launch-confirm-title">
+            <strong>+<?= number_format((int)$launch['quantity'], 0, ',', '.') ?> <?= (int)$launch['quantity'] === 1 ? 'ponto lançado' : 'pontos lançados' ?></strong>
+            para <?= e(strtok((string)$card['customer_name'], ' ')) ?>.
+            Saldo agora: <strong><?= number_format((int)$card['current_points'], 0, ',', '.') ?> pontos</strong>.
+        </p>
+        <?php if ($progress && !$progress['all_available']): ?>
+            <p class="muted">Faltam <?= number_format($progress['missing'], 0, ',', '.') ?> para <?= e($progress['reward']['name']) ?>.</p>
+        <?php elseif ($progress): ?>
+            <p class="muted">Já dá para resgatar qualquer prêmio.</p>
+        <?php endif; ?>
+        <form action="<?= e(url('merchant/customer')) ?>" method="POST" class="launch-undo" data-undo-seconds="<?= (int)$undoSeconds ?>">
+            <?= Csrf::field() ?>
+            <input type="hidden" name="action" value="reverse">
+            <input type="hidden" name="phone" value="<?= e($card['phone']) ?>">
+            <input type="hidden" name="log_id" value="<?= (int)$launch['id'] ?>">
+            <button type="submit" class="btn-secondary">Desfazer <span class="launch-undo-timer"></span></button>
+        </form>
+    </section>
+<?php endif; ?>
+
 <?php if ($card['consent_at'] === null): ?>
     <?php // cadastro anterior ao registro de consentimento (migration 003): pergunta ao cliente e grava ?>
     <section class="card consent-pending">
@@ -115,6 +138,22 @@
 </details>
 
 <script>
+    // Desfazer da confirmacao some depois de alguns segundos (depois disso, o estorno e pelo extrato)
+    document.querySelectorAll('.launch-undo').forEach(function (form) {
+        var left = parseInt(form.dataset.undoSeconds, 10);
+        var timer = form.querySelector('.launch-undo-timer');
+        var tick = function () {
+            if (left <= 0) {
+                form.remove();
+                return;
+            }
+            timer.textContent = '(' + left + 's)';
+            left--;
+            setTimeout(tick, 1000);
+        };
+        tick();
+    });
+
     // atalhos +1/+5/+10 somam no campo de pontos (o lancamento continua pelo botao)
     document.querySelectorAll('[data-add]').forEach(function (button) {
         button.addEventListener('click', function () {

@@ -47,6 +47,18 @@ class PointsLogModel {
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    // lancamento (earn) deste cartao, feito ha no maximo $maxAgeSeconds e ainda nao estornado; false se nao houver
+    public function findFreshEarn($logId, $cardId, int $maxAgeSeconds) {
+        $sql = "SELECT id, quantity FROM points_log pl
+                WHERE pl.id = :id AND pl.card_id = :card_id AND pl.type = 'earn'
+                  AND pl.created_at >= NOW() - INTERVAL " . (int)$maxAgeSeconds . " SECOND
+                  AND NOT EXISTS (SELECT 1 FROM points_log r WHERE r.reverses_id = pl.id)";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id' => $logId, ':card_id' => $cardId]);
+
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
     public function countByCard($cardId): int {
         $stmt = $this->db->prepare('SELECT COUNT(*) FROM points_log WHERE card_id = :card_id');
         $stmt->execute([':card_id' => $cardId]);

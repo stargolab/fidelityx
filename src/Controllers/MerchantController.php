@@ -36,6 +36,10 @@ class MerchantController {
 
     private const MAX_POINTS_PER_ENTRY = 10000;
     private const PER_PAGE = 20;
+    // confirmacao do lancamento: o botao Desfazer fica UNDO_SECONDS na tela; o aviso so aparece
+    // se o lancamento tiver ate UNDO_BANNER_SECONDS (o estorno em si vale por 24 h, pelo extrato)
+    private const UNDO_SECONDS = 30;
+    private const UNDO_BANNER_SECONDS = 120;
     private const MAX_LOGIN_FAILURES = 5;
     private const LOGIN_WINDOW_SECONDS = 900;
 
@@ -204,10 +208,19 @@ class MerchantController {
             fn($reward) => (int)$reward['points_cost'] <= $balance
         ));
 
+        // confirmacao do lancamento que acabou de ser feito (task 5). so aparece logo depois de lancar:
+        // recarregar a pagina minutos depois nao mostra de novo nem oferece Desfazer.
+        $launchId = filter_var($_GET['lancamento'] ?? '', FILTER_VALIDATE_INT);
+        $launch = $launchId
+            ? (new PointsLogModel($this->db))->findFreshEarn($launchId, (int)$card['id'], self::UNDO_BANNER_SECONDS)
+            : false;
+
         View::render('merchant/customer', [
-            'card'     => $card,
-            'rewards'  => $rewards,
-            'progress' => RewardProgress::next($balance, $activeRewards),
+            'card'        => $card,
+            'rewards'     => $rewards,
+            'progress'    => RewardProgress::next($balance, $activeRewards),
+            'launch'      => $launch ?: null,
+            'undoSeconds' => self::UNDO_SECONDS,
         ]);
     }
 
@@ -578,9 +591,10 @@ class MerchantController {
             redirect('merchant/customer', ['phone' => $phone, 'error' => 'pontos_invalidos']);
         }
 
-        $cardModel->addPoints($card['id'], $points, $description);
+        $logId = $cardModel->addPoints($card['id'], $points, $description);
 
-        redirect('merchant/customer', ['phone' => $phone, 'success' => 'pontos_lancados']);
+        // a tela do cliente mostra a confirmacao (novo saldo, quanto falta, Desfazer) a partir do lancamento
+        redirect('merchant/customer', ['phone' => $phone, 'lancamento' => $logId]);
     }
 
     private function logBelongsToCard(int $logId, int $cardId): bool {

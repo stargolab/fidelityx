@@ -755,3 +755,21 @@ span.btn-secondary {
     font-size: 1.25rem;
     letter-spacing: 0.15em;
 }
+
+/* confirmacao do lancamento (novo saldo, quanto falta e Desfazer) */
+.launch-confirm {
+    border-color: var(--success);
+    background: var(--success-soft);
+}
+
+.launch-confirm p {
+    margin-bottom: 0.5rem;
+}
+
+.launch-confirm-title strong:first-child {
+    color: var(--success-text);
+}
+
+.launch-undo {
+    margin-top: 0.75rem;
+}

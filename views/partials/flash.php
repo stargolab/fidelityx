@@ -35,7 +35,6 @@ $flashMessages = [
         'logged'            => 'Bem-vindo de volta!',
         'logout'            => 'Você saiu da sua conta.',
         'cliente_cadastrado' => 'Cliente cadastrado. Já pode lançar os pontos.',
-        'pontos_lancados'   => 'Pontos lançados com sucesso.',
         'premio_criado'     => 'Prêmio cadastrado.',
         'premio_atualizado' => 'Prêmio atualizado.',
         'premio_editado'    => 'Prêmio salvo.',

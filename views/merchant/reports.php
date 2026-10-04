@@ -42,14 +42,9 @@
                                     <a href="<?= e(url('merchant/statement', ['phone' => $entry['phone']])) ?>"><?= e($entry['customer_name']) ?></a>
                                 <?php endif; ?>
                             </td>
-                            <td>
-                                <?php if ($entry['type'] === 'earn'): ?>
-                                    <span class="badge badge-earn">Ganhou</span>
-                                <?php else: ?>
-                                    <span class="badge badge-redeem">Resgatou</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="num"><?= $entry['type'] === 'earn' ? '+' : '−' ?><?= (int)$entry['quantity'] ?></td>
+                            <?php [$typeLabel, $typeBadge, $typeSign] = log_type_view($entry['type']); ?>
+                            <td><span class="badge <?= $typeBadge ?>"><?= e($typeLabel) ?></span></td>
+                            <td class="num"><?= $typeSign ?><?= (int)$entry['quantity'] ?></td>
                             <td><?= e($entry['description']) ?></td>
                         </tr>
                     <?php endforeach; ?>

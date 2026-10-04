@@ -2,6 +2,15 @@
 <?php $title = 'Prêmios'; ?>
 <?php require __DIR__ . '/../partials/merchant-header.php'; ?>
 
+<section class="card rule-summary">
+    <?php if ($pointsRule): ?>
+        <p>Regra de pontos: a cada <strong><?= e(\App\Support\Money::format($pointsRule)) ?></strong> em compras, 1 ponto.</p>
+    <?php else: ?>
+        <p class="muted">Sem regra de pontos: no balcão, os pontos são digitados direto.</p>
+    <?php endif; ?>
+    <a href="<?= e(url('merchant/points-rule')) ?>" class="btn-secondary"><?= $pointsRule ? 'Alterar regra' : 'Definir regra de pontos' ?></a>
+</section>
+
 <section class="card">
     <h2>Novo prêmio</h2>
     <form action="<?= e(url('merchant/rewards')) ?>" method="POST">

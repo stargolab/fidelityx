@@ -21,21 +21,29 @@
         <div class="table-wrap">
             <table>
                 <thead>
-                    <tr><th>Data</th><th>Tipo</th><th class="num">Pontos</th><th>Descrição</th></tr>
+                    <tr><th>Data</th><th>Tipo</th><th class="num">Pontos</th><th>Descrição</th><th><span class="visually-hidden">Ações</span></th></tr>
                 </thead>
                 <tbody>
                     <?php foreach ($entries as $entry): ?>
                         <tr>
                             <td><?= e(format_datetime($entry['created_at'])) ?></td>
-                            <td>
-                                <?php if ($entry['type'] === 'earn'): ?>
-                                    <span class="badge badge-earn">Ganhou</span>
-                                <?php else: ?>
-                                    <span class="badge badge-redeem">Resgatou</span>
+                            <?php [$typeLabel, $typeBadge, $typeSign] = log_type_view($entry['type']); ?>
+                            <td><span class="badge <?= $typeBadge ?>"><?= e($typeLabel) ?></span></td>
+                            <td class="num"><?= $typeSign ?><?= (int)$entry['quantity'] ?></td>
+                            <td><?= e($entry['description']) ?></td>
+                            <td class="num">
+                                <?php if ($entry['can_reverse'] ?? false): ?>
+                                    <form action="<?= e(url('merchant/customer')) ?>" method="POST"
+                                          onsubmit="return confirm('Estornar este lançamento? Os pontos saem do saldo do cliente.');">
+                                        <?= \App\Support\Csrf::field() ?>
+                                        <input type="hidden" name="action" value="reverse">
+                                        <input type="hidden" name="back" value="statement">
+                                        <input type="hidden" name="phone" value="<?= e($card['phone']) ?>">
+                                        <input type="hidden" name="log_id" value="<?= (int)$entry['id'] ?>">
+                                        <button type="submit" class="btn-secondary btn-danger">Estornar</button>
+                                    </form>
                                 <?php endif; ?>
                             </td>
-                            <td class="num"><?= $entry['type'] === 'earn' ? '+' : '−' ?><?= (int)$entry['quantity'] ?></td>
-                            <td><?= e($entry['description']) ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

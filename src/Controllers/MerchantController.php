@@ -8,6 +8,7 @@ use App\Models\MerchantModel;
 use App\Models\PointsLogModel;
 use App\Models\RewardModel;
 use App\Support\Csrf;
+use App\Support\Money;
 use App\Support\Paginator;
 use App\Support\Privacy;
 use App\Support\QrSvg;
@@ -36,11 +37,19 @@ class MerchantController {
 
     private const MAX_POINTS_PER_ENTRY = 10000;
     private const PER_PAGE = 20;
+    // confirmacao do lancamento: o botao Desfazer fica UNDO_SECONDS na tela; o aviso so aparece
+    // se o lancamento tiver ate UNDO_BANNER_SECONDS (o estorno em si vale por 24 h, pelo extrato)
+    private const UNDO_SECONDS = 30;
+    private const UNDO_BANNER_SECONDS = 120;
+    private const RECENT_CUSTOMERS = 5;
+    private const MAX_POINTS_RULE_CENTS = 100000000;
     private const MAX_LOGIN_FAILURES = 5;
     private const LOGIN_WINDOW_SECONDS = 900;
 
     private $db;
     private $merchantModel;
+    // lojista logado, preenchido pelo authGuard
+    private ?array $merchant = null;
 
     public function __construct($db) {
         $this->db = $db;
@@ -87,7 +96,10 @@ class MerchantController {
         $merchantId = $this->authGuard();
 
         if (!isset($_GET['phone'])) {
-            View::render('merchant/dashboard', ['steps' => $this->onboardingSteps($merchantId)]);
+            View::render('merchant/dashboard', [
+                'steps'  => $this->onboardingSteps($merchantId),
+                'recent' => $this->recentCustomers($merchantId),
+            ]);
             return;
         }
 
@@ -101,6 +113,49 @@ class MerchantController {
         }
 
         redirect('merchant/customer-new', ['phone' => $phone]);
+    }
+
+    // regra de pontos da loja logada, em centavos por ponto (null = sem regra). so depois do authGuard.
+    private function pointsRule(): ?int {
+        $rule = $this->merchant['points_rule_cents'] ?? null;
+        return $rule === null ? null : (int)$rule;
+    }
+
+    // regra de pontos pelo valor da compra (task 6): "a cada R$ X em compras, 1 ponto"
+    public function renderPointsRule() {
+        $merchantId = $this->authGuard();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handlePointsRule($merchantId);
+            return;
+        }
+
+        View::render('merchant/points-rule', ['ruleCents' => $this->pointsRule()]);
+    }
+
+    private function handlePointsRule(int $merchantId) {
+        Csrf::verify();
+
+        if (($_POST['action'] ?? '') === 'clear') {
+            $this->merchantModel->updatePointsRule($merchantId, null);
+            redirect('merchant/points-rule', ['success' => 'regra_removida']);
+        }
+
+        // de R$ 0,01 (1 centavo = 1 ponto) ate R$ 1.000.000,00 por ponto
+        $cents = Money::toCents($_POST['rule'] ?? '');
+        if ($cents === null || $cents < 1 || $cents > self::MAX_POINTS_RULE_CENTS) {
+            redirect('merchant/points-rule', ['error' => 'regra_invalida']);
+        }
+
+        $this->merchantModel->updatePointsRule($merchantId, $cents);
+        redirect('merchant/points-rule', ['success' => 'regra_salva']);
+    }
+
+    // atalho da home: os ultimos clientes atendidos (lancamento, resgate ou estorno), para quem volta no mesmo dia.
+    // cadastro sem nenhuma movimentacao ainda nao conta como atendimento.
+    private function recentCustomers(int $merchantId): array {
+        $rows = (new LoyaltyCardModel($this->db))->searchByMerchant($merchantId, '', self::RECENT_CUSTOMERS, 0);
+        return array_values(array_filter($rows, fn($row) => $row['last_use_at'] !== null));
     }
 
     // guia de primeiros passos da home: cada passo sabe se ja foi feito pelos dados da propria loja.
@@ -120,6 +175,15 @@ class MerchantController {
                 'url'   => url('merchant/dashboard') . '#phone',
                 'cta'   => 'Buscar cliente',
                 'done'  => (new PointsLogModel($this->db))->countByMerchant($merchantId) > 0,
+            ],
+            [
+                // opcional: lancar pontos direto continua valendo
+                'label'    => 'Defina a regra de pontos',
+                'hint'     => 'Ex.: a cada R$ 1,00 em compras, 1 ponto. Aí é só digitar o valor da compra.',
+                'url'      => url('merchant/points-rule'),
+                'cta'      => 'Definir regra',
+                'done'     => $this->pointsRule() !== null,
+                'optional' => true,
             ],
             [
                 // nao da pra saber se imprimiu: e uma dica (opcional) que nao segura o guia na tela
@@ -204,10 +268,20 @@ class MerchantController {
             fn($reward) => (int)$reward['points_cost'] <= $balance
         ));
 
+        // confirmacao do lancamento que acabou de ser feito (task 5). so aparece logo depois de lancar:
+        // recarregar a pagina minutos depois nao mostra de novo nem oferece Desfazer.
+        $launchId = filter_var($_GET['lancamento'] ?? '', FILTER_VALIDATE_INT);
+        $launch = $launchId
+            ? (new PointsLogModel($this->db))->findFreshEarn($launchId, (int)$card['id'], self::UNDO_BANNER_SECONDS)
+            : false;
+
         View::render('merchant/customer', [
-            'card'     => $card,
-            'rewards'  => $rewards,
-            'progress' => RewardProgress::next($balance, $activeRewards),
+            'card'        => $card,
+            'rewards'     => $rewards,
+            'progress'    => RewardProgress::next($balance, $activeRewards),
+            'launch'      => $launch ?: null,
+            'undoSeconds' => self::UNDO_SECONDS,
+            'pointsRule'  => $this->pointsRule(),
         ]);
     }
 
@@ -259,7 +333,8 @@ class MerchantController {
         }
 
         View::render('merchant/rewards', [
-            'rewards' => $rewardModel->listByMerchant($merchantId),
+            'rewards'    => $rewardModel->listByMerchant($merchantId),
+            'pointsRule' => $this->pointsRule(),
         ]);
     }
 
@@ -535,6 +610,24 @@ class MerchantController {
             redirect('merchant/dashboard', ['success' => 'cliente_excluido']);
         }
 
+        // estorno de lancamento (do extrato ou do Desfazer da confirmacao). volta pra tela de onde veio.
+        if (($_POST['action'] ?? '') === 'reverse') {
+            $back = ($_POST['back'] ?? '') === 'statement' ? 'merchant/statement' : 'merchant/customer';
+            $logId = filter_var($_POST['log_id'] ?? '', FILTER_VALIDATE_INT);
+            // o lancamento precisa ser do cartao deste cliente (o model confere tambem a loja)
+            $result = $logId && $this->logBelongsToCard($logId, (int)$card['id'])
+                ? $cardModel->reverse($logId, $merchantId)
+                : 'not_found';
+
+            redirect($back, ['phone' => $phone] + match ($result) {
+                'ok'           => ['success' => 'lancamento_estornado'],
+                'already'      => ['error' => 'estorno_repetido'],
+                'expired'      => ['error' => 'estorno_expirado'],
+                'insufficient' => ['error' => 'estorno_sem_saldo'],
+                default        => ['error' => 'estorno_invalido'],
+            });
+        }
+
         if (($_POST['action'] ?? '') === 'redeem') {
             $rewardId = filter_var($_POST['reward_id'] ?? '', FILTER_VALIDATE_INT);
             $reward = $rewardId ? (new RewardModel($this->db))->findActiveForMerchant($rewardId, $merchantId) : null;
@@ -550,19 +643,48 @@ class MerchantController {
             redirect('merchant/customer', ['phone' => $phone, 'success' => 'resgate_realizado']);
         }
 
-        $points = filter_var($_POST['points'] ?? '', FILTER_VALIDATE_INT, [
-            'options' => ['min_range' => 1, 'max_range' => self::MAX_POINTS_PER_ENTRY],
-        ]);
+        // com regra de pontos e valor da compra digitado, os pontos saem do valor (task 6), sempre
+        // arredondando pra baixo e calculados aqui (a previa da tela e so ajuda). sem valor, vale o campo de pontos.
+        $amount = trim((string)($_POST['amount'] ?? ''));
+        $rule = $this->pointsRule();
+        $defaultDescription = 'Compra';
+
+        if ($amount !== '' && $rule) {
+            $cents = Money::toCents($amount);
+            if ($cents === null || $cents < 1) {
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'valor_invalido']);
+            }
+            $points = Money::pointsFor($cents, $rule);
+            if ($points < 1) {
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'valor_sem_pontos']);
+            }
+            if ($points > self::MAX_POINTS_PER_ENTRY) {
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'pontos_invalidos']);
+            }
+            $defaultDescription = 'Compra de ' . Money::format($cents);
+        } else {
+            $points = filter_var($_POST['points'] ?? '', FILTER_VALIDATE_INT, [
+                'options' => ['min_range' => 1, 'max_range' => self::MAX_POINTS_PER_ENTRY],
+            ]);
+        }
+
         $description = trim((string)($_POST['description'] ?? ''));
-        $description = $description === '' ? 'Compra' : mb_substr($description, 0, 255);
+        $description = $description === '' ? $defaultDescription : mb_substr($description, 0, 255);
 
         if ($points === false) {
             redirect('merchant/customer', ['phone' => $phone, 'error' => 'pontos_invalidos']);
         }
 
-        $cardModel->addPoints($card['id'], $points, $description);
+        $logId = $cardModel->addPoints($card['id'], $points, $description);
 
-        redirect('merchant/customer', ['phone' => $phone, 'success' => 'pontos_lancados']);
+        // a tela do cliente mostra a confirmacao (novo saldo, quanto falta, Desfazer) a partir do lancamento
+        redirect('merchant/customer', ['phone' => $phone, 'lancamento' => $logId]);
+    }
+
+    private function logBelongsToCard(int $logId, int $cardId): bool {
+        $stmt = $this->db->prepare('SELECT 1 FROM points_log WHERE id = :id AND card_id = :card_id');
+        $stmt->execute([':id' => $logId, ':card_id' => $cardId]);
+        return (bool)$stmt->fetchColumn();
     }
 
     // criar, ativar/desativar ou excluir premio
@@ -670,6 +792,9 @@ class MerchantController {
             SessionGuard::destroy();
             redirect('merchant/login', ['error' => 'conta_inativa']);
         }
+
+        // a loja da requisicao fica a mao (ex.: regra de pontos), sem consultar o banco de novo
+        $this->merchant = $merchant;
 
         // nome da loja sempre atualizado no menu (pode ter mudado desde o login)
         $_SESSION['last_seen']     = time();

@@ -220,6 +220,7 @@
 
 /* tabela larga rola dentro do card, nunca a pagina inteira */
 .table-wrap {
+    position: relative; /* elemento absoluto dentro da tabela (ex.: .visually-hidden) fica no scroll dela, nao alarga a pagina */
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
@@ -278,6 +279,11 @@ th.num {
 .badge-redeem {
     background: var(--primary-soft);
     color: var(--primary-hover);
+}
+
+.badge-reversal {
+    background: var(--warning-soft);
+    color: var(--warning-text);
 }
 
 .btn-secondary {
@@ -540,8 +546,12 @@ span.btn-secondary {
     position: absolute;
     width: 1px;
     height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
     overflow: hidden;
     clip: rect(0 0 0 0);
+    clip-path: inset(50%);
     white-space: nowrap;
 }
 
@@ -749,4 +759,91 @@ span.btn-secondary {
 .poster-code strong {
     font-size: 1.25rem;
     letter-spacing: 0.15em;
+}
+
+/* confirmacao do lancamento (novo saldo, quanto falta e Desfazer) */
+.launch-confirm {
+    border-color: var(--success);
+    background: var(--success-soft);
+}
+
+.launch-confirm p {
+    margin-bottom: 0.5rem;
+}
+
+.launch-confirm-title strong:first-child {
+    color: var(--success-text);
+}
+
+.launch-undo {
+    margin-top: 0.75rem;
+}
+
+/* clientes atendidos recentemente (home): cada linha e um link grande, facil de tocar */
+.recent-list {
+    list-style: none;
+}
+
+.recent-list li {
+    border-bottom: 1px solid var(--border);
+}
+
+.recent-list li:last-child {
+    border-bottom: none;
+}
+
+.recent-list a {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 56px;
+    padding: 0.5rem 0;
+    text-decoration: none;
+}
+
+.recent-name {
+    font-weight: 600;
+}
+
+.recent-meta {
+    font-size: 0.85rem;
+}
+
+@media (min-width: 640px) {
+    .recent-list a {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+}
+
+/* regra de pontos pelo valor da compra */
+.rule-help,
+.rule-current {
+    margin-bottom: 1rem;
+}
+
+.rule-example,
+.amount-preview {
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+.rule-clear {
+    margin-top: 1rem;
+}
+
+.rule-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+    .rule-summary {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
 }

@@ -38,7 +38,7 @@ final class BalcaoFlowTest extends HttpTestCase {
         // tela do cliente: lancar pontos e o saldo atualiza na hora
         $screen = 'merchant/customer&phone=11911110001';
         [, $location] = $this->post('merchant/customer', ['action' => 'score', 'phone' => '11911110001', 'points' => 30], true, $screen);
-        $this->assertSame('merchant/customer&phone=11911110001&success=pontos_lancados', $location);
+        $this->assertMatchesRegularExpression('/^merchant\/customer&phone=11911110001&lancamento=\d+$/', $location);
         $this->get($screen);
         $this->assertStringContainsString('balance-value">30<', $this->lastBody);
         $this->assertStringContainsString('name="reward_id" value="' . $cafeId . '"', $this->lastBody, 'premio que o saldo paga aparece');

@@ -69,6 +69,22 @@ abstract class HttpTestCase extends DatabaseTestCase {
         $this->cookieJar = tempnam(sys_get_temp_dir(), 'fx-cookie');
     }
 
+    // poe um cookie no "navegador" do teste (ex.: um id de sessao inventado, para testar session fixation)
+    protected function setCookie(string $name, string $value): void {
+        $host = parse_url(self::$baseUrl, PHP_URL_HOST);
+        file_put_contents($this->cookieJar, "$host\tFALSE\t/\tFALSE\t0\t$name\t$value\n", FILE_APPEND);
+    }
+
+    protected function cookie(string $name): ?string {
+        foreach (file($this->cookieJar, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
+            $parts = explode("\t", $line);
+            if (count($parts) === 7 && $parts[5] === $name) {
+                return $parts[6];
+            }
+        }
+        return null;
+    }
+
     // GET sem seguir redirect. devolve [status, destino do redirect sem o host]
     protected function get(string $route): array {
         return $this->request('GET', $route);

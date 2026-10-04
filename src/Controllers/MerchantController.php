@@ -499,6 +499,7 @@ class MerchantController {
         $_SESSION['merchant_id']     = (int)$merchant['id'];
         $_SESSION['merchant_name']   = $merchant['owner_name'];
         $_SESSION['store_name']      = $merchant['store_name'];
+        $_SESSION['last_seen']       = time();
 
         redirect('merchant/dashboard', ['success' => 'logged']);
     }
@@ -652,10 +653,29 @@ class MerchantController {
 
     // barra quem nao esta logado e devolve o id do lojista da sessao.
     // o id SEMPRE vem da sessao, nunca do formulario.
+    // a cada requisicao: sessao parada demais expira, e a conta e conferida no banco
+    // (lojista desativado perde o acesso na hora, nao so no proximo login).
     private function authGuard(): int {
         if(!isset($_SESSION['merchant_id'])){
             redirect('merchant/login', ['error' => 'sessao_expirada']);
         }
-        return (int)$_SESSION['merchant_id'];
+
+        if (SessionGuard::isExpired($_SESSION['last_seen'] ?? null, time())) {
+            SessionGuard::destroy();
+            redirect('merchant/login', ['error' => 'sessao_expirada']);
+        }
+
+        $merchant = $this->merchantModel->findById((int)$_SESSION['merchant_id']);
+        if (!$merchant || $merchant['status'] !== 'active') {
+            SessionGuard::destroy();
+            redirect('merchant/login', ['error' => 'conta_inativa']);
+        }
+
+        // nome da loja sempre atualizado no menu (pode ter mudado desde o login)
+        $_SESSION['last_seen']     = time();
+        $_SESSION['merchant_name'] = $merchant['owner_name'];
+        $_SESSION['store_name']    = $merchant['store_name'];
+
+        return (int)$merchant['id'];
     }
 }

@@ -77,6 +77,28 @@
     border-radius: 8px;
 }
 
+/* "Sair" e um botao de formulario (logout por POST) com a mesma cara dos links do menu */
+.app-nav .nav-logout button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 0.75rem;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-muted);
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.app-nav .nav-logout button:hover {
+    color: var(--text-main);
+    background: var(--bg-body);
+}
+
 .app-nav .nav-menu a:hover,
 .app-nav .nav-menu a.active {
     color: var(--text-main);

@@ -11,13 +11,6 @@
 // namespace: index.php usa o namespace para chamar o controller certo: new \App\Controllers\MerchantController($db).
 // -----------------------------------------------------------------------------------------
 
-// inicializacao
-// cookie de sessao so via http (js nao le) e sem envio em POST vindo de outro site
-session_start([
-    'cookie_httponly' => true,
-    'cookie_samesite' => 'Lax',
-]);
-
 // autoloading psr-4 , carrega as classes necessárias, não tem necessidade de ficar puxando com require, include, etc.
 // pro nosso caso especifico, substitui massivamente os requires, deixa o código mais limpo e combinado com o singleton
 // aumenta muito o desempenho e otimizaçao pra larga escala.
@@ -26,6 +19,25 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 use Dotenv\Dotenv;
 use App\Controllers\ErrorController;
+use App\Support\RequestGuard;
+use App\Support\SessionGuard;
+
+// inicializacao
+// cabecalhos de seguranca em toda resposta e nada de parametro em formato de lista (ver RequestGuard)
+RequestGuard::sendSecurityHeaders();
+$_GET = RequestGuard::dropArrayParams($_GET);
+$_POST = RequestGuard::dropArrayParams($_POST);
+
+// cookie de sessao so via http (js nao le), sem envio em POST vindo de outro site e, em https, so por https.
+// use_strict_mode: id de sessao inventado por quem chega (session fixation) e trocado por um novo.
+// gc_maxlifetime acompanha a expiracao por inatividade (SessionGuard), senao o PHP apagaria a sessao em 24 min.
+session_start([
+    'cookie_httponly' => true,
+    'cookie_samesite' => 'Lax',
+    'cookie_secure'   => RequestGuard::isHttps(),
+    'use_strict_mode' => true,
+    'gc_maxlifetime'  => SessionGuard::IDLE_SECONDS,
+]);
 
 // qualquer excecao nao tratada vira log + pagina 500 (nunca mostra o erro cru pro usuario)
 set_exception_handler(function (\Throwable $e) {

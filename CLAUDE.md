@@ -36,6 +36,10 @@ Banco: `mysql -u root -p < database/schema.sql` em instalação nova. Banco já 
 
 **Fuso horário** — `app_timezone()` (`APP_TIMEZONE` do `.env`, padrão `America/Sao_Paulo`) é aplicado no PHP pelo `index.php` e pelo `tests/bootstrap.php`, e o `Database` faz `SET time_zone` com o mesmo offset em toda conexão. Não dependa do fuso do `php.ini` nem do servidor MySQL.
 
+**Sessão do lojista** — o `authGuard` confere a cada requisição se a conta ainda existe e está `active` (desativada encerra a sessão na hora, com `conta_inativa`), expira a sessão parada há mais de `SessionGuard::IDLE_SECONDS` (8 h) e atualiza nome da loja e `last_seen`. A sessão usa `use_strict_mode` (id inventado não é aceito), `cookie_secure` quando a requisição é HTTPS e `gc_maxlifetime` igual ao limite de inatividade.
+
+**Proteções de toda requisição** — o `index.php` chama `RequestGuard` antes de rotear: cabeçalhos de segurança (`X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff`, `Referrer-Policy: same-origin`, sem `X-Powered-By`) e parâmetros em formato de lista (`campo[]=`) viram texto vazio, então nenhum `(string)` de `$_GET`/`$_POST` gera warning. O logout é POST com CSRF (o "Sair" do menu é um formulário). Os testes de fluxo rodam com `display_errors` ligado (`tests/Support/router.php`): qualquer warning aparece no HTML e quebra o teste.
+
 **Erros** — `ErrorController::handle($code)` renderiza `views/errors/{code}.php` (fallback `default.php`). Exceções não tratadas são logadas e viram 500 pelo `set_exception_handler` do `index.php`; detalhes técnicos vão só para `error_log`.
 
 **Modelo de dados** (detalhes em `docs/db/schema-explanation.md`):

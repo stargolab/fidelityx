@@ -39,6 +39,14 @@ class MerchantModel{
         return $stmt->fetch(\PDO::FETCH_ASSOC); // array associativo
     }
 
+    // dados que o authGuard confere a cada requisicao
+    public function findById($merchantId) {
+        $stmt = $this->db->prepare('SELECT id, owner_name, store_name, status FROM merchants WHERE id = :id');
+        $stmt->execute([':id' => $merchantId]);
+
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
     public function findPublicCode($merchantId): ?string {
         $stmt = $this->db->prepare('SELECT public_code FROM merchants WHERE id = :id');
         $stmt->execute([':id' => $merchantId]);

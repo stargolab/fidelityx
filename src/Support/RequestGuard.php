@@ -35,8 +35,9 @@ final class RequestGuard {
         return $params;
     }
 
-    // a requisicao chegou por https (direto ou pelo servidor web)
+    // a requisicao chegou por https: direto, pelo servidor web ou por um proxy de TRUSTED_PROXIES
+    // que termina o https e avisa pelo X-Forwarded-Proto
     public static function isHttps(): bool {
-        return !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+        return ClientIp::isHttps($_SERVER, Env::get('TRUSTED_PROXIES'));
     }
 }

@@ -46,9 +46,10 @@ class RateLimiter {
         $stmt->execute([':bucket' => $bucket, ':key_hash' => $this->hash($key)]);
     }
 
-    // ip de quem fez a requisicao. nao confia em X-Forwarded-For: qualquer um pode mandar esse header.
+    // ip de quem fez a requisicao. o X-Forwarded-For so vale quando a requisicao chega de um proxy
+    // listado em TRUSTED_PROXIES (qualquer um pode mandar esse header); sem isso e o REMOTE_ADDR.
     public static function clientIp(): string {
-        return (string)($_SERVER['REMOTE_ADDR'] ?? 'desconhecido');
+        return ClientIp::resolve($_SERVER, Env::get('TRUSTED_PROXIES'));
     }
 
     private function hash(string $key): string {

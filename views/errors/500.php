@@ -19,6 +19,9 @@
         
         <h1>Erro interno</h1>
         <p>Algo saiu do esperado do nosso lado. Já estamos trabalhando nisso — tente novamente em instantes.</p>
+        <?php if (!empty($errorId)): ?>
+            <p>Se precisar falar com o suporte, informe o código <strong><?= htmlspecialchars((string)$errorId, ENT_QUOTES, 'UTF-8') ?></strong>.</p>
+        <?php endif; ?>
         
         <a href="/index.php?url=merchant/dashboard" class="btn-home">Voltar ao Painel</a>
     </div>

@@ -215,7 +215,7 @@ class LoyaltyCardModel {
             ':quantity'    => $quantity,
             ':description' => $description,
             ':reward_id'   => $rewardId,
-            ':ip'          => $_SERVER['REMOTE_ADDR'] ?? null,
+            ':ip'          => isset($_SERVER['REMOTE_ADDR']) ? \App\Support\RateLimiter::clientIp() : null,
         ]);
     }
 }

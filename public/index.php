@@ -17,8 +17,9 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use Dotenv\Dotenv;
 use App\Controllers\ErrorController;
+use App\Support\Env;
+use App\Support\ErrorLog;
 use App\Support\RequestGuard;
 use App\Support\SessionGuard;
 
@@ -27,6 +28,14 @@ use App\Support\SessionGuard;
 RequestGuard::sendSecurityHeaders();
 $_GET = RequestGuard::dropArrayParams($_GET);
 $_POST = RequestGuard::dropArrayParams($_POST);
+
+// qualquer excecao nao tratada ou erro fatal vira log + pagina 500 (nunca mostra o erro cru pro usuario)
+ErrorLog::register();
+
+// configuracao: variaveis de ambiente e, se existir, o .env da raiz (__DIR__ . '/..' sobe uma pasta).
+// em producao (docker) nao ha .env, so variaveis de ambiente. tudo fica no $_ENV, usado no Database.php!
+Env::load(__DIR__ . '/..');
+ErrorLog::useFile(Env::get('LOG_FILE'));
 
 // cookie de sessao so via http (js nao le), sem envio em POST vindo de outro site e, em https, so por https.
 // use_strict_mode: id de sessao inventado por quem chega (session fixation) e trocado por um novo.
@@ -39,19 +48,13 @@ session_start([
     'gc_maxlifetime'  => SessionGuard::IDLE_SECONDS,
 ]);
 
-// qualquer excecao nao tratada vira log + pagina 500 (nunca mostra o erro cru pro usuario)
-set_exception_handler(function (\Throwable $e) {
-    error_log('[uncaught] ' . $e);
-    (new ErrorController())->handle(500);
-});
-
-// criando instancia da biblioteca dotenv
-// __DIR__ . '/..' diz para o php subir uma pasta para encontrar o .env na raiz
-$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
-
-// load() lê a env e guarda as informações na memoria ($_ENV)
-$dotenv->load();
-// a .env será usada no Database.php!
+// sem as variaveis do banco nao ha o que servir: avisa no log quais faltam e responde 503
+$missing = Env::missing();
+if ($missing !== []) {
+    error_log('[config] variaveis obrigatorias sem valor: ' . implode(', ', $missing));
+    (new ErrorController())->handle(503);
+    exit;
+}
 
 // fuso fixo da aplicacao (o Database aplica o mesmo na conexao com o MySQL)
 date_default_timezone_set(app_timezone());

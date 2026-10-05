@@ -1,0 +1,22 @@
+# fora da imagem: segredos, historico do git e o que so serve para desenvolver
+.env
+.env.*
+.git
+.github
+.claude
+.idea
+.vscode
+.phpunit.cache
+vendor
+node_modules
+storage
+tests
+docs
+src/ts
+*.md
+*.log
+phpunit.xml
+tsconfig.json
+docker-compose.yml
+Dockerfile
+.dockerignore

@@ -1,0 +1,54 @@
+# fidelityx em docker: aplicacao (apache + php) e banco (mysql 8).
+#
+#   docker compose up -d --build
+#
+# as senhas vem do .env desta pasta (o compose le sozinho): DB_PASS e DB_ROOT_PASS sao obrigatorias.
+# passo a passo, atualizacao, backup e proxy: docs/operacao.md
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8080}:80"
+    # o container nao tem .env: a aplicacao sobe so com estas variaveis
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: fidelityx
+      DB_USER: fidelityx
+      DB_PASS: ${DB_PASS:?defina DB_PASS no .env}
+      APP_URL: ${APP_URL:-}
+      APP_TIMEZONE: ${APP_TIMEZONE:-}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      BACKUP_DIR: /var/backups/fidelityx
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - sessions:/var/lib/php/sessions
+      - backups:/var/backups/fidelityx
+
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: fidelityx
+      MYSQL_USER: fidelityx
+      MYSQL_PASSWORD: ${DB_PASS:?defina DB_PASS no .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS:?defina DB_ROOT_PASS no .env}
+    volumes:
+      - dbdata:/var/lib/mysql
+      # so roda na primeira subida, com o volume do banco vazio. depois disso: php bin/migrate.php
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  dbdata:
+  sessions:
+  backups:

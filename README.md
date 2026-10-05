@@ -168,14 +168,14 @@ mysql -u root -p < database/schema.sql
 
 O arquivo [database/schema.sql](database/schema.sql) cria automaticamente:
 - Database `fidelityx`
-- Tabelas `merchants`, `customers`, `loyalty_cards`, `rewards`, `points_log` e `rate_limit_hits`
+- Tabelas `merchants`, `customers`, `loyalty_cards`, `rewards`, `points_log`, `rate_limit_hits` e `schema_migrations`
 - Índices e chaves estrangeiras
 - Charset UTF-8mb4
 
-> **Já tinha o banco criado antes?** Rode uma vez cada migration que ainda não aplicou, em ordem:
-> `mysql -u root -p fidelityx < database/migrations/001_mvp.sql` (bancos anteriores ao MVP)
-> `mysql -u root -p fidelityx < database/migrations/002_rate_limit.sql` (limite de tentativas de login e da consulta pública)
-> `mysql -u root -p fidelityx < database/migrations/003_lgpd.sql` (dados do cliente por loja, consentimento e código público da loja)
+> **Já tinha o banco criado antes?** As mudanças ficam em `database/migrations/` e o sistema controla quais já rodaram (depois do passo 4, com o `.env` pronto):
+> `php bin/migrate.php` roda as pendentes, em ordem · `php bin/migrate.php status` mostra a situação
+>
+> Na primeira vez, um banco criado antes deste controle precisa dizer até onde já está: `php bin/migrate.php baseline 003` (quem tinha aplicado até a `003_lgpd`) e, em seguida, `php bin/migrate.php`. Detalhes em [docs/operacao.md](docs/operacao.md#migrations).
 >
 > Detalhes das tabelas em [docs/db/schema-explanation.md](docs/db/schema-explanation.md).
 
@@ -200,6 +200,8 @@ DB_PASS=sua_senha
 
 Opcional: `APP_TIMEZONE=America/Sao_Paulo` (fuso da aplicação; vazio usa esse) e `APP_URL=https://seu-dominio` (endereço público do sistema, usado no QR code do cartaz; vazio usa o host da requisição).
 
+O `.env` é opcional: as mesmas variáveis podem vir do ambiente (é assim no Docker), e o ambiente tem prioridade sobre o arquivo. As variáveis de produção (`TRUSTED_PROXIES`, `LOG_FILE`, backup) estão comentadas no `.env.example`.
+
 > Depois de atualizar o projeto (`git pull`), rode `composer dump-autoload` para registrar arquivos novos do autoload.
 
 #### 5. Inicie o Servidor Local
@@ -213,18 +215,30 @@ php -S localhost:8000 -t public/
 
 Acesse: `http://localhost:8000` (redireciona para o login do lojista). A consulta pública do cliente fica em `http://localhost:8000/index.php?url=customer/balance`.
 
+### Docker e produção
+
+```bash
+cp .env.example .env          # preencha DB_PASS e DB_ROOT_PASS
+docker compose up -d --build  # aplicação em http://localhost:8080 + MySQL 8
+```
+
+A imagem serve só a pasta `public/`, não mostra erros na tela e sobe apenas com variáveis de ambiente. O guia completo está em [docs/operacao.md](docs/operacao.md): configuração, proxy reverso (`TRUSTED_PROXIES`), migrations, **backup do banco** (`php bin/backup.php`) e **log de erros**.
+
 ---
 
 ## 📚 Estrutura de Diretórios
 
 ```
 fidelityx/
+├── bin/                        # Scripts de linha de comando (migrate.php, backup.php)
 ├── database/
 │   ├── schema.sql              # Schema do banco de dados
 │   └── migrations/             # Alterações para bancos já existentes
+├── docker/                     # php.ini e Apache da imagem de produção
 ├── docs/
 │   ├── adr/                    # Architecture Decision Records
-│   └── db/                     # Documentação de banco de dados
+│   ├── db/                     # Documentação de banco de dados
+│   └── operacao.md             # Docker, migrations, backup e log de erros
 ├── public/
 │   ├── index.php               # Entry point
 │   ├── assets/
@@ -242,6 +256,8 @@ fidelityx/
 │   ├── customer/               # Consulta pública do cliente
 │   ├── partials/               # Cabeçalho, navegação e mensagens
 │   └── errors/                 # Templates de erro (400, 404, 500...)
+├── Dockerfile                  # Imagem de produção
+├── docker-compose.yml          # Aplicação + MySQL
 ├── composer.json               # Dependências PHP
 ├── tsconfig.json               # Configuração TypeScript
 └── README.md                   # Este arquivo
@@ -257,8 +273,8 @@ PHPUnit 10.5, em três suítes:
 
 | Suíte | O que cobre | Banco |
 |---|---|---|
-| `Unit` | `DocumentValidator` (CPF/CNPJ) e `PhoneValidator` | não |
-| `Integration` | `LoyaltyCardModel` (pontos, resgate, transação), `CustomerModel` (cadastro simultâneo) e `RateLimiter` | sim |
+| `Unit` | `DocumentValidator` (CPF/CNPJ), `PhoneValidator`, IP atrás de proxy (`ClientIp`), configuração (`Env`), formato do log de erros e regras do backup | não |
+| `Integration` | `LoyaltyCardModel` (pontos, resgate, transação), `CustomerModel` (cadastro simultâneo), `RateLimiter`, controle de migrations, índice do extrato e backup de verdade (pulado sem `mysqldump`) | sim |
 | `Feature` | fluxo completo por HTTP: cadastro da loja, busca pelo telefone, cadastro rápido, lançar e resgatar, cliente de outra loja, isolamento entre lojas, CSRF e limites de tentativas | sim |
 
 ```bash
@@ -266,12 +282,12 @@ composer test                       # todas as suítes
 composer test -- --testsuite Unit   # só as que não usam banco
 
 # verifica a sintaxe de todos os arquivos PHP
-find src views public tests -name "*.php" -exec php -l {} \;
+find src views public tests bin -name "*.php" -exec php -l {} \;
 ```
 
 Os testes com banco usam o banco **`fidelityx_test`**, que é apagado e recriado a partir do `schema.sql` a cada rodada (as credenciais vêm do seu `.env`; o usuário precisa poder criar banco). O banco do `.env` nunca é tocado.
 
-O **GitHub Actions** roda lint + testes em PHP 8.1 e 8.3 com MySQL 8 em todo PR e todo push na `main`.
+O **GitHub Actions** roda lint + testes em PHP 8.1 e 8.3 com MySQL 8 em todo PR e todo push na `main`, sem arquivo `.env` (só variáveis de ambiente, como em produção). Um segundo job recompila `src/ts/masks.ts` e falha se o resultado não bater com o `public/js/masks.js` versionado: mexeu no `.ts`, rode `tsc` e inclua o `.js` no commit.
 
 ### Estrutura de Controllers
 
@@ -304,7 +320,8 @@ public function renderCustomer() {
 - ✅ **Sessão** — Cookie `HttpOnly` + `SameSite=Lax` e `session_regenerate_id()` no login
 - ✅ **Limite de tentativas** — Login bloqueia com 429 após 5 erros em 15 min por e-mail ou IP; consulta pública limitada a 5/min por IP. Contagem no banco (sobrevive a apagar o cookie), com e-mail e IP guardados só como hash SHA-256
 - ✅ **Isolamento entre lojas** — Consultas filtram pelo `merchant_id` da sessão
-- ✅ **Erros** — Detalhes técnicos vão para o log; o usuário vê só as páginas de erro
+- ✅ **Erros** — Detalhes técnicos vão para o log (sem query string nem dados de formulário); o usuário vê só as páginas de erro, com um código para localizar o erro no log
+- ✅ **Atrás de proxy** — O IP do cliente só é lido do `X-Forwarded-For` quando a requisição vem de um proxy listado em `TRUSTED_PROXIES`
 
 ---
 
@@ -324,7 +341,9 @@ public function renderCustomer() {
 - [x] Paleta de cores em variáveis CSS (contraste WCAG AA)
 - [x] Layout responsivo e mobile-first
 - [x] Testes automatizados e CI
-- [ ] Docker e configuração de produção
+- [x] Docker e configuração de produção
+- [x] Backup do banco e registro de erros
+- [x] Controle de versão das migrations
 
 ### Próximos passos
 
@@ -367,6 +386,7 @@ test: adiciona/atualiza testes
 
 - [ADR - Decisões Arquiteturais](docs/adr/001-documents-validation.md)
 - [Schema do Banco de Dados](docs/db/schema-explanation.md)
+- [Operação: Docker, migrations, backup e log de erros](docs/operacao.md)
 
 ---
 

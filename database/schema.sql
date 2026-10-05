@@ -149,7 +149,8 @@ CREATE TABLE IF NOT EXISTS points_log (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-  KEY idx_points_log_card (card_id),
+  -- extrato paginado: movimentacoes de um cartao ja na ordem de data (o id, chave primaria, desempata)
+  KEY idx_points_log_card_created (card_id, created_at),
   KEY idx_points_log_type (type),
 
   KEY idx_points_log_reward (reward_id),
@@ -179,3 +180,20 @@ CREATE TABLE IF NOT EXISTS rate_limit_hits (
   KEY idx_rate_limit_lookup (bucket, key_hash, created_at),
   KEY idx_rate_limit_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================
+-- schema_migrations // quais migrations de database/migrations ja rodaram neste banco
+-- =========================
+-- controle usado pelo php bin/migrate.php (App\Support\Migrator).
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version VARCHAR(100) NOT NULL PRIMARY KEY, -- nome do arquivo sem .sql, ex.: 003_lgpd
+  applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- este arquivo ja e o estado final: banco criado por ele nasce com todas as migrations registradas.
+-- migration nova = arquivo em database/migrations + uma linha aqui (o teste MigratorTest cobra as duas coisas).
+INSERT IGNORE INTO schema_migrations (version) VALUES
+  ('001_mvp'),
+  ('002_rate_limit'),
+  ('003_lgpd'),
+  ('006_points_log_extrato');

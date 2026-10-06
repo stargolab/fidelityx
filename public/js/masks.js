@@ -21,20 +21,21 @@ function maskPhone(value) {
     const split = d.length === 11 ? 7 : 6;
     return ddd + d.slice(2, split) + "-" + d.slice(split);
 }
-// cpf (ate 11 digitos) "000.000.000-00"; passou de 11 vira cnpj "00.000.000/0000-00"
+// cpf (ate 11 digitos) "000.000.000-00"; passou de 11 (ou tem letra) vira cnpj "00.000.000/0000-00".
+// o cnpj alfanumerico (task 57) tem letras nas 12 primeiras posicoes: entram em maiuscula, com a mesma mascara.
 function maskDocument(value) {
-    const d = onlyDigits(value).slice(0, 14);
-    if (d.length <= 11) {
-        return d
+    const c = value.toUpperCase().replace(/[^0-9A-Z]/g, "").slice(0, 14);
+    if (c.length <= 11 && /^\d*$/.test(c)) {
+        return c
             .replace(/^(\d{3})(\d)/, "$1.$2")
             .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
             .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
     }
-    return d
-        .replace(/^(\d{2})(\d)/, "$1.$2")
-        .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
-        .replace(/^(\d{2})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3/$4")
-        .replace(/^(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, "$1.$2.$3/$4-$5");
+    return c
+        .replace(/^(\w{2})(\w)/, "$1.$2")
+        .replace(/^(\w{2})\.(\w{3})(\w)/, "$1.$2.$3")
+        .replace(/^(\w{2})\.(\w{3})\.(\w{3})(\w)/, "$1.$2.$3/$4")
+        .replace(/^(\w{2})\.(\w{3})\.(\w{3})\/(\w{4})(\w)/, "$1.$2.$3/$4-$5");
 }
 const MASKS = {
     phone: maskPhone,

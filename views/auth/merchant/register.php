@@ -46,7 +46,7 @@
 
             <div class="form-group">
                 <label for="document">CPF ou CNPJ</label>
-                <input type="text" name="document" id="document" placeholder="000.000.000-00 ou 00.000.000/0000-00" inputmode="numeric" maxlength="18" data-mask="document" required>
+                <input type="text" name="document" id="document" placeholder="000.000.000-00 ou 00.000.000/0000-00" autocapitalize="characters" autocomplete="off" maxlength="18" data-mask="document" required>
             </div>
 
             <div class="form-row">

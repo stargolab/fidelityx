@@ -446,7 +446,8 @@ class MerchantController {
         $passwordConfirm = $_POST['password_confirm'] ?? '';
 
         // tratamento dos input masks vindos do front-end.
-        $document   = preg_replace('/\D/', '', (string)$document);
+        // cpf so numeros; cnpj pode ter letras (alfanumerico, task 57): fica so letra maiuscula e digito
+        $document   = DocumentValidator::normalize($document);
         $phone      = PhoneValidator::sanitize($phone);
 
         // verificacao dos dados: primeiro campos vazios/fora da lista, depois as regras especificas

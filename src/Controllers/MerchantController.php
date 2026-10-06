@@ -8,6 +8,7 @@ use App\Models\MerchantModel;
 use App\Models\PointsLogModel;
 use App\Models\RewardModel;
 use App\Support\Csrf;
+use App\Support\LoginGuard;
 use App\Support\Money;
 use App\Support\Paginator;
 use App\Support\PasswordPolicy;
@@ -565,11 +566,18 @@ class MerchantController {
             exit;
         }
 
-        $merchant = $this->merchantModel->findByEmail($email);
+        $merchant = $this->merchantModel->findByEmail($email) ?: null;
 
-        if(!$merchant || !password_verify($password, $merchant['password_hash'])){
+        // e-mail inexistente tambem roda o password_verify (LoginGuard): mesmo tempo da senha errada
+        if (!LoginGuard::verify($merchant, (string)$password)) {
             $limiter->hit('login_pair', $pair);
             $limiter->hit('login_ip', $ip);
+            // teto por conta somando todos os ips: so avisa no log, nunca bloqueia (ver LoginGuard)
+            $limiter->hit('login_account', $email);
+            $alert = LoginGuard::accountAlert($limiter->count('login_account', $email, self::LOGIN_WINDOW_SECONDS), $email);
+            if ($alert !== null) {
+                error_log($alert);
+            }
             redirect('merchant/login', ['error' => 'credenciais_invalidas']);
         }
 
@@ -582,6 +590,8 @@ class MerchantController {
 
         // gera um novo id de sessao no login (evita session fixation)
         session_regenerate_id(true);
+        // e token csrf novo: o da pagina de login (visto antes de entrar) nao vale na sessao logada
+        Csrf::regenerate();
 
         $_SESSION['merchant_id']     = (int)$merchant['id'];
         $_SESSION['merchant_name']   = $merchant['owner_name'];

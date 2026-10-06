@@ -23,6 +23,18 @@ final class RateLimiterTest extends DatabaseTestCase {
         $this->assertTrue($this->limiter->tooMany('login_email', 'ana@teste.test', 5, 900));
     }
 
+    public function testContaAsTentativasDaChaveNaJanela(): void {
+        $this->assertSame(0, $this->limiter->count('login_account', 'ana@teste.test', 900));
+        for ($i = 0; $i < 3; $i++) {
+            $this->limiter->hit('login_account', 'ana@teste.test');
+        }
+        $this->limiter->hit('login_account', 'outra@teste.test');
+        $this->assertSame(3, $this->limiter->count('login_account', 'ana@teste.test', 900));
+
+        $this->db->exec('UPDATE rate_limit_hits SET created_at = NOW() - INTERVAL 16 MINUTE');
+        $this->assertSame(0, $this->limiter->count('login_account', 'ana@teste.test', 900));
+    }
+
     public function testTentativasForaDaJanelaNaoContam(): void {
         for ($i = 0; $i < 5; $i++) {
             $this->limiter->hit('login_email', 'ana@teste.test');

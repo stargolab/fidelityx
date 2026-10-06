@@ -129,7 +129,46 @@ final class LoginLockoutTest extends HttpTestCase {
         $this->loginAs('loja@teste.test');
     }
 
-    // cada erro conta em dois lugares (e-mail + ip, e ip), e a chave continua gravada so como hash
+    // task 45: passar do teto por conta (somando todos os ips) so gera aviso no log, nunca tranca a dona
+    public function testTetoPorContaNaoBloqueiaADona(): void {
+        $this->createMerchant('loja@teste.test');
+
+        $max = \App\Support\LoginGuard::MAX_FAILURES_PER_ACCOUNT;
+        for ($i = 1; $i <= intdiv($max, 5) + 1; $i++) {
+            $this->fromIp('203.0.113.' . $i);
+            $this->failLogin('loja@teste.test', 5);
+        }
+        $this->assertGreaterThan($max, (int)$this->scalar(
+            "SELECT COUNT(*) FROM rate_limit_hits WHERE bucket = 'login_account' AND key_hash = :h",
+            [':h' => hash('sha256', 'loja@teste.test')]
+        ));
+
+        $this->fromIp(self::DONA);
+        $this->loginAs('loja@teste.test');
+    }
+
+    // token csrf da tela de login (visto antes de entrar) nao vale na sessao logada
+    public function testLoginTrocaOTokenCsrf(): void {
+        $this->createMerchant('loja@teste.test');
+        $this->get('merchant/login');
+        $before = $this->csrfToken();
+
+        $this->loginAs('loja@teste.test');
+        $this->get('merchant/dashboard');
+        $this->assertNotSame($before, $this->csrfToken());
+
+        [$status] = $this->post('merchant/logout', ['_csrf' => $before], false);
+        $this->assertSame(403, $status);
+    }
+
+    // e-mail inexistente responde igual a senha errada (mesma mensagem e conta nos mesmos limites)
+    public function testEmailInexistenteRespondeIgualASenhaErrada(): void {
+        $this->fromIp(self::ATACANTE);
+        $this->failLogin('nao-existe@teste.test', 5);
+        $this->assertSame(429, $this->tryLogin('nao-existe@teste.test', 'senha-errada')[0]);
+    }
+
+    // cada erro conta em tres lugares (e-mail + ip, ip e a conta, que so avisa), e a chave continua gravada so como hash
     public function testTentativasFicamGravadasSoComoHash(): void {
         $this->createMerchant('loja@teste.test');
         $this->fromIp(self::ATACANTE);
@@ -137,7 +176,9 @@ final class LoginLockoutTest extends HttpTestCase {
 
         $rows = $this->db->query('SELECT bucket, key_hash FROM rate_limit_hits ORDER BY bucket')->fetchAll(\PDO::FETCH_KEY_PAIR);
 
-        $this->assertSame(['login_ip', 'login_pair'], array_keys($rows), 'nao existe mais o bloqueio so por e-mail');
+        // login_account so conta pro aviso do teto (LoginGuard): nao existe bloqueio so por e-mail
+        $this->assertSame(['login_account', 'login_ip', 'login_pair'], array_keys($rows));
+        $this->assertSame(hash('sha256', 'loja@teste.test'), $rows['login_account']);
         $this->assertSame(hash('sha256', self::ATACANTE), $rows['login_ip']);
         $this->assertSame(hash('sha256', 'loja@teste.test|' . self::ATACANTE), $rows['login_pair']);
     }

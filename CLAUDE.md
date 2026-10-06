@@ -16,6 +16,8 @@ composer dump-autoload                 # obrigatorio apos criar classe nova em s
 php -S localhost:8000 -t public/       # servidor local (document root = public/)
 find src views public tests bin -name "*.php" -exec php -l {} \;   # checagem de sintaxe
 composer test                          # phpunit (unidade + integração + fluxo); recria o banco fidelityx_test
+composer analyse                       # phpstan nível 5 (phpstan.neon) com baseline; erro novo quebra
+composer audit                         # dependências com falha de segurança conhecida
 composer test -- --testsuite Unit      # só os testes sem banco
 node tests/js/masks.test.js            # testes das mascaras (public/js/masks.js), sem navegador
 node tests/js/forms.test.js            # testes do public/js/forms.js (envio e campo com erro), sem navegador
@@ -29,6 +31,8 @@ docker compose up -d --build           # aplicacao + mysql em docker (docs/opera
 Banco: `mysql -u root -p < database/schema.sql` em instalação nova. Banco já existente: `php bin/migrate.php` roda as migrations de `database/migrations/` que ainda não rodaram (banco anterior ao controle: antes, uma vez, `php bin/migrate.php baseline 003`); o `schema.sql` sempre reflete o estado final. Credenciais em `.env` ou em variáveis de ambiente (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`; `APP_URL` opcional: endereço público usado no QR do cartaz, vazio usa o host da requisição). No ambiente local do autor o PHP e o MySQL vêm do XAMPP (`C:\xampp\mysql\bin\mysql.exe`).
 
 **Testes (PHPUnit 10.5)** em `tests/`: `Unit` (validators e classes de `src/Support`, sem banco), `Integration` (models, `RateLimiter`, `Migrator` e backup contra o banco) e `Feature` (fluxo completo por HTTP: o teste sobe um `php -S` próprio numa porta livre e usa cookie + `_csrf` como o navegador). O bootstrap **apaga e recria** o banco `fidelityx_test` a partir do `schema.sql` (o `phpunit.xml` força esse nome e o bootstrap recusa nome que não termine em `_test`); credenciais vêm do `.env` local ou das variáveis de ambiente no CI. Cada teste começa com as tabelas vazias (`DatabaseTestCase`). Regra nova de negócio ou bug corrigido = teste junto. O GitHub Actions (`.github/workflows/ci.yml`) roda lint + PHPUnit + `tests/js/masks.test.js` em PHP 8.1 e 8.3 com MySQL 8 em todo PR e push na `main`, **sem `.env`** (só variáveis de ambiente, como em produção), e um job à parte recompila o `masks.ts` e falha se o `masks.js` versionado não bater. O MySQL do XAMPP roda sem `sql_mode` estrito (trunca texto longo sem erro), o do CI é estrito: não escreva teste que dependa disso.
+
+**Análise estática** (task 51): PHPStan nível 5 em `src`, `views`, `bin` e `public`, com `phpstan-baseline.neon` guardando o que já existia (hoje só os "might not be defined" das views, que recebem as variáveis pelo `extract()`). Código novo não entra na baseline: corrija o erro. Variável nova numa view ou erro antigo corrigido: `composer analyse -- --generate-baseline`. Rodar no CI, `composer audit` no workflow e Dependabot ainda dependem de mudar o `.github/` (pendente).
 
 ## Arquitetura
 

@@ -1,0 +1,355 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Variable \$categories might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/auth/merchant/register.php
+
+		-
+			message: '#^Variable \$states might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/auth/merchant/register.php
+
+		-
+			message: '#^Variable \$card might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/customer/balance.php
+
+		-
+			message: '#^Variable \$error might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: views/customer/balance.php
+
+		-
+			message: '#^Variable \$firstName might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/customer/balance.php
+
+		-
+			message: '#^Variable \$phone might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/customer/balance.php
+
+		-
+			message: '#^Variable \$rewards might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/customer/balance.php
+
+		-
+			message: '#^Variable \$store might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/customer/balance.php
+
+		-
+			message: '#^Variable \$backLabel might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/400.php
+
+		-
+			message: '#^Variable \$backUrl might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/400.php
+
+		-
+			message: '#^Variable \$backLabel might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/401.php
+
+		-
+			message: '#^Variable \$backUrl might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/401.php
+
+		-
+			message: '#^Variable \$backLabel might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/403.php
+
+		-
+			message: '#^Variable \$backUrl might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/403.php
+
+		-
+			message: '#^Variable \$backLabel might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/404.php
+
+		-
+			message: '#^Variable \$backUrl might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/404.php
+
+		-
+			message: '#^Variable \$backLabel might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/429.php
+
+		-
+			message: '#^Variable \$backUrl might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/429.php
+
+		-
+			message: '#^Variable \$backLabel might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/500.php
+
+		-
+			message: '#^Variable \$backUrl might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/500.php
+
+		-
+			message: '#^Variable \$backLabel might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/502.php
+
+		-
+			message: '#^Variable \$backUrl might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/502.php
+
+		-
+			message: '#^Variable \$backLabel might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/503.php
+
+		-
+			message: '#^Variable \$backUrl might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/503.php
+
+		-
+			message: '#^Variable \$backLabel might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/default.php
+
+		-
+			message: '#^Variable \$backUrl might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/errors/default.php
+
+		-
+			message: '#^Variable \$phone might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: views/merchant/customer-new.php
+
+		-
+			message: '#^Variable \$card might not be defined\.$#'
+			identifier: variable.undefined
+			count: 15
+			path: views/merchant/customer.php
+
+		-
+			message: '#^Variable \$launch might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/customer.php
+
+		-
+			message: '#^Variable \$pointsRule might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/customer.php
+
+		-
+			message: '#^Variable \$progress might not be defined\.$#'
+			identifier: variable.undefined
+			count: 3
+			path: views/merchant/customer.php
+
+		-
+			message: '#^Variable \$rewards might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/customer.php
+
+		-
+			message: '#^Variable \$undoSeconds might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/customer.php
+
+		-
+			message: '#^Variable \$customers might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/customers.php
+
+		-
+			message: '#^Variable \$paginator might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: views/merchant/customers.php
+
+		-
+			message: '#^Variable \$search might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: views/merchant/customers.php
+
+		-
+			message: '#^Variable \$ruleCents might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/points-rule.php
+
+		-
+			message: '#^Variable \$balanceUrl might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/poster.php
+
+		-
+			message: '#^Variable \$publicCode might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/poster.php
+
+		-
+			message: '#^Variable \$qrSvg might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/poster.php
+
+		-
+			message: '#^Variable \$categories might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/profile.php
+
+		-
+			message: '#^Variable \$maxPassword might not be defined\.$#'
+			identifier: variable.undefined
+			count: 3
+			path: views/merchant/profile.php
+
+		-
+			message: '#^Variable \$minPassword might not be defined\.$#'
+			identifier: variable.undefined
+			count: 3
+			path: views/merchant/profile.php
+
+		-
+			message: '#^Variable \$profile might not be defined\.$#'
+			identifier: variable.undefined
+			count: 11
+			path: views/merchant/profile.php
+
+		-
+			message: '#^Variable \$states might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/profile.php
+
+		-
+			message: '#^Variable \$entries might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/reports.php
+
+		-
+			message: '#^Variable \$period might not be defined\.$#'
+			identifier: variable.undefined
+			count: 10
+			path: views/merchant/reports.php
+
+		-
+			message: '#^Variable \$stats might not be defined\.$#'
+			identifier: variable.undefined
+			count: 4
+			path: views/merchant/reports.php
+
+		-
+			message: '#^Variable \$reward might not be defined\.$#'
+			identifier: variable.undefined
+			count: 4
+			path: views/merchant/reward-edit.php
+
+		-
+			message: '#^Variable \$pointsRule might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/rewards.php
+
+		-
+			message: '#^Variable \$rewards might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/rewards.php
+
+		-
+			message: '#^Variable \$card might not be defined\.$#'
+			identifier: variable.undefined
+			count: 6
+			path: views/merchant/statement.php
+
+		-
+			message: '#^Variable \$entries might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/statement.php
+
+		-
+			message: '#^Variable \$title might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: views/partials/merchant-header.php
+
+		-
+			message: '#^Variable \$paginator might not be defined\.$#'
+			identifier: variable.undefined
+			count: 8
+			path: views/partials/pagination.php
+
+		-
+			message: '#^Variable \$query might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: views/partials/pagination.php
+
+		-
+			message: '#^Variable \$route might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: views/partials/pagination.php
+
+		-
+			message: '#^Variable \$progress might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/partials/reward-progress.php
+
+		-
+			message: '#^Variable \$version might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/privacy.php

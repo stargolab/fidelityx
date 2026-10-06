@@ -21,7 +21,8 @@
         }
     },
     "scripts": {
-        "test": "phpunit"
+        "test": "phpunit",
+        "analyse": "phpstan analyse --memory-limit=1G --no-progress"
     },
     "config": {
         "platform": {
@@ -29,6 +30,7 @@
         }
     },
     "require-dev": {
-        "phpunit/phpunit": "^10.5"
+        "phpunit/phpunit": "^10.5",
+        "phpstan/phpstan": "^2.1"
     }
 }

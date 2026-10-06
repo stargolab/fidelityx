@@ -18,6 +18,7 @@ find src views public tests bin -name "*.php" -exec php -l {} \;   # checagem de
 composer test                          # phpunit (unidade + integração + fluxo); recria o banco fidelityx_test
 composer test -- --testsuite Unit      # só os testes sem banco
 node tests/js/masks.test.js            # testes das mascaras (public/js/masks.js), sem navegador
+node tests/js/forms.test.js            # testes do public/js/forms.js (envio e campo com erro), sem navegador
 tsc                                    # compila src/ts -> public/js (tsconfig.json)
 php bin/migrate.php                    # roda as migrations pendentes (status | baseline NNN)
 php bin/backup.php                     # backup do banco (mysqldump .sql.gz em BACKUP_DIR)
@@ -72,6 +73,7 @@ Banco: `mysql -u root -p < database/schema.sql` em instalação nova. Banco já 
 - Commits no padrão `tipo(escopo): descrição` (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`); branches `tipo/nome` com o mesmo tipo do commit (ex.: `feat/logout`, `fix/csrf-token`). Nunca commitar direto na `main`: tudo entra por PR, e o PR referencia a issue com `close #N` quando houver.
 - SQL sempre com prepared statements; o PDO usa `ATTR_EMULATE_PREPARES = false`, então o mesmo placeholder não pode aparecer duas vezes na query (use `:p1`, `:p2`).
 - Máscaras de telefone e CPF/CNPJ ficam em `src/ts/masks.ts` (`data-mask="phone"` / `"document"` no input), compiladas com `tsc` para `public/js/masks.js`, que é versionado: rode `tsc` ao mexer no `.ts`. É só apresentação; o back-end continua limpando os dígitos.
+- `src/ts/forms.ts` (→ `public/js/forms.js`, em toda página com formulário) trava o clique duplo com "carregando" no botão e marca o campo apontado pelo erro: o `views/partials/flash.php` tem o mapa `$flashFields` (código de erro → `name` dos campos). Erro novo que é de um campo: adicione lá também. Nada de `style=""` nas views (a CSP bloqueia): use classe em `public/css`.
 
 ## Backlog
 

@@ -66,9 +66,35 @@ $flashMessages = [
     ],
 ];
 
+// campos que cada erro aponta (pelo name do input): o public/js/forms.js marca, liga a mensagem e poe o foco.
+// erro de login nao aponta campo de proposito (nao diz se o errado foi o e-mail ou a senha).
+$flashFields = [
+    'telefone_invalido'         => ['phone'],
+    'email_invalido'            => ['email'],
+    'documento_invalido'        => ['document'],
+    'senha_curta'               => ['password', 'password_confirm', 'new_password', 'new_password_confirm'],
+    'senha_longa'               => ['password', 'password_confirm', 'new_password', 'new_password_confirm'],
+    'senhas_diferentes'         => ['password_confirm', 'new_password_confirm'],
+    'senha_igual'               => ['new_password', 'new_password_confirm'],
+    'senha_atual_incorreta'     => ['current_password'],
+    'nome_obrigatorio'          => ['name'],
+    'nome_invalido'             => ['name'],
+    'consentimento_obrigatorio' => ['consent'],
+    'confirmacao_obrigatoria'   => ['confirm'],
+    'pontos_invalidos'          => ['points'],
+    'valor_invalido'            => ['amount'],
+    'valor_sem_pontos'          => ['amount'],
+    'valor_pontos_demais'       => ['amount'],
+    'regra_invalida'            => ['rule'],
+    'telefone_novo_invalido'    => ['new_phone'],
+    'telefone_igual'            => ['new_phone'],
+    'telefone_ja_cliente'       => ['new_phone'],
+];
+
 foreach (['error', 'success'] as $flashType):
     $flashCode = $_GET[$flashType] ?? null;
-    if (is_string($flashCode) && isset($flashMessages[$flashType][$flashCode])): ?>
-        <div class="alert alert-<?= $flashType ?>"><?= e($flashMessages[$flashType][$flashCode]) ?></div>
+    if (is_string($flashCode) && isset($flashMessages[$flashType][$flashCode])):
+        $fields = $flashType === 'error' ? ($flashFields[$flashCode] ?? []) : []; ?>
+        <div class="alert alert-<?= $flashType ?>" id="flash-<?= $flashType ?>" role="<?= $flashType === 'error' ? 'alert' : 'status' ?>"<?php if ($fields): ?> data-fields="<?= e(implode(' ', $fields)) ?>"<?php endif; ?>><?= e($flashMessages[$flashType][$flashCode]) ?></div>
     <?php endif;
 endforeach;

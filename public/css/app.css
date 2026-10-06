@@ -585,6 +585,29 @@ span.btn-secondary {
     border-radius: 999px;
 }
 
+/* largura da barra em passos de 5% (reward-progress.php): sem atributo style, que a CSP bloquearia */
+.progress-w-0 { width: 0%; }
+.progress-w-5 { width: 5%; }
+.progress-w-10 { width: 10%; }
+.progress-w-15 { width: 15%; }
+.progress-w-20 { width: 20%; }
+.progress-w-25 { width: 25%; }
+.progress-w-30 { width: 30%; }
+.progress-w-35 { width: 35%; }
+.progress-w-40 { width: 40%; }
+.progress-w-45 { width: 45%; }
+.progress-w-50 { width: 50%; }
+.progress-w-55 { width: 55%; }
+.progress-w-60 { width: 60%; }
+.progress-w-65 { width: 65%; }
+.progress-w-70 { width: 70%; }
+.progress-w-75 { width: 75%; }
+.progress-w-80 { width: 80%; }
+.progress-w-85 { width: 85%; }
+.progress-w-90 { width: 90%; }
+.progress-w-95 { width: 95%; }
+.progress-w-100 { width: 100%; }
+
 /* cartaz: folha clara (--paper) com nome da loja e qr code; centralizado e legivel de longe */
 .poster {
     max-width: 520px;

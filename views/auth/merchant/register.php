@@ -12,7 +12,7 @@
 </head>
 <body class="auth-page">
 
-    <div class="auth-container" style="max-width: 600px;"> <header class="auth-header">
+    <div class="auth-container auth-container-wide"> <header class="auth-header">
             <img src="/assets/fidelityx-logo.svg" alt="FidelityX Logo" class="auth-logo">
             <p>Registre sua empresa no ecossistema FidelityX</p>
         </header>
@@ -97,7 +97,7 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn-primary" style="margin-top: 1rem;">Criar Minha Conta Profissional</button>
+            <button type="submit" class="btn-primary btn-spaced">Criar Minha Conta Profissional</button>
         </form>
 
         <footer class="auth-footer">
@@ -106,5 +106,6 @@
     </div>
 
     <script src="/js/masks.js"></script>
+    <script src="/js/forms.js"></script>
 </body>
 </html>

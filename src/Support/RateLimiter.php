@@ -4,8 +4,8 @@ namespace App\Support;
 
 // limite de tentativas guardado no banco (tabela rate_limit_hits), entao vale
 // mesmo se a pessoa apagar o cookie ou abrir outra sessao.
-// cada "bucket" e um tipo de limite (login_email, login_ip, balance_ip...) e a chave
-// e quem esta sendo limitado (e-mail, ip). a chave so e gravada como hash.
+// cada "bucket" e um tipo de limite (login_pair, login_ip, balance_ip...) e a chave
+// e quem esta sendo limitado (e-mail + ip, ip, conta). a chave so e gravada como hash.
 class RateLimiter {
     private $db;
 
@@ -50,6 +50,12 @@ class RateLimiter {
     // listado em TRUSTED_PROXIES (qualquer um pode mandar esse header); sem isso e o REMOTE_ADDR.
     public static function clientIp(): string {
         return ClientIp::resolve($_SERVER, Env::get('TRUSTED_PROXIES'));
+    }
+
+    // chave pros limites por ip: o proprio ip ou, em ipv6, a rede /64 dele (ver ClientIp::rateLimitKey).
+    // use esta nos buckets; clientIp() e pra registrar o endereco exato.
+    public static function clientKey(): string {
+        return ClientIp::rateLimitKey(self::clientIp());
     }
 
     private function hash(string $key): string {

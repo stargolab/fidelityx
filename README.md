@@ -24,7 +24,7 @@ Recentemente refatorado para adotar o padrão **MVC com separação clara de res
 
 **Painel do lojista**
 - ✅ **Cadastro de Lojistas** — Registro completo com validação de documentos (CPF/CNPJ), e-mail, telefone e confirmação de senha; máscaras de telefone e documento
-- ✅ **Autenticação Segura** — Login com hash BCRYPT, renovação do ID de sessão, logout, bloqueio de contas inativas e limite de 5 erros em 15 min
+- ✅ **Autenticação Segura** — Login com hash BCRYPT, renovação do ID de sessão, logout, bloqueio de contas inativas e limite de tentativas que trava só quem errou a senha, nunca a dona da conta
 - ✅ **Atendimento pelo telefone** — A home é um único campo de telefone: cliente da loja vai direto para a tela do cliente; qualquer outro telefone vai para o cadastro rápido
 - ✅ **Tela do cliente** — Nome e saldo no topo, progresso até o próximo prêmio, lançar pontos (atalhos +1/+5/+10) e resgatar os prêmios que o saldo já paga
 - ✅ **Cadastro rápido** — Telefone já preenchido, só o nome e o consentimento do cliente (gravado com data e versão do texto)
@@ -320,7 +320,7 @@ public function renderCustomer() {
 - ✅ **CSRF** — Token por sessão em todos os formulários POST
 - ✅ **XSS** — Toda saída nas views passa por `e()` (`htmlspecialchars`)
 - ✅ **Sessão** — Cookie `HttpOnly` + `SameSite=Lax` e `session_regenerate_id()` no login
-- ✅ **Limite de tentativas** — Login bloqueia com 429 após 5 erros em 15 min por e-mail ou IP; consulta pública limitada a 5/min por IP. Contagem no banco (sobrevive a apagar o cookie), com e-mail e IP guardados só como hash SHA-256
+- ✅ **Limite de tentativas** — Login bloqueia com 429, por 15 min, quem errar 5 vezes a senha de uma conta (contado por e-mail + IP) ou 20 vezes somando todas as contas (por IP). O bloqueio nunca é só pelo e-mail, então errar a senha de uma loja de propósito não tranca a dona dela. Consulta pública limitada a 5/min por IP. Em IPv6 o limite vale pela rede /64. Contagem no banco (sobrevive a apagar o cookie), com e-mail e IP guardados só como hash SHA-256
 - ✅ **Isolamento entre lojas** — Consultas filtram pelo `merchant_id` da sessão
 - ✅ **Erros** — Detalhes técnicos vão para o log (sem query string nem dados de formulário); o usuário vê só as páginas de erro, com um código para localizar o erro no log
 - ✅ **Atrás de proxy** — O IP do cliente só é lido do `X-Forwarded-For` quando a requisição vem de um proxy listado em `TRUSTED_PROXIES`

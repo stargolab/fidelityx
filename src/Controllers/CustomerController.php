@@ -49,7 +49,7 @@ class CustomerController {
         $data = ['store' => $store, 'phone' => '', 'card' => null, 'error' => null];
 
         if ($isPost) {
-            if ($this->tooManyLookups(RateLimiter::clientIp())) {
+            if ($this->tooManyLookups(RateLimiter::clientKey())) {
                 (new ErrorController())->handle(429);
                 return;
             }

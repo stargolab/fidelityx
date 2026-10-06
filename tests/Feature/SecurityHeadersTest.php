@@ -29,6 +29,32 @@ final class SecurityHeadersTest extends HttpTestCase {
         $this->assertSame('DENY', $this->header('X-Frame-Options'));
     }
 
+    // task 47: nome, telefone e saldo nao ficam no cache (Voltar depois do logout, computador compartilhado)
+    public function testPainelEConsultaDeSaldoSaemComNoStore(): void {
+        $merchant = $this->createMerchant('loja@teste.test');
+        $this->createCard($merchant, 'Bia', '11922220002');
+        $code = $this->scalar('SELECT public_code FROM merchants WHERE id = ' . $merchant);
+
+        // publicas: login e consulta de saldo (GET e o POST com o resultado)
+        foreach (['merchant/login', 'customer/balance', 'customer/balance&loja=' . $code] as $route) {
+            $this->get($route);
+            $this->assertSame('no-store', $this->header('Cache-Control'), $route);
+        }
+        $this->post('customer/balance', ['loja' => $code, 'phone' => '11922220002'], true, 'customer/balance&loja=' . $code);
+        $this->assertStringContainsString('Bia', $this->lastBody);
+        $this->assertSame('no-store', $this->header('Cache-Control'));
+
+        // painel logado, inclusive redirect
+        $this->loginAs('loja@teste.test');
+        foreach (['merchant/dashboard', 'merchant/customer&phone=11922220002', 'merchant/customers',
+                  'merchant/statement&phone=11922220002', 'merchant/reports', 'merchant/profile',
+                  'merchant/dashboard&phone=11922220002'] as $route) {
+            $this->get($route);
+            $this->assertSame('no-store', $this->header('Cache-Control'), $route);
+            $this->assertSame('no-cache', $this->header('Pragma'), $route);
+        }
+    }
+
     public function testLogoutSoPorPostComCsrf(): void {
         $this->createMerchant('loja@teste.test');
         $this->loginAs('loja@teste.test');

@@ -23,6 +23,14 @@ final class RequestGuard {
         }
     }
 
+    // painel e consulta de saldo mostram nome, telefone e saldo: a resposta nao fica guardada no navegador
+    // nem em proxy (o Voltar depois do logout ou um computador compartilhado nao mostram nada).
+    // chamado depois do session_start, que manda o cache-control dele e seria sobrescrito por este.
+    public static function sendNoStore(): void {
+        header('Cache-Control: no-store');
+        header('Pragma: no-cache');
+    }
+
     // nenhum formulario do sistema manda lista (campo[]=...). parametro em formato de lista vira
     // texto vazio, que cada tela ja trata como invalido. sem isso, um (string) num array gera
     // warning ("Array to string conversion") e, com display_errors ligado, quebra o redirect.

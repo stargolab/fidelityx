@@ -85,6 +85,7 @@ switch ($domain) {
         break;
 
     case 'customer':
+        RequestGuard::sendNoStore();
         // exemplo do psr-4 citado acima, sem require_once
         $controller = new \App\Controllers\CustomerController($db);
 
@@ -96,6 +97,7 @@ switch ($domain) {
         break;
 
     case 'merchant':
+        RequestGuard::sendNoStore();
         $controller = new \App\Controllers\MerchantController($db);
 
         match ($action ?? 'dashboard') {

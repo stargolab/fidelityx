@@ -13,6 +13,7 @@ use App\Support\Paginator;
 use App\Support\Privacy;
 use App\Support\QrSvg;
 use App\Support\RateLimiter;
+use App\Support\RequestGuard;
 use App\Support\RewardProgress;
 use App\Support\SessionGuard;
 use App\Support\View;
@@ -231,7 +232,7 @@ class MerchantController {
             return $configured;
         }
 
-        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $scheme = RequestGuard::isHttps() ? 'https' : 'http';
         $host = (string)($_SERVER['HTTP_HOST'] ?? '');
         if (!preg_match('/^[A-Za-z0-9.-]+(:\d{1,5})?$/', $host)) {
             $host = 'localhost';

@@ -1,6 +1,7 @@
 -- fidelityx - migration 005 (pontos calculados pelo valor da compra, task 6)
 -- para bancos criados antes desta versao do schema.sql. rodar uma unica vez:
---   mysql -u root -p fidelityx < database/migrations/005_regra_pontos.sql
+--   php bin/migrate.php
+-- (ou, a mao: mysql -u root -p fidelityx < database/migrations/005_regra_pontos.sql)
 
 USE fidelityx;
 

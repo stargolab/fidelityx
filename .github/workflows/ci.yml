@@ -61,16 +61,43 @@ jobs:
       - name: Instalar dependencias
         run: composer install --no-interaction --no-progress --prefer-dist
 
-      # o index.php exige um .env (Dotenv::load); igual a instalacao do README.
-      # os valores de teste continuam valendo: as variaveis do job tem prioridade (Dotenv imutavel)
-      - name: Criar .env a partir do exemplo
-        run: cp .env.example .env
-
+      # sem .env de proposito: a aplicacao precisa subir so com as variaveis de ambiente do job,
+      # como em producao (docker). se alguem voltar a exigir o arquivo, os testes de fluxo quebram aqui.
       - name: Checagem de sintaxe (php -l)
-        run: find src views public tests -name "*.php" -print0 | xargs -0 -n1 php -l > /dev/null
+        run: find src views public tests bin -name "*.php" -print0 | xargs -0 -n1 php -l > /dev/null
 
       - name: Testes (PHPUnit)
         run: vendor/bin/phpunit
 
       - name: Testes das mascaras (JavaScript)
         run: node tests/js/masks.test.js
+
+  # o public/js/masks.js e versionado e gerado do src/ts/masks.ts: se alguem mexer no .ts e esquecer
+  # de rodar o tsc (ou editar o .js na mao), o compilado deixa de bater com o fonte e o job falha.
+  mascaras:
+    name: masks.js compilado
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # versao fixa do compilador: versao diferente pode gerar um .js diferente sem ninguem ter mexido no .ts
+      - name: Compilar src/ts com o tsconfig.json do projeto
+        run: npx --yes -p typescript@5.8.3 tsc
+
+      - name: Conferir se o compilado bate com o versionado
+        run: |
+          if ! git diff --exit-code -- public/js; then
+            echo "::error::public/js/masks.js nao bate com src/ts/masks.ts. Rode 'tsc' e inclua o arquivo gerado no commit."
+            exit 1
+          fi
+          # arquivo novo gerado pelo tsc e ainda nao versionado tambem conta
+          if [ -n "$(git status --porcelain -- public/js)" ]; then
+            echo "::error::o tsc gerou arquivo em public/js que nao esta versionado."
+            git status --porcelain -- public/js
+            exit 1
+          fi

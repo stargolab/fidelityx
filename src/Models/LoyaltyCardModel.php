@@ -284,7 +284,7 @@ class LoyaltyCardModel {
             ':description' => $description,
             ':reward_id'   => $rewardId,
             ':reverses_id' => $reversesId,
-            ':ip'          => $_SERVER['REMOTE_ADDR'] ?? null,
+            ':ip'          => isset($_SERVER['REMOTE_ADDR']) ? \App\Support\RateLimiter::clientIp() : null,
         ]);
 
         return (int)$this->db->lastInsertId();

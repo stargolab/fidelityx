@@ -6,16 +6,9 @@
 
 require __DIR__ . '/../vendor/autoload.php';
 
-// variaveis de ambiente reais (CI) entram no $_ENV mesmo se o php.ini nao tiver "E" no variables_order
-foreach (['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASS'] as $key) {
-    $value = getenv($key);
-    if ($value !== false && !isset($_ENV[$key])) {
-        $_ENV[$key] = $value;
-    }
-}
-
-// local: completa o que faltar com o .env (immutable: nao troca o que ja existe, como o DB_NAME de teste)
-Dotenv\Dotenv::createImmutable(dirname(__DIR__))->safeLoad();
+// mesma carga do index.php: variaveis de ambiente reais (CI) primeiro, e o .env local so completa
+// o que faltar (nunca troca o que ja existe, como o DB_NAME de teste)
+App\Support\Env::load(dirname(__DIR__));
 
 // mesmo fuso do index.php (o php.ini de cada maquina pode ter outro)
 date_default_timezone_set(app_timezone());

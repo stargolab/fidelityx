@@ -1,7 +1,7 @@
 # Schema do banco — FidelityX
 
 MySQL 8.0+ / MariaDB 10.4+ · InnoDB · `utf8mb4_unicode_ci` · colunas `TIMESTAMP` (guardadas em UTC pelo MySQL e lidas no fuso da aplicação, `APP_TIMEZONE`, padrão `America/Sao_Paulo`).
-Arquivo: [`database/schema.sql`](../../database/schema.sql). Bancos já existentes: rodar, em ordem, as migrations de [`database/migrations/`](../../database/migrations/) que ainda não rodaram (`001_mvp`, `002_rate_limit`, `003_lgpd`, `004_estorno`, `005_regra_pontos`).
+Arquivo: [`database/schema.sql`](../../database/schema.sql). Bancos já existentes: `php bin/migrate.php` roda as migrations de [`database/migrations/`](../../database/migrations/) que ainda não rodaram (ver [operação](../operacao.md#migrations)).
 
 ## Visão geral
 
@@ -62,7 +62,8 @@ merchants 1───N loyalty_cards N───1 customers
 | `type` | `earn` (ganho), `redeem` (resgate) ou `reversal` (estorno de um ganho). `quantity` é sempre positivo. |
 | `reward_id` | Preenchido em resgates. Vira `NULL` se o prêmio for apagado. |
 | `reverses_id` | Preenchido em estornos (`reversal`): o lançamento estornado. `UNIQUE`, então cada lançamento é estornado no máximo uma vez. |
-| `ip_address` | IP de quem fez a operação. |
+| `ip_address` | IP de quem fez a operação (o do cliente, mesmo atrás de proxy confiável: `TRUSTED_PROXIES`). |
+| índice `idx_points_log_card_created` | `(card_id, created_at)`: o extrato de um cartão é lido já na ordem de data, sem ordenar tudo a cada página. Também atende a chave estrangeira de `card_id`. |
 
 ### `rate_limit_hits` — tentativas (limite de abuso)
 | Coluna | Observação |
@@ -70,6 +71,14 @@ merchants 1───N loyalty_cards N───1 customers
 | `bucket` | Tipo de limite: `login_email`, `login_ip`, `balance_ip`. |
 | `key_hash` | SHA-256 da chave (e-mail ou IP em minúsculas). O dado pessoal não é gravado. |
 | `created_at` | Cada linha é uma tentativa; só contam as que estão dentro da janela. Linhas com mais de 1 dia são apagadas aos poucos. |
+
+### `schema_migrations` — controle das migrations
+| Coluna | Observação |
+|---|---|
+| `version` | Nome do arquivo de `database/migrations/` sem `.sql` (ex.: `003_lgpd`). Chave primária. |
+| `applied_at` | Quando rodou (ou foi marcada como já aplicada pelo `baseline`). |
+
+O `schema.sql` já insere todas as migrations existentes: banco novo nasce sem pendência. Não é dado de negócio; os testes não esvaziam esta tabela.
 
 ## Regras de consistência
 

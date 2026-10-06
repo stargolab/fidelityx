@@ -1,6 +1,7 @@
 -- fidelityx - migration 004 (estorno de lancamento de pontos, task 4)
 -- para bancos criados antes desta versao do schema.sql. rodar uma unica vez:
---   mysql -u root -p fidelityx < database/migrations/004_estorno.sql
+--   php bin/migrate.php
+-- (ou, a mao: mysql -u root -p fidelityx < database/migrations/004_estorno.sql)
 
 USE fidelityx;
 

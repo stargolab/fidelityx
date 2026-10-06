@@ -14,19 +14,24 @@ FidelityX: SaaS de fidelidade para lojistas locais. PHP 8.1+ sem framework (MVC 
 composer install                       # dependencias
 composer dump-autoload                 # obrigatorio apos criar classe nova em src/ ou mudar autoload "files"
 php -S localhost:8000 -t public/       # servidor local (document root = public/)
-find src views public tests -name "*.php" -exec php -l {} \;   # checagem de sintaxe
+find src views public tests bin -name "*.php" -exec php -l {} \;   # checagem de sintaxe
 composer test                          # phpunit (unidade + integração + fluxo); recria o banco fidelityx_test
 composer test -- --testsuite Unit      # só os testes sem banco
 tsc                                    # compila src/ts -> public/js (tsconfig.json)
+php bin/migrate.php                    # roda as migrations pendentes (status | baseline NNN)
+php bin/backup.php                     # backup do banco (mysqldump .sql.gz em BACKUP_DIR)
+docker compose up -d --build           # aplicacao + mysql em docker (docs/operacao.md)
 ```
 
-Banco: `mysql -u root -p < database/schema.sql` em instalação nova. Banco já existente: rode, em ordem e uma vez cada, as migrations de `database/migrations/` que ainda não rodou (`001_mvp`, `002_rate_limit`, `003_lgpd`, `004_estorno`, `005_regra_pontos`); o `schema.sql` sempre reflete o estado final. Credenciais em `.env` (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`; `APP_URL` opcional: endereço público usado no QR do cartaz, vazio usa o host da requisição). No ambiente local do autor o PHP e o MySQL vêm do XAMPP (`C:\xampp\mysql\bin\mysql.exe`).
+Banco: `mysql -u root -p < database/schema.sql` em instalação nova. Banco já existente: `php bin/migrate.php` roda as migrations de `database/migrations/` que ainda não rodaram (banco anterior ao controle: antes, uma vez, `php bin/migrate.php baseline 003`); o `schema.sql` sempre reflete o estado final. Credenciais em `.env` ou em variáveis de ambiente (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`; `APP_URL` opcional: endereço público usado no QR do cartaz, vazio usa o host da requisição). No ambiente local do autor o PHP e o MySQL vêm do XAMPP (`C:\xampp\mysql\bin\mysql.exe`).
 
-**Testes (PHPUnit 10.5)** em `tests/`: `Unit` (validators, sem banco), `Integration` (models e `RateLimiter` contra o banco) e `Feature` (fluxo completo por HTTP: o teste sobe um `php -S` próprio numa porta livre e usa cookie + `_csrf` como o navegador). O bootstrap **apaga e recria** o banco `fidelityx_test` a partir do `schema.sql` (o `phpunit.xml` força esse nome e o bootstrap recusa nome que não termine em `_test`); credenciais vêm do `.env` local ou das variáveis de ambiente no CI. Cada teste começa com as tabelas vazias (`DatabaseTestCase`). Regra nova de negócio ou bug corrigido = teste junto. O GitHub Actions (`.github/workflows/ci.yml`) roda lint + PHPUnit em PHP 8.1 e 8.3 com MySQL 8 em todo PR e push na `main`. O MySQL do XAMPP roda sem `sql_mode` estrito (trunca texto longo sem erro), o do CI é estrito: não escreva teste que dependa disso.
+**Testes (PHPUnit 10.5)** em `tests/`: `Unit` (validators, sem banco), `Integration` (models e `RateLimiter` contra o banco) e `Feature` (fluxo completo por HTTP: o teste sobe um `php -S` próprio numa porta livre e usa cookie + `_csrf` como o navegador). O bootstrap **apaga e recria** o banco `fidelityx_test` a partir do `schema.sql` (o `phpunit.xml` força esse nome e o bootstrap recusa nome que não termine em `_test`); credenciais vêm do `.env` local ou das variáveis de ambiente no CI. Cada teste começa com as tabelas vazias (`DatabaseTestCase`). Regra nova de negócio ou bug corrigido = teste junto. O GitHub Actions (`.github/workflows/ci.yml`) roda lint + PHPUnit em PHP 8.1 e 8.3 com MySQL 8 em todo PR e push na `main`, **sem `.env`** (só variáveis de ambiente, como em produção), e um job à parte recompila o `masks.ts` e falha se o `masks.js` versionado não bater. O MySQL do XAMPP roda sem `sql_mode` estrito (trunca texto longo sem erro), o do CI é estrito: não escreva teste que dependa disso.
 
 ## Arquitetura
 
-**Roteamento** — tudo entra por `public/index.php` com `?url=dominio/acao`. Um `switch` no domínio (`merchant`, `customer`, mais `home` e `privacy` sem ação) instancia o controller e um `match` na ação chama o método `render*()`. Rota nova = novo braço no `match` + método no controller. O `index.php` abre a conexão com o banco antes de rotear, então sem MySQL toda rota devolve 503.
+**Roteamento** — tudo entra por `public/index.php` com `?url=dominio/acao`. Um `switch` no domínio (`merchant`, `customer`, mais `home` e `privacy` sem ação) instancia o controller e um `match` na ação chama o método `render*()`. Rota nova = novo braço no `match` + método no controller. O `index.php` abre a conexão com o banco antes de rotear, então sem MySQL (ou sem as variáveis obrigatórias do banco) toda rota devolve 503.
+
+**Configuração** — `App\Support\Env::load()` (chamado pelo `index.php`, pelo bootstrap dos testes e pelos scripts de `bin/`) põe tudo no `$_ENV`: variável de ambiente real primeiro, e o `.env`, se existir, só completa o que falta (`safeLoad`: a aplicação sobe sem o arquivo). Variável nova entra em `Env::KEYS` e no `.env.example`; leia com `Env::get()` ou `$_ENV`, nunca com `getenv()` direto.
 
 **Padrão de controller** — cada rota tem um `renderX()` público: no GET chama `View::render(...)`, no POST delega para um `handleX()` privado. Todo `handle*` começa com `Csrf::verify()` (aborta com 403). Rotas privadas começam com `$merchantId = $this->authGuard()`; o `merchant_id` vem **sempre da sessão**, nunca do formulário, e todo model filtra por ele (isolamento entre lojas).
 
@@ -40,7 +45,7 @@ Banco: `mysql -u root -p < database/schema.sql` em instalação nova. Banco já 
 
 **Proteções de toda requisição** — o `index.php` chama `RequestGuard` antes de rotear: cabeçalhos de segurança (`X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff`, `Referrer-Policy: same-origin`, sem `X-Powered-By`) e parâmetros em formato de lista (`campo[]=`) viram texto vazio, então nenhum `(string)` de `$_GET`/`$_POST` gera warning. O logout é POST com CSRF (o "Sair" do menu é um formulário). Os testes de fluxo rodam com `display_errors` ligado (`tests/Support/router.php`): qualquer warning aparece no HTML e quebra o teste.
 
-**Erros** — `ErrorController::handle($code)` renderiza `views/errors/{code}.php` (fallback `default.php`). Exceções não tratadas são logadas e viram 500 pelo `set_exception_handler` do `index.php`; detalhes técnicos vão só para `error_log`.
+**Erros** — `ErrorController::handle($code)` renderiza `views/errors/{code}.php` (fallback `default.php`). Exceções não tratadas e erros fatais são logados e viram 500 pelo `App\Support\ErrorLog` (registrado no `index.php`): uma linha por erro com um código curto, que a página 500 também mostra. Do contexto da requisição o log leva só método e rota, nunca query string, corpo ou argumentos (têm telefone e senha). Detalhes técnicos vão só para `error_log`, cujo destino é `LOG_FILE` ou o do `php.ini`.
 
 **Modelo de dados** (detalhes em `docs/db/schema-explanation.md`):
 - `customers` é **só o telefone**, global e único (só dígitos, 10–11, via `PhoneValidator::sanitize`); o mesmo cliente pode ter cartão em várias lojas.
@@ -51,7 +56,11 @@ Banco: `mysql -u root -p < database/schema.sql` em instalação nova. Banco já 
 
 **Área pública** — a home (`HomeController`, view `views/home.php`, `public/css/home.css`) apresenta o produto e leva ao cadastro; lojista logado vai direto ao painel. `customer/balance&loja=CODIGO` consulta o saldo pelo telefone sem login, **só na loja do código** (`merchants.public_code`, impresso no cartaz e embutido no QR), com limite por IP (5/min → 429) e exibindo só o primeiro nome do cartão daquela loja. Sem código válido, a página pede o código (nunca lista lojas). `privacy` é a política de privacidade (rascunho pendente de revisão jurídica).
 
-**Limite de tentativas** — `App\Support\RateLimiter` conta tentativas na tabela `rate_limit_hits` (chave guardada só como hash SHA-256), então o limite sobrevive a apagar o cookie. Usos: login (5 erros em 15 min por e-mail ou IP → 429) e consulta pública (5/min por IP). O IP vem de `REMOTE_ADDR`; atrás de proxy/load balancer isso precisa ser revisto.
+**Limite de tentativas** — `App\Support\RateLimiter` conta tentativas na tabela `rate_limit_hits` (chave guardada só como hash SHA-256), então o limite sobrevive a apagar o cookie. Usos: login (5 erros em 15 min por e-mail ou IP → 429) e consulta pública (5/min por IP). O IP vem de `RateLimiter::clientIp()` (`App\Support\ClientIp`): é o `REMOTE_ADDR`, e o `X-Forwarded-For` só vale quando a requisição chega de um proxy listado em `TRUSTED_PROXIES` (o mesmo vale para o `X-Forwarded-Proto` em `RequestGuard::isHttps()`). Nunca leia esses cabeçalhos direto.
+
+**Migrations** — `App\Support\Migrator` + `bin/migrate.php` registram em `schema_migrations` o nome de cada arquivo aplicado (o controle é pelo nome, não pelo maior número: migration de outro PR com número menor ainda roda). Migration nova = arquivo `NNN_descricao.sql` + a mesma mudança no `schema.sql` + o nome no `INSERT INTO schema_migrations` do fim do `schema.sql` (o `MigratorTest` cobra).
+
+**Produção** — `Dockerfile` + `docker-compose.yml` (Apache, PHP 8.3, MySQL 8; `docker/php.ini` desliga `display_errors`), backup por `bin/backup.php` (`App\Support\Backup`) e o guia em `docs/operacao.md`. Mudou variável de ambiente, comando de operação ou volume: atualize esse guia.
 
 ## Convenções
 

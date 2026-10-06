@@ -134,6 +134,35 @@
     <?php endif; ?>
 </section>
 
+<?php // correcoes do cadastro (task 43): fechadas por padrao, como a exclusao ?>
+<details class="card">
+    <summary>Corrigir nome ou trocar telefone</summary>
+
+    <form action="<?= e(url('merchant/customer')) ?>" method="POST">
+        <?= Csrf::field() ?>
+        <input type="hidden" name="action" value="rename">
+        <input type="hidden" name="phone" value="<?= e($card['phone']) ?>">
+        <div class="form-group">
+            <label for="rename-name">Nome do cliente</label>
+            <input type="text" name="name" id="rename-name" value="<?= e($card['customer_name']) ?>" maxlength="255" required>
+        </div>
+        <button type="submit" class="btn-secondary">Salvar nome</button>
+    </form>
+
+    <form action="<?= e(url('merchant/customer')) ?>" method="POST">
+        <?= Csrf::field() ?>
+        <input type="hidden" name="action" value="change_phone">
+        <input type="hidden" name="phone" value="<?= e($card['phone']) ?>">
+        <div class="form-group">
+            <label for="new-phone">Telefone novo</label>
+            <input type="tel" name="new_phone" id="new-phone" inputmode="numeric" data-mask="phone" maxlength="15"
+                   placeholder="(00) 00000-0000" autocomplete="off" required>
+        </div>
+        <p class="muted form-hint">O saldo e o histórico desta loja passam para o número novo.</p>
+        <button type="submit" class="btn-secondary">Trocar telefone</button>
+    </form>
+</details>
+
 <?php // exclusao a pedido do cliente (LGPD): escondida num <details> pra nao ser clicada por engano no balcao ?>
 <details class="card danger-zone">
     <summary>Excluir dados do cliente</summary>

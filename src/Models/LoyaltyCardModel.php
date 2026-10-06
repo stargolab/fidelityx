@@ -233,6 +233,73 @@ class LoyaltyCardModel {
         $stmt->execute([':version' => $version, ':id' => $cardId]);
     }
 
+    // corrige o nome que o cliente deu a esta loja (digitado errado no cadastro rapido). so mexe no cartao
+    // desta loja: o nome dado em outra loja continua o mesmo. devolve false se o cartao nao for desta loja.
+    public function rename($cardId, $merchantId, string $name): bool {
+        $stmt = $this->db->prepare(
+            'UPDATE loyalty_cards SET customer_name = :name
+             WHERE id = :id AND merchant_id = :merchant_id AND anonymized_at IS NULL'
+        );
+        $stmt->execute([':name' => $name, ':id' => $cardId, ':merchant_id' => $merchantId]);
+        return $stmt->rowCount() > 0 || $this->belongsTo($cardId, $merchantId);
+    }
+
+    // cliente trocou de numero: o cartao DESTA loja (saldo, historico, nome, consentimento) passa para o
+    // telefone novo. cartoes do numero antigo em outras lojas nao mudam (cada loja move o seu).
+    // o telefone antigo some quando nao sobra cartao dele em nenhuma loja (como na exclusao).
+    // devolve 'ok', 'taken' (o telefone novo ja tem cartao nesta loja) ou 'not_found'.
+    public function changePhone($cardId, $merchantId, string $newPhone): string {
+        $this->db->beginTransaction();
+        try {
+            $stmt = $this->db->prepare(
+                'SELECT customer_id FROM loyalty_cards
+                 WHERE id = :id AND merchant_id = :merchant_id AND anonymized_at IS NULL
+                 FOR UPDATE'
+            );
+            $stmt->execute([':id' => $cardId, ':merchant_id' => $merchantId]);
+            $oldCustomerId = $stmt->fetchColumn();
+            if ($oldCustomerId === false || $oldCustomerId === null) {
+                $this->db->rollBack();
+                return 'not_found';
+            }
+
+            $newCustomerId = (new CustomerModel($this->db))->findOrCreate($newPhone);
+            if ($newCustomerId === (int)$oldCustomerId) {
+                $this->db->rollBack();
+                return 'ok';
+            }
+
+            // o UNIQUE (merchant_id, customer_id) barra o telefone que ja e cliente desta loja
+            $this->db->prepare('UPDATE loyalty_cards SET customer_id = :customer_id WHERE id = :id')
+                ->execute([':customer_id' => $newCustomerId, ':id' => $cardId]);
+
+            $this->db->prepare(
+                'DELETE FROM customers
+                 WHERE id = :c1 AND NOT EXISTS (SELECT 1 FROM loyalty_cards WHERE customer_id = :c2)'
+            )->execute([':c1' => $oldCustomerId, ':c2' => $oldCustomerId]);
+
+            $this->db->commit();
+            return 'ok';
+        } catch (\PDOException $e) {
+            $this->db->rollBack();
+            if (($e->errorInfo[1] ?? null) === 1062) {
+                return 'taken';
+            }
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    private function belongsTo($cardId, $merchantId): bool {
+        $stmt = $this->db->prepare(
+            'SELECT 1 FROM loyalty_cards WHERE id = :id AND merchant_id = :merchant_id AND anonymized_at IS NULL'
+        );
+        $stmt->execute([':id' => $cardId, ':merchant_id' => $merchantId]);
+        return (bool)$stmt->fetchColumn();
+    }
+
     // exclusao a pedido do cliente (LGPD), tudo ou nada:
     // - o cartao perde nome, telefone (customer_id), consentimento e saldo; fica so como numero nos relatorios
     // - as descricoes de ganho (texto livre do lojista, pode ter dado pessoal) sao trocadas; os resgates

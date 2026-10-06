@@ -625,6 +625,32 @@ class MerchantController {
             redirect('merchant/customer', ['phone' => $phone, 'success' => 'consentimento_registrado']);
         }
 
+        // corrigir o nome dado a esta loja (task 43)
+        if (($_POST['action'] ?? '') === 'rename') {
+            $name = trim((string)($_POST['name'] ?? ''));
+            if ($name === '' || mb_strlen($name) > 255) {
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'nome_invalido']);
+            }
+            $cardModel->rename($card['id'], $merchantId, $name);
+            redirect('merchant/customer', ['phone' => $phone, 'success' => 'nome_corrigido']);
+        }
+
+        // cliente trocou de numero (task 43): o cartao desta loja vai para o telefone novo, com saldo e historico.
+        // telefone que ja tem cartao nesta loja e recusado; o que ele tem em outras lojas nao aparece nem muda.
+        if (($_POST['action'] ?? '') === 'change_phone') {
+            $newPhone = PhoneValidator::sanitize($_POST['new_phone'] ?? '');
+            if (!PhoneValidator::isValid($newPhone)) {
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'telefone_novo_invalido']);
+            }
+            if ($newPhone === $phone) {
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'telefone_igual']);
+            }
+            if ($cardModel->changePhone($card['id'], $merchantId, $newPhone) !== 'ok') {
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'telefone_ja_cliente']);
+            }
+            redirect('merchant/customer', ['phone' => $newPhone, 'success' => 'telefone_trocado']);
+        }
+
         // exclusao dos dados a pedido do cliente (LGPD). a confirmacao e obrigatoria: nao tem volta.
         if (($_POST['action'] ?? '') === 'anonymize') {
             if (($_POST['confirm'] ?? '') !== '1') {

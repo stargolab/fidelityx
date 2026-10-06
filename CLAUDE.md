@@ -72,15 +72,15 @@ Banco: `mysql -u root -p < database/schema.sql` em instalação nova. Banco já 
 
 ## Backlog
 
-As tasks pós-MVP ficam no doc **FidelityX — Backlog pós-MVP** (Claude Docs): https://claude.ai/artifact/4WYQTvbJf5j4oevnFbfSbm
+A fonte oficial das tasks é o banco **Tasks FidelityX** no Notion da StargoLab, na página **FidelityX**: https://app.notion.com/p/3f102726fca98194b5b5f608ffc824fe
 
-É um documento do Claude Docs, não um artifact HTML: leia e edite **só pelo conector Claude Docs** (`read`/`update`). Nunca republique o artifact nem crie outro doc.
+Leia e edite pelo conector do Notion (`fetch`, `query`, `update-page`, `create-pages`), usando o data source `collection://7f29e04c-fd16-4045-9457-5e9cfe260e40`. O antigo doc do Claude Docs (FidelityX — Backlog pós-MVP) é só histórico: não atualize mais.
 
-- Cada tema tem uma tabela com as colunas `#`, Task, Prioridade, Tamanho, Responsável e Status (dropdown: A fazer → Em andamento → Em revisão → Feito). A lista "Detalhes" abaixo de cada tabela traz o escopo de cada task pelo número.
-- Ao começar uma task: leia a linha e os detalhes dela, coloque o responsável e mude o Status para **Em andamento**.
-- PR aberto: **Em revisão**. PR mergeado: **Feito**. Altere só a célula de Status (e Responsável); o resto do doc fica como está.
-- Task nova descoberta durante o trabalho entra na tabela do tema certo em vez de ficar só na conversa.
-- Sem o conector Claude Docs ou sem acesso de edição: liste no corpo do PR as tasks (`#`) que ele conclui, para quem tiver acesso marcar.
+- Cada task é uma linha com `Nº`, `Task`, `Status` (A fazer → Em andamento → Em revisão → Feito), `Prioridade` (Alta/Média/Baixa), `Tamanho` (P/M/G), `Tema` (os 7 temas, de "1. Atendimento no balcão" a "7. Administração e negócio"), `Responsável` (pessoa do Notion), `PR` (link), `Contexto` e `Pronto quando`. A task é citada pelo `Nº` (ex.: task 45), inclusive em commits, PRs e ADRs.
+- Ao começar uma task: leia `Contexto` e `Pronto quando`, coloque o responsável e mude o Status para **Em andamento**.
+- PR aberto: **Em revisão**, com o link no campo `PR`. PR mergeado: **Feito**. Mexa só em Status, Responsável e PR; o escopo da task só muda com o time de acordo.
+- Task nova descoberta durante o trabalho entra no banco (próximo `Nº` livre, com Tema, Prioridade, Tamanho, Contexto e Pronto quando) em vez de ficar só na conversa.
+- Sem o conector do Notion ou sem acesso de edição: liste no corpo do PR as tasks (`Nº`) que ele conclui, para quem tiver acesso marcar.
 
 ## Claude Code no time
 

@@ -7,6 +7,7 @@ $navItems = [
     'customers' => 'Clientes',
     'reports'   => 'Relatórios',
     'poster'    => 'Cartaz',
+    'profile'   => 'Perfil',
 ];
 ?>
 <!DOCTYPE html>

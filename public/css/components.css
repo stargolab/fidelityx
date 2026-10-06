@@ -31,6 +31,13 @@
     box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
+/* campo so de leitura (ex.: e-mail e documento no perfil): mesma caixa, texto apagado */
+.form-group input:disabled {
+    color: var(--text-muted);
+    background: var(--bg-body);
+    cursor: not-allowed;
+}
+
 /* Botão */
 .btn-primary {
     width: 100%;

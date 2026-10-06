@@ -39,6 +39,10 @@ class MerchantController {
     private const PER_PAGE = 20;
     private const MAX_LOGIN_FAILURES = 5;
     private const LOGIN_WINDOW_SECONDS = 900;
+    private const MIN_PASSWORD_LENGTH = 6;
+    // senha atual errada na troca de senha: mesmo limite do login, contado por conta
+    private const MAX_PASSWORD_FAILURES = 5;
+    private const PASSWORD_WINDOW_SECONDS = 900;
 
     private $db;
     private $merchantModel;
@@ -388,7 +392,7 @@ class MerchantController {
             redirect('merchant/register', ['error' => 'documento_invalido']);
         }
 
-        if (strlen($password) < 6) {
+        if (strlen($password) < self::MIN_PASSWORD_LENGTH) {
             redirect('merchant/register', ['error' => 'senha_curta']);
         }
 
@@ -501,6 +505,7 @@ class MerchantController {
         $_SESSION['merchant_name']   = $merchant['owner_name'];
         $_SESSION['store_name']      = $merchant['store_name'];
         $_SESSION['last_seen']       = time();
+        $_SESSION['password_sig']    = SessionGuard::passwordSignature($merchant['password_hash']);
 
         redirect('merchant/dashboard', ['success' => 'logged']);
     }
@@ -637,6 +642,104 @@ class MerchantController {
         redirect('merchant/rewards', ['success' => 'premio_editado']);
     }
 
+    // perfil do lojista: dados da loja e troca de senha (dois formularios na mesma tela)
+    public function renderProfile() {
+        $merchantId = $this->authGuard();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handleProfile($merchantId);
+            return;
+        }
+
+        View::render('merchant/profile', [
+            'profile'     => $this->merchantModel->findProfile($merchantId),
+            'categories'  => self::CATEGORIES,
+            'states'      => self::STATES,
+            'minPassword' => self::MIN_PASSWORD_LENGTH,
+        ]);
+    }
+
+    private function handleProfile($merchantId) {
+        Csrf::verify();
+
+        if (($_POST['action'] ?? '') === 'password') {
+            $this->handlePasswordChange($merchantId);
+        }
+
+        // as mesmas regras do cadastro. e-mail e cpf/cnpj nao sao editaveis aqui: mesmo que venham no post, sao ignorados.
+        $fields = [
+            'owner_name' => trim((string)($_POST['owner_name'] ?? '')),
+            'store_name' => trim((string)($_POST['shop_name'] ?? '')),
+            'phone'      => PhoneValidator::sanitize($_POST['phone'] ?? ''),
+            'category'   => (string)($_POST['category'] ?? ''),
+            'address'    => trim((string)($_POST['address'] ?? '')),
+            'city'       => trim((string)($_POST['city'] ?? '')),
+            'state'      => (string)($_POST['state'] ?? ''),
+        ];
+
+        if ($fields['owner_name'] === '' || $fields['store_name'] === '' || $fields['address'] === '' || $fields['city'] === ''
+            || !in_array($fields['state'], self::STATES, true)
+            || !array_key_exists($fields['category'], self::CATEGORIES)) {
+            redirect('merchant/profile', ['error' => 'campos_invalidos']);
+        }
+
+        // tamanho das colunas conferido aqui: o mysql sem modo estrito cortaria o texto sem avisar
+        if (mb_strlen($fields['owner_name']) > 255 || mb_strlen($fields['store_name']) > 255
+            || mb_strlen($fields['address']) > 255 || mb_strlen($fields['city']) > 100) {
+            redirect('merchant/profile', ['error' => 'dados_muito_longos']);
+        }
+
+        if (!PhoneValidator::isValid($fields['phone'])) {
+            redirect('merchant/profile', ['error' => 'telefone_invalido']);
+        }
+
+        $this->merchantModel->updateProfile($merchantId, $fields);
+
+        redirect('merchant/profile', ['success' => 'perfil_atualizado']);
+    }
+
+    // troca de senha: so com a senha atual (sessao aberta num aparelho esquecido nao basta pra tomar a conta)
+    private function handlePasswordChange($merchantId): never {
+        $current = (string)($_POST['current_password'] ?? '');
+        $new     = (string)($_POST['new_password'] ?? '');
+        $confirm = (string)($_POST['new_password_confirm'] ?? '');
+
+        if ($current === '' || $new === '' || $confirm === '') {
+            redirect('merchant/profile', ['error' => 'campos_obrigatorios']);
+        }
+
+        // limite de erros da senha atual, pra ninguem ficar testando senhas por este formulario
+        $limiter = new RateLimiter($this->db);
+        $key = 'merchant:' . $merchantId;
+        if ($limiter->tooMany('password_change', $key, self::MAX_PASSWORD_FAILURES, self::PASSWORD_WINDOW_SECONDS)) {
+            redirect('merchant/profile', ['error' => 'muitas_tentativas']);
+        }
+
+        $merchant = $this->merchantModel->findById($merchantId);
+        if (!$merchant || !password_verify($current, $merchant['password_hash'])) {
+            $limiter->hit('password_change', $key);
+            redirect('merchant/profile', ['error' => 'senha_atual_incorreta']);
+        }
+
+        if (strlen($new) < self::MIN_PASSWORD_LENGTH) {
+            redirect('merchant/profile', ['error' => 'senha_curta']);
+        }
+
+        if (!hash_equals($new, $confirm)) {
+            redirect('merchant/profile', ['error' => 'senhas_diferentes']);
+        }
+
+        $hash = password_hash($new, PASSWORD_BCRYPT);
+        $this->merchantModel->updatePasswordHash($merchantId, $hash);
+        $limiter->clear('password_change', $key);
+
+        // esta sessao continua valendo (com id novo); as outras, abertas com a senha antiga, caem no authGuard
+        session_regenerate_id(true);
+        $_SESSION['password_sig'] = SessionGuard::passwordSignature($hash);
+
+        redirect('merchant/profile', ['success' => 'senha_alterada']);
+    }
+
     // nome, descricao e custo do formulario de premio; null se algo estiver invalido
     private function readRewardFields(): ?array {
         $name        = trim((string)($_POST['name'] ?? ''));
@@ -670,6 +773,12 @@ class MerchantController {
         if (!$merchant || $merchant['status'] !== 'active') {
             SessionGuard::destroy();
             redirect('merchant/login', ['error' => 'conta_inativa']);
+        }
+
+        // a senha foi trocada depois que esta sessao abriu (em outro aparelho): precisa entrar de novo
+        if (SessionGuard::passwordChanged($_SESSION['password_sig'] ?? null, $merchant['password_hash'])) {
+            SessionGuard::destroy();
+            redirect('merchant/login', ['error' => 'sessao_expirada']);
         }
 
         // nome da loja sempre atualizado no menu (pode ter mudado desde o login)

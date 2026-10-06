@@ -39,12 +39,49 @@ class MerchantModel{
         return $stmt->fetch(\PDO::FETCH_ASSOC); // array associativo
     }
 
-    // dados que o authGuard confere a cada requisicao
+    // dados que o authGuard confere a cada requisicao (o hash da senha serve pra derrubar
+    // as sessoes antigas quando a senha e trocada, ver SessionGuard::passwordSignature)
     public function findById($merchantId) {
-        $stmt = $this->db->prepare('SELECT id, owner_name, store_name, status FROM merchants WHERE id = :id');
+        $stmt = $this->db->prepare('SELECT id, owner_name, store_name, status, password_hash FROM merchants WHERE id = :id');
         $stmt->execute([':id' => $merchantId]);
 
         return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    // dados exibidos na tela de perfil; false se a conta nao existir
+    public function findProfile($merchantId) {
+        $stmt = $this->db->prepare(
+            'SELECT owner_name, store_name, email, phone, category, cpf, cnpj, address, city, state
+             FROM merchants WHERE id = :id'
+        );
+        $stmt->execute([':id' => $merchantId]);
+
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    // dados da loja que o proprio lojista edita. e-mail (login) e cpf/cnpj (identidade) ficam de fora de proposito.
+    public function updateProfile($merchantId, array $fields): void {
+        $stmt = $this->db->prepare(
+            'UPDATE merchants
+             SET owner_name = :owner_name, store_name = :store_name, phone = :phone, category = :category,
+                 address = :address, city = :city, state = :state
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            ':owner_name' => $fields['owner_name'],
+            ':store_name' => $fields['store_name'],
+            ':phone'      => $fields['phone'],
+            ':category'   => $fields['category'],
+            ':address'    => $fields['address'],
+            ':city'       => $fields['city'],
+            ':state'      => $fields['state'],
+            ':id'         => $merchantId,
+        ]);
+    }
+
+    public function updatePasswordHash($merchantId, string $hash): void {
+        $stmt = $this->db->prepare('UPDATE merchants SET password_hash = :hash WHERE id = :id');
+        $stmt->execute([':hash' => $hash, ':id' => $merchantId]);
     }
 
     public function findPublicCode($merchantId): ?string {

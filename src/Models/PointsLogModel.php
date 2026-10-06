@@ -17,10 +17,12 @@ class PointsLogModel {
     // uma pagina do historico de movimentacoes da loja, da mais recente pra mais antiga.
     // LEFT JOIN: cartao anonimizado nao tem cliente, mas a movimentacao continua no historico (nome e telefone NULL)
     public function pageByMerchant($merchantId, int $limit, int $offset) {
-        $sql = 'SELECT pl.type, pl.quantity, pl.description, pl.created_at, lc.customer_name, c.phone
+        $sql = 'SELECT pl.type, pl.quantity, pl.description, pl.created_at, lc.customer_name, c.phone,
+                       orig.type AS reversed_type
                 FROM points_log pl
                 JOIN loyalty_cards lc ON lc.id = pl.card_id
                 LEFT JOIN customers c ON c.id = lc.customer_id
+                LEFT JOIN points_log orig ON orig.id = pl.reverses_id
                 WHERE lc.merchant_id = :merchant_id
                 ORDER BY pl.created_at DESC, pl.id DESC
                 LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset;
@@ -32,9 +34,11 @@ class PointsLogModel {
 
     // extrato de um cartao: movimentacoes do cliente nesta loja, da mais recente pra mais antiga
     public function pageByCard($cardId, int $limit, int $offset) {
-        // can_reverse: lancamento que ainda pode ser estornado (o model confere tudo de novo no POST)
+        // can_reverse: lancamento ou resgate que ainda pode ser estornado (o model confere tudo de novo no POST).
+        // reversed_type: num estorno, o tipo do que foi estornado (estorno de resgate devolve pontos)
         $sql = 'SELECT pl.id, pl.type, pl.quantity, pl.description, pl.created_at,
-                       (pl.type = \'earn\'
+                       (SELECT orig.type FROM points_log orig WHERE orig.id = pl.reverses_id) AS reversed_type,
+                       (pl.type IN (\'earn\', \'redeem\')
                         AND pl.created_at >= NOW() - INTERVAL ' . LoyaltyCardModel::REVERSAL_WINDOW_HOURS . ' HOUR
                         AND NOT EXISTS (SELECT 1 FROM points_log r WHERE r.reverses_id = pl.id)) AS can_reverse
                 FROM points_log pl
@@ -59,11 +63,13 @@ class PointsLogModel {
         return $stmt->fetch(\PDO::FETCH_ASSOC);
     }
 
-    // a movimentacao e deste cartao (o estorno confere antes, pra nao estornar lancamento de outro cliente)
-    public function belongsToCard(int $logId, int $cardId): bool {
-        $stmt = $this->db->prepare('SELECT 1 FROM points_log WHERE id = :id AND card_id = :card_id');
+    // tipo da movimentacao, se ela for deste cartao; null se nao for (o estorno confere antes,
+    // pra nao estornar movimentacao de outro cliente)
+    public function typeForCard(int $logId, int $cardId): ?string {
+        $stmt = $this->db->prepare('SELECT type FROM points_log WHERE id = :id AND card_id = :card_id');
         $stmt->execute([':id' => $logId, ':card_id' => $cardId]);
-        return (bool)$stmt->fetchColumn();
+        $type = $stmt->fetchColumn();
+        return $type === false ? null : $type;
     }
 
     public function countByCard($cardId): int {
@@ -83,16 +89,20 @@ class PointsLogModel {
         return (int)$stmt->fetchColumn();
     }
 
-    // numeros do dashboard
+    // numeros do dashboard. estorno de lancamento desconta dos pontos emitidos; resgate estornado
+    // (task 44) nao conta como resgate, e o estorno dele nao mexe nos pontos emitidos.
     public function statsByMerchant($merchantId) {
         $sql = "SELECT
                     (SELECT COUNT(*) FROM loyalty_cards WHERE merchant_id = :m1 AND anonymized_at IS NULL) AS customers,
-                    (SELECT COALESCE(SUM(CASE pl.type WHEN 'earn' THEN pl.quantity ELSE -pl.quantity END), 0) FROM points_log pl
+                    (SELECT COALESCE(SUM(CASE WHEN pl.type = 'earn' THEN pl.quantity ELSE -pl.quantity END), 0) FROM points_log pl
                         JOIN loyalty_cards lc ON lc.id = pl.card_id
-                        WHERE lc.merchant_id = :m2 AND pl.type IN ('earn', 'reversal')) AS points_issued,
+                        LEFT JOIN points_log orig ON orig.id = pl.reverses_id
+                        WHERE lc.merchant_id = :m2
+                          AND (pl.type = 'earn' OR (pl.type = 'reversal' AND orig.type = 'earn'))) AS points_issued,
                     (SELECT COUNT(*) FROM points_log pl
                         JOIN loyalty_cards lc ON lc.id = pl.card_id
-                        WHERE lc.merchant_id = :m3 AND pl.type = 'redeem') AS redemptions,
+                        WHERE lc.merchant_id = :m3 AND pl.type = 'redeem'
+                          AND NOT EXISTS (SELECT 1 FROM points_log r WHERE r.reverses_id = pl.id)) AS redemptions,
                     (SELECT COALESCE(SUM(current_points), 0) FROM loyalty_cards WHERE merchant_id = :m4) AS points_balance";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':m1' => $merchantId, ':m2' => $merchantId, ':m3' => $merchantId, ':m4' => $merchantId]);

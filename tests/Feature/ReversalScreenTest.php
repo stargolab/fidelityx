@@ -34,6 +34,39 @@ final class ReversalScreenTest extends HttpTestCase {
         $this->assertStringNotContainsString('name="log_id"', $this->lastBody);
     }
 
+    // task 44: resgate por engano se estorna pelo extrato e os pontos voltam
+    public function testEstornaResgatePeloExtrato(): void {
+        $merchant = $this->createMerchant('loja@teste.test');
+        $card = $this->createCard($merchant, 'Bia', '11922220002');
+        $reward = $this->createReward($merchant, 'Cafe', 20);
+        $cards = new LoyaltyCardModel($this->db);
+        $cards->addPoints($card, 30, 'Compra');
+        $cards->redeem($card, $reward);
+        $resgate = (int)$this->scalar("SELECT id FROM points_log WHERE type = 'redeem'");
+        $this->loginAs('loja@teste.test');
+
+        $this->get(self::STATEMENT);
+        $this->assertStringContainsString('name="log_id" value="' . $resgate . '"', $this->lastBody);
+        $this->assertStringContainsString('Estornar este resgate? Os pontos voltam ao saldo do cliente.', html_entity_decode($this->lastBody));
+
+        [, $location] = $this->post(
+            'merchant/customer',
+            ['action' => 'reverse', 'back' => 'statement', 'phone' => '11922220002', 'log_id' => $resgate],
+            true,
+            self::STATEMENT
+        );
+        $this->assertSame(self::STATEMENT . '&success=resgate_estornado', $location);
+        $this->assertSame(30, (int)$this->scalar('SELECT current_points FROM loyalty_cards'));
+
+        $this->get(self::STATEMENT . '&success=resgate_estornado');
+        $this->assertStringContainsString('Os pontos voltaram ao saldo', $this->lastBody);
+        $this->assertMatchesRegularExpression('#badge-reversal">Estorno de resgate</span></td>\s*<td class="num">\+20<#', $this->lastBody);
+
+        // relatorio: o resgate desfeito nao conta
+        $this->get('merchant/reports');
+        $this->assertMatchesRegularExpression('#stat-value">0</div>\s*<div class="stat-label">Resgates#', $this->lastBody);
+    }
+
     public function testErrosVoltamComMensagem(): void {
         $merchant = $this->createMerchant('loja@teste.test');
         $card = $this->createCard($merchant, 'Bia', '11922220002');

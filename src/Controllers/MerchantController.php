@@ -634,17 +634,17 @@ class MerchantController {
             redirect('merchant/dashboard', ['success' => 'cliente_excluido']);
         }
 
-        // estorno de lancamento (do extrato ou do Desfazer da confirmacao). volta pra tela de onde veio.
+        // estorno de lancamento (do extrato ou do Desfazer da confirmacao) ou de resgate (do extrato, task 44).
+        // volta pra tela de onde veio.
         if (($_POST['action'] ?? '') === 'reverse') {
             $back = ($_POST['back'] ?? '') === 'statement' ? 'merchant/statement' : 'merchant/customer';
             $logId = filter_var($_POST['log_id'] ?? '', FILTER_VALIDATE_INT);
-            // o lancamento precisa ser do cartao deste cliente (o model confere tambem a loja)
-            $result = $logId && (new PointsLogModel($this->db))->belongsToCard($logId, (int)$card['id'])
-                ? $cardModel->reverse($logId, $merchantId)
-                : 'not_found';
+            // a movimentacao precisa ser do cartao deste cliente (o model confere tambem a loja)
+            $type = $logId ? (new PointsLogModel($this->db))->typeForCard($logId, (int)$card['id']) : null;
+            $result = $type !== null ? $cardModel->reverse($logId, $merchantId) : 'not_found';
 
             redirect($back, ['phone' => $phone] + match ($result) {
-                'ok'           => ['success' => 'lancamento_estornado'],
+                'ok'           => ['success' => $type === 'redeem' ? 'resgate_estornado' : 'lancamento_estornado'],
                 'already'      => ['error' => 'estorno_repetido'],
                 'expired'      => ['error' => 'estorno_expirado'],
                 'insufficient' => ['error' => 'estorno_sem_saldo'],

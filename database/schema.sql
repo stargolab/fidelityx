@@ -132,11 +132,11 @@ CREATE TABLE IF NOT EXISTS points_log (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
   card_id BIGINT UNSIGNED NOT NULL,
-  type ENUM('earn', 'redeem', 'reversal') NOT NULL, -- reversal = estorno de um earn
+  type ENUM('earn', 'redeem', 'reversal') NOT NULL, -- reversal = estorno de um earn ou de um redeem
   quantity INT NOT NULL,
   description VARCHAR(255) NOT NULL,
   reward_id BIGINT UNSIGNED NULL, -- preenchido quando type = 'redeem'
-  reverses_id BIGINT UNSIGNED NULL, -- preenchido quando type = 'reversal': o lancamento estornado
+  reverses_id BIGINT UNSIGNED NULL, -- preenchido quando type = 'reversal': o ganho ou resgate estornado
 
   -- para futuras implementações (NULL)
   responsible_user VARCHAR(255) NULL,

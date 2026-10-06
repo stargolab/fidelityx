@@ -27,14 +27,17 @@
                     <?php foreach ($entries as $entry): ?>
                         <tr>
                             <td><?= e(format_datetime($entry['created_at'])) ?></td>
-                            <?php [$typeLabel, $typeBadge, $typeSign] = log_type_view($entry['type']); ?>
+                            <?php [$typeLabel, $typeBadge, $typeSign] = log_type_view($entry['type'], $entry['reversed_type'] ?? null); ?>
                             <td><span class="badge <?= $typeBadge ?>"><?= e($typeLabel) ?></span></td>
                             <td class="num"><?= $typeSign ?><?= (int)$entry['quantity'] ?></td>
                             <td><?= e($entry['description']) ?></td>
                             <td class="num">
                                 <?php if ($entry['can_reverse'] ?? false): ?>
+                                    <?php $confirmText = $entry['type'] === 'redeem'
+                                        ? 'Estornar este resgate? Os pontos voltam ao saldo do cliente.'
+                                        : 'Estornar este lançamento? Os pontos saem do saldo do cliente.'; ?>
                                     <form action="<?= e(url('merchant/customer')) ?>" method="POST"
-                                          onsubmit="return confirm('Estornar este lançamento? Os pontos saem do saldo do cliente.');">
+                                          onsubmit="return confirm(<?= e(json_encode($confirmText, JSON_UNESCAPED_UNICODE)) ?>);">
                                         <?= \App\Support\Csrf::field() ?>
                                         <input type="hidden" name="action" value="reverse">
                                         <input type="hidden" name="back" value="statement">

@@ -42,7 +42,7 @@
                                     <a href="<?= e(url('merchant/statement', ['phone' => $entry['phone']])) ?>"><?= e($entry['customer_name']) ?></a>
                                 <?php endif; ?>
                             </td>
-                            <?php [$typeLabel, $typeBadge, $typeSign] = log_type_view($entry['type']); ?>
+                            <?php [$typeLabel, $typeBadge, $typeSign] = log_type_view($entry['type'], $entry['reversed_type'] ?? null); ?>
                             <td><span class="badge <?= $typeBadge ?>"><?= e($typeLabel) ?></span></td>
                             <td class="num"><?= $typeSign ?><?= (int)$entry['quantity'] ?></td>
                             <td><?= e($entry['description']) ?></td>

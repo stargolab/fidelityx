@@ -70,10 +70,12 @@ class LoyaltyCardModel {
         }
     }
 
-    // estorno de um lancamento de pontos (digitou 500 em vez de 50). nada e apagado: o estorno vira uma
-    // linha nova 'reversal' que aponta pro lancamento, e o saldo e o total acumulado voltam ao que eram.
-    // so vale para lancamento (earn) desta loja, feito nas ultimas REVERSAL_WINDOW_HOURS horas, ainda nao estornado,
-    // e quando o saldo atual cobre os pontos (se o cliente ja gastou, o saldo ficaria negativo).
+    // estorno de um lancamento de pontos (digitou 500 em vez de 50) ou de um resgate feito por engano (task 44).
+    // nada e apagado: o estorno vira uma linha nova 'reversal' que aponta pra movimentacao estornada.
+    // - lancamento (earn): saldo e total acumulado voltam ao que eram, e so quando o saldo atual cobre os pontos
+    //   (se o cliente ja gastou, o saldo ficaria negativo).
+    // - resgate (redeem): os pontos voltam ao saldo; o total acumulado nao muda (o resgate nao mexeu nele).
+    // so vale para movimentacao desta loja, feita nas ultimas REVERSAL_WINDOW_HOURS horas e ainda nao estornada.
     // devolve 'ok', 'not_found', 'already', 'expired' ou 'insufficient'.
     public const REVERSAL_WINDOW_HOURS = 24;
 
@@ -81,12 +83,13 @@ class LoyaltyCardModel {
         $this->db->beginTransaction();
         try {
             $stmt = $this->db->prepare(
-                "SELECT pl.id, pl.card_id, pl.quantity, pl.description,
+                "SELECT pl.id, pl.card_id, pl.type, pl.quantity, pl.description,
                         pl.created_at >= NOW() - INTERVAL " . self::REVERSAL_WINDOW_HOURS . " HOUR AS recent,
                         EXISTS (SELECT 1 FROM points_log r WHERE r.reverses_id = pl.id) AS reversed
                  FROM points_log pl
                  JOIN loyalty_cards lc ON lc.id = pl.card_id
-                 WHERE pl.id = :id AND lc.merchant_id = :merchant_id AND pl.type = 'earn' AND lc.anonymized_at IS NULL"
+                 WHERE pl.id = :id AND lc.merchant_id = :merchant_id AND pl.type IN ('earn', 'redeem')
+                   AND lc.anonymized_at IS NULL"
             );
             $stmt->execute([':id' => $logId, ':merchant_id' => $merchantId]);
             $entry = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -106,17 +109,25 @@ class LoyaltyCardModel {
             $stmt = $this->db->prepare('SELECT current_points FROM loyalty_cards WHERE id = :id FOR UPDATE');
             $stmt->execute([':id' => $entry['card_id']]);
             $quantity = (int)$entry['quantity'];
-            if ((int)$stmt->fetchColumn() < $quantity) {
-                $this->db->rollBack();
-                return 'insufficient';
-            }
 
-            $this->db->prepare(
-                'UPDATE loyalty_cards
-                 SET current_points = current_points - :p1, total_accumulated = total_accumulated - :p2,
-                     last_use_at = CURRENT_TIMESTAMP
-                 WHERE id = :id'
-            )->execute([':p1' => $quantity, ':p2' => $quantity, ':id' => $entry['card_id']]);
+            if ($entry['type'] === 'redeem') {
+                $this->db->prepare(
+                    'UPDATE loyalty_cards SET current_points = current_points + :p1, last_use_at = CURRENT_TIMESTAMP
+                     WHERE id = :id'
+                )->execute([':p1' => $quantity, ':id' => $entry['card_id']]);
+            } else {
+                if ((int)$stmt->fetchColumn() < $quantity) {
+                    $this->db->rollBack();
+                    return 'insufficient';
+                }
+
+                $this->db->prepare(
+                    'UPDATE loyalty_cards
+                     SET current_points = current_points - :p1, total_accumulated = total_accumulated - :p2,
+                         last_use_at = CURRENT_TIMESTAMP
+                     WHERE id = :id'
+                )->execute([':p1' => $quantity, ':p2' => $quantity, ':id' => $entry['card_id']]);
+            }
 
             $description = mb_substr('Estorno: ' . $entry['description'], 0, 255);
             $this->log($entry['card_id'], 'reversal', $quantity, $description, null, (int)$entry['id']);

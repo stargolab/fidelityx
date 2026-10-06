@@ -59,9 +59,9 @@ O cliente é **só o telefone** (task 11, ADR 002). As colunas `cpf`, `email`, `
 ### `points_log` — histórico
 | Coluna | Observação |
 |---|---|
-| `type` | `earn` (ganho), `redeem` (resgate) ou `reversal` (estorno de um ganho). `quantity` é sempre positivo. |
+| `type` | `earn` (ganho), `redeem` (resgate) ou `reversal` (estorno de um ganho ou de um resgate, task 44). `quantity` é sempre positivo: o sinal vem do tipo (o estorno de resgate devolve pontos). |
 | `reward_id` | Preenchido em resgates. Vira `NULL` se o prêmio for apagado. |
-| `reverses_id` | Preenchido em estornos (`reversal`): o lançamento estornado. `UNIQUE`, então cada lançamento é estornado no máximo uma vez. |
+| `reverses_id` | Preenchido em estornos (`reversal`): o ganho ou resgate estornado. `UNIQUE`, então cada movimentação é estornada no máximo uma vez. |
 | `ip_address` | IP de quem fez a operação (o do cliente, mesmo atrás de proxy confiável: `TRUSTED_PROXIES`). |
 | índice `idx_points_log_card_created` | `(card_id, created_at)`: o extrato de um cartão é lido já na ordem de data, sem ordenar tudo a cada página. Também atende a chave estrangeira de `card_id`. |
 

@@ -66,7 +66,7 @@ merchants 1───N loyalty_cards N───1 customers
 ### `rate_limit_hits` — tentativas (limite de abuso)
 | Coluna | Observação |
 |---|---|
-| `bucket` | Tipo de limite: `login_email`, `login_ip`, `balance_ip`. |
+| `bucket` | Tipo de limite: `login_email`, `login_ip`, `balance_ip`, `password_change` (senha atual errada na troca de senha, por conta). |
 | `key_hash` | SHA-256 da chave (e-mail ou IP em minúsculas). O dado pessoal não é gravado. |
 | `created_at` | Cada linha é uma tentativa; só contam as que estão dentro da janela. Linhas com mais de 1 dia são apagadas aos poucos. |
 

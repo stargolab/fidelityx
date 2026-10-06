@@ -33,6 +33,7 @@ Recentemente refatorado para adotar o padrão **MVC com separação clara de res
 - ✅ **Clientes** — Lista paginada com busca por nome ou telefone; extrato de pontos de cada cliente
 - ✅ **Relatórios** — Clientes, pontos emitidos, resgates, pontos em circulação e histórico paginado
 - ✅ **Cartaz com QR code** — Pronto para imprimir, leva o cliente à consulta de saldo da loja
+- ✅ **Perfil** — O lojista edita os dados da loja e troca a senha informando a atual; a troca encerra as sessões abertas em outros aparelhos
 - ✅ **Primeiros passos** — Guia para a loja nova até o primeiro prêmio e os primeiros pontos
 - ✅ **Funciona do celular ao PC** — Layout mobile-first (360 px a 1440 px), menu de celular e alvos de toque de 44 px
 
@@ -55,6 +56,7 @@ Recentemente refatorado para adotar o padrão **MVC com separação clara de res
 | `merchant/rewards` · `merchant/reward-edit?id=` | lojista | Catálogo de prêmios e edição |
 | `merchant/reports?page=` | lojista | Indicadores e histórico de movimentações |
 | `merchant/poster` | lojista | Cartaz com QR code e código da loja |
+| `merchant/profile` | lojista | Dados da loja e troca de senha |
 | `customer/balance?loja=` | público | Consulta de saldo pelo telefone, na loja do código |
 
 ---
@@ -348,7 +350,8 @@ public function renderCustomer() {
 ### Próximos passos
 
 - [ ] Análise estática (PHPStan) e padronização de código (PHP-CS-Fixer)
-- [ ] Edição de perfil do lojista e recuperação de senha
+- [x] Perfil do lojista e troca de senha
+- [ ] Recuperação de senha por e-mail
 - [ ] Máscaras de input no front-end (TypeScript)
 - [ ] Planos Free/Pro com limites
 - [ ] Área do cliente com login

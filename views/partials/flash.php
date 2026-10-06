@@ -25,6 +25,8 @@ $flashMessages = [
         'premio_invalido'       => 'Prêmio inválido ou inativo.',
         'saldo_insuficiente'    => 'Saldo de pontos insuficiente para este prêmio.',
         'confirmacao_obrigatoria' => 'Marque a confirmação de que o cliente pediu a exclusão.',
+        'senha_atual_incorreta' => 'A senha atual não confere.',
+        'muitas_tentativas'     => 'Muitas tentativas com a senha atual errada. Aguarde alguns minutos e tente de novo.',
     ],
     'success' => [
         'cadastrado'        => 'Cadastro realizado! Faça login para continuar.',
@@ -40,6 +42,8 @@ $flashMessages = [
         'resgate_realizado' => 'Resgate realizado com sucesso.',
         'consentimento_registrado' => 'Consentimento registrado.',
         'cliente_excluido'  => 'Dados do cliente excluídos.',
+        'perfil_atualizado' => 'Dados da loja atualizados.',
+        'senha_alterada'    => 'Senha alterada. Os outros aparelhos conectados precisam entrar de novo.',
     ],
 ];
 

@@ -36,7 +36,7 @@ merchants 1───N loyalty_cards N───1 customers
 |---|---|
 | `phone` | `UNIQUE`, 10 ou 11 dígitos sem máscara. É a chave de busca no balcão e na consulta pública. |
 
-| `cpf`, `email`, `birth_date`, `gender` | Opcionais, para uso futuro. |
+O cliente é **só o telefone** (task 11, ADR 002). As colunas `cpf`, `email`, `birth_date` e `gender`, que estavam “para uso futuro”, saíram na migration 007 (task 49): dado pessoal sem uso e sem base legal não fica no banco. Nome e consentimento ficam no cartão de cada loja.
 
 ### `loyalty_cards` — cartões de fidelidade
 | Coluna | Observação |

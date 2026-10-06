@@ -57,18 +57,10 @@ CREATE TABLE IF NOT EXISTS customers (
 
   phone VARCHAR(30) NOT NULL,
 
-  -- Future-proofing (NULL)
-  cpf VARCHAR(11) NULL,
-  email VARCHAR(255) NULL,
-  birth_date DATE NULL,
-  gender ENUM('male', 'female', 'other') NULL,
-
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-  UNIQUE KEY uq_customers_phone (phone),
-  UNIQUE KEY uq_customers_cpf (cpf),
-  KEY idx_customers_email (email)
+  UNIQUE KEY uq_customers_phone (phone)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================
@@ -207,4 +199,5 @@ INSERT IGNORE INTO schema_migrations (version) VALUES
   ('003_lgpd'),
   ('004_estorno'),
   ('005_regra_pontos'),
-  ('006_points_log_extrato');
+  ('006_points_log_extrato'),
+  ('007_customers_so_telefone');

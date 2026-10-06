@@ -18,9 +18,9 @@
         </div>
         
         <h1>Ops! Você se perdeu?</h1>
-        <p>Esse cartão fidelidade parece ter expirado ou nunca existiu. Mas não esquenta, o dashboard está a um clique de distância.</p>
+        <p>Esse cartão fidelidade parece ter expirado ou nunca existiu. Mas não esquenta, o caminho de volta está a um clique de distância.</p>
         
-        <a href="/index.php?url=merchant/dashboard" class="btn-home">Voltar ao Painel</a>
+        <a href="<?= e($backUrl) ?>" class="btn-home"><?= e($backLabel) ?></a>
     </div>
 </body>
 </html>

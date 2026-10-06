@@ -37,7 +37,8 @@ class MerchantController {
 
     private const MAX_POINTS_PER_ENTRY = 10000;
     private const PER_PAGE = 20;
-    private const MAX_LOGIN_FAILURES = 5;
+    private const MAX_LOGIN_FAILURES = 5;         // mesmo e-mail + mesmo ip
+    private const MAX_LOGIN_FAILURES_PER_IP = 20; // mesmo ip, somando todas as contas
     private const LOGIN_WINDOW_SECONDS = 900;
     private const MIN_PASSWORD_LENGTH = 6;
     // senha atual errada na troca de senha: mesmo limite do login, contado por conta
@@ -474,11 +475,16 @@ class MerchantController {
             redirect('merchant/login', ['error' => 'campos_obrigatorios']);
         }
 
-        // 5 erros em 15 min pro mesmo e-mail ou ip bloqueiam o login ate a janela passar
+        // limite de erros em 15 min, ate a janela passar:
+        // - 5 pro mesmo e-mail vindos do mesmo ip: quem erra a senha trava so a si mesmo naquela conta.
+        //   o bloqueio nunca e so pelo e-mail, senao qualquer pessoa que soubesse o e-mail de uma loja
+        //   trancaria a dona pra fora errando a senha de proposito.
+        // - 20 pro mesmo ip, em qualquer conta: segura quem testa senhas de varias lojas.
         $limiter = new RateLimiter($this->db);
-        $ip = RateLimiter::clientIp();
-        if ($limiter->tooMany('login_email', $email, self::MAX_LOGIN_FAILURES, self::LOGIN_WINDOW_SECONDS)
-            || $limiter->tooMany('login_ip', $ip, self::MAX_LOGIN_FAILURES, self::LOGIN_WINDOW_SECONDS)) {
+        $ip = RateLimiter::clientKey();
+        $pair = $email . '|' . $ip;
+        if ($limiter->tooMany('login_pair', $pair, self::MAX_LOGIN_FAILURES, self::LOGIN_WINDOW_SECONDS)
+            || $limiter->tooMany('login_ip', $ip, self::MAX_LOGIN_FAILURES_PER_IP, self::LOGIN_WINDOW_SECONDS)) {
             (new ErrorController())->handle(429);
             exit;
         }
@@ -486,13 +492,13 @@ class MerchantController {
         $merchant = $this->merchantModel->findByEmail($email);
 
         if(!$merchant || !password_verify($password, $merchant['password_hash'])){
-            $limiter->hit('login_email', $email);
+            $limiter->hit('login_pair', $pair);
             $limiter->hit('login_ip', $ip);
             redirect('merchant/login', ['error' => 'credenciais_invalidas']);
         }
 
-        // login certo zera os erros do e-mail (os do ip continuam contando)
-        $limiter->clear('login_email', $email);
+        // login certo zera os erros deste e-mail neste ip (os do ip em geral continuam contando)
+        $limiter->clear('login_pair', $pair);
 
         if($merchant['status'] === 'inactive'){
             redirect('merchant/login', ['error' => 'conta_inativa']);

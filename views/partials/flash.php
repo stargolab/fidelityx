@@ -40,6 +40,8 @@ $flashMessages = [
         'estorno_expirado'      => 'Só dá para estornar lançamentos e resgates das últimas 24 horas.',
         'estorno_sem_saldo'     => 'Não dá para estornar: o cliente já usou parte desses pontos.',
         'senha_atual_incorreta' => 'A senha atual não confere.',
+        'link_invalido'         => 'Este link de nova senha é inválido, já foi usado ou venceu. Peça outro.',
+        'muitos_pedidos'        => 'Muitos pedidos seguidos. Aguarde um pouco e tente de novo.',
         'muitas_tentativas'     => 'Muitas tentativas com a senha atual errada. Aguarde alguns minutos e tente de novo.',
     ],
     'success' => [
@@ -62,6 +64,8 @@ $flashMessages = [
         'regra_salva'       => 'Regra de pontos salva.',
         'regra_removida'    => 'Regra de pontos removida.',
         'perfil_atualizado' => 'Dados da loja atualizados.',
+        'reset_enviado'     => 'Se o e-mail for de uma loja cadastrada, enviamos um link para criar uma nova senha. Ele vale por 1 hora.',
+        'senha_redefinida'  => 'Senha nova criada. Entre com ela.',
         'senha_alterada'    => 'Senha alterada. Os outros aparelhos conectados precisam entrar de novo.',
     ],
 ];

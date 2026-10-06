@@ -4,7 +4,10 @@ namespace App\Controllers;
 
 use App\Models\CustomerModel;
 use App\Models\LoyaltyCardModel;
+use App\Mail\MailerFactory;
+use App\Mail\Message;
 use App\Models\MerchantModel;
+use App\Models\PasswordResetModel;
 use App\Models\PointsLogModel;
 use App\Models\RewardModel;
 use App\Support\Csrf;
@@ -56,6 +59,10 @@ class MerchantController {
     // senha atual errada na troca de senha: mesmo limite do login, contado por conta
     private const MAX_PASSWORD_FAILURES = 5;
     private const PASSWORD_WINDOW_SECONDS = 900;
+    // pedidos de link de senha (task 21): por ip (quem testa varios e-mails) e por e-mail (nao lotar a caixa de ninguem)
+    private const MAX_RESET_REQUESTS_PER_IP = 10;
+    private const MAX_RESET_REQUESTS_PER_EMAIL = 3;
+    private const RESET_WINDOW_SECONDS = 3600;
 
     private $db;
     private $merchantModel;
@@ -95,6 +102,99 @@ class MerchantController {
         }
 
         View::render('auth/merchant/login');
+    }
+
+    // esqueci a senha (task 21): pede o e-mail e manda o link. a resposta e sempre a mesma, exista
+    // o e-mail ou nao: a tela nao revela quais e-mails sao lojas.
+    public function renderForgot() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handleForgot();
+            return;
+        }
+
+        View::render('auth/merchant/forgot');
+    }
+
+    private function handleForgot(): never {
+        Csrf::verify();
+
+        $email = trim((string)($_POST['email'] ?? ''));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            redirect('merchant/forgot', ['error' => 'email_invalido']);
+        }
+
+        $limiter = new RateLimiter($this->db);
+        $ip = RateLimiter::clientKey();
+        if ($limiter->tooMany('password_reset_ip', $ip, self::MAX_RESET_REQUESTS_PER_IP, self::RESET_WINDOW_SECONDS)
+            || $limiter->tooMany('password_reset_email', $email, self::MAX_RESET_REQUESTS_PER_EMAIL, self::RESET_WINDOW_SECONDS)) {
+            redirect('merchant/forgot', ['error' => 'muitos_pedidos']);
+        }
+        $limiter->hit('password_reset_ip', $ip);
+        $limiter->hit('password_reset_email', $email);
+
+        // conta desativada nao recebe link (nao conseguiria entrar mesmo)
+        $merchant = $this->merchantModel->findByEmail($email);
+        if ($merchant && $merchant['status'] === 'active') {
+            $token = (new PasswordResetModel($this->db))->create((int)$merchant['id']);
+            $link = $this->publicBaseUrl() . url('merchant/reset', ['token' => $token]);
+            MailerFactory::fromEnv()->send(new Message(
+                $email,
+                'FidelityX: criar uma nova senha',
+                "Olá, {$merchant['owner_name']}.\n\n"
+                . "Recebemos um pedido para criar uma nova senha no painel da loja {$merchant['store_name']}.\n"
+                . "Abra o link abaixo em até 1 hora (ele só funciona uma vez):\n\n$link\n\n"
+                . "Se não foi você, ignore este e-mail: a senha atual continua valendo."
+            ));
+        }
+
+        redirect('merchant/forgot', ['success' => 'reset_enviado']);
+    }
+
+    // link do e-mail: escolhe a senha nova. o token vem na url (GET) e volta num campo escondido (POST).
+    public function renderReset() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handleReset();
+            return;
+        }
+
+        $token = (string)($_GET['token'] ?? '');
+        if (!(new PasswordResetModel($this->db))->isValid($token)) {
+            redirect('merchant/forgot', ['error' => 'link_invalido']);
+        }
+
+        View::render('auth/merchant/reset', [
+            'token'       => $token,
+            'minPassword' => PasswordPolicy::MIN_BYTES,
+            'maxPassword' => PasswordPolicy::MAX_BYTES,
+        ]);
+    }
+
+    private function handleReset(): never {
+        Csrf::verify();
+
+        $token = (string)($_POST['token'] ?? '');
+        $new = (string)($_POST['new_password'] ?? '');
+        $confirm = (string)($_POST['new_password_confirm'] ?? '');
+        $resets = new PasswordResetModel($this->db);
+
+        if (!$resets->isValid($token)) {
+            redirect('merchant/forgot', ['error' => 'link_invalido']);
+        }
+
+        $passwordProblem = PasswordPolicy::problem($new);
+        if ($passwordProblem !== null) {
+            redirect('merchant/reset', ['token' => $token, 'error' => $passwordProblem]);
+        }
+        if (!hash_equals($new, $confirm)) {
+            redirect('merchant/reset', ['token' => $token, 'error' => 'senhas_diferentes']);
+        }
+
+        // a senha nova derruba as sessoes abertas com a antiga (password_sig, ver authGuard)
+        if ($resets->resetPassword($token, password_hash($new, PASSWORD_BCRYPT)) === null) {
+            redirect('merchant/forgot', ['error' => 'link_invalido']);
+        }
+
+        redirect('merchant/login', ['success' => 'senha_redefinida']);
     }
 
     // RENDERS (privadas, exigem login) -----------------------------------

@@ -85,3 +85,11 @@ O `schema.sql` já insere todas as migrations existentes: banco novo nasce sem p
 - **Lançar e resgatar** rodam em transação: o saldo do cartão e a linha do `points_log` são gravados juntos, ou nenhum dos dois é gravado.
 - **Resgate** trava a linha do cartão com `SELECT ... FOR UPDATE` antes de checar o saldo. Assim, dois resgates simultâneos não conseguem gastar os mesmos pontos.
 - **Cartão novo** é criado com `INSERT ... ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`, que devolve o id existente sem risco de duplicar.
+
+### `password_resets` — links de nova senha (task 21)
+| Coluna | Observação |
+|---|---|
+| `merchant_id` | Dono do link. `ON DELETE CASCADE`. |
+| `token_hash` | `UNIQUE`. SHA-256 do token; o token em si só existe no e-mail. |
+| `expires_at` | 1 hora depois do pedido. |
+| `used_at` | Preenchido quando o link é usado, quando um pedido novo é feito ou quando a senha é trocada por ele: depois disso não vale mais. |

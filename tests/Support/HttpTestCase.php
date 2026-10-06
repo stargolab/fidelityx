@@ -97,6 +97,16 @@ abstract class HttpTestCase extends DatabaseTestCase {
         return \App\Mail\LogMailer::read(self::$mailLog);
     }
 
+    // abre o link do ultimo e-mail de confirmacao mandado para $email (task 50) e devolve o destino do redirect
+    protected function confirmEmailFromMail(string $email): ?string {
+        foreach (array_reverse($this->sentMails()) as $mail) {
+            if ($mail['to'] === $email && preg_match('#url=merchant%2Fverify-email&token=([a-f0-9]{64})#', $mail['body'], $m)) {
+                return $this->get('merchant/verify-email&token=' . $m[1])[1];
+            }
+        }
+        $this->fail("nenhum e-mail de confirmacao para $email");
+    }
+
     // sessao nova (como apagar o cookie no navegador)
     protected function newSession(): void {
         @unlink($this->cookieJar);

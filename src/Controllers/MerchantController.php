@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\CustomerModel;
+use App\Models\EmailVerificationModel;
 use App\Models\LoyaltyCardModel;
 use App\Mail\MailerFactory;
 use App\Mail\Message;
@@ -63,6 +64,8 @@ class MerchantController {
     private const MAX_RESET_REQUESTS_PER_IP = 10;
     private const MAX_RESET_REQUESTS_PER_EMAIL = 3;
     private const RESET_WINDOW_SECONDS = 3600;
+    // reenvio do link de confirmacao do e-mail (task 50), por conta
+    private const MAX_VERIFY_RESENDS = 3;
 
     private $db;
     private $merchantModel;
@@ -650,9 +653,7 @@ class MerchantController {
             ];
 
             $this->merchantModel->create($data);
-
-             // se deu certo, redireciona usuario para o login
-            redirect('merchant/login', ['success' => 'cadastrado']);
+            $merchantId = (int)$this->db->lastInsertId();
         } catch (\PDOException $e) {
             $sqlState = $e->errorInfo[0] ?? null;
             $driverCode = (int)($e->errorInfo[1] ?? 0);
@@ -688,6 +689,59 @@ class MerchantController {
             redirect('merchant/register', ['error' => 'erro_servidor']);
         }
 
+        // conta nova so usa o painel depois de confirmar o e-mail (task 50)
+        $this->sendEmailVerification($merchantId, $email, $owner_name);
+
+        // se deu certo, redireciona usuario para o login
+        redirect('merchant/login', ['success' => 'cadastrado']);
+    }
+
+    // manda (ou reenvia) o link de confirmacao do e-mail; o anterior deixa de valer
+    private function sendEmailVerification(int $merchantId, string $email, string $ownerName): void {
+        $token = (new EmailVerificationModel($this->db))->create($merchantId);
+        $link = $this->publicBaseUrl() . url('merchant/verify-email', ['token' => $token]);
+        MailerFactory::fromEnv()->send(new Message(
+            $email,
+            'FidelityX: confirme seu e-mail',
+            "Olá, $ownerName.\n\n"
+            . "Para começar a usar o painel do FidelityX, confirme que este e-mail é seu abrindo o link abaixo\n"
+            . "(ele vale por 24 horas):\n\n$link\n\n"
+            . "Se você não criou uma conta no FidelityX, ignore este e-mail."
+        ));
+    }
+
+    // tela de quem entrou mas ainda nao confirmou o e-mail: explica e reenvia o link (task 50)
+    public function renderConfirmEmail() {
+        $merchantId = $this->authGuard(true);
+        if ($this->merchant['email_verified_at'] !== null) {
+            redirect('merchant/dashboard');
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            Csrf::verify();
+            $limiter = new RateLimiter($this->db);
+            $key = 'merchant:' . $merchantId;
+            if ($limiter->tooMany('email_verify_resend', $key, self::MAX_VERIFY_RESENDS, self::RESET_WINDOW_SECONDS)) {
+                redirect('merchant/confirm-email', ['error' => 'muitos_pedidos']);
+            }
+            $limiter->hit('email_verify_resend', $key);
+            $this->sendEmailVerification($merchantId, $this->merchant['email'], $this->merchant['owner_name']);
+            redirect('merchant/confirm-email', ['success' => 'confirmacao_reenviada']);
+        }
+
+        View::render('merchant/confirm-email', ['email' => $this->merchant['email']]);
+    }
+
+    // link do e-mail de confirmacao (nao exige login: pode ser aberto no celular, fora da sessao do painel)
+    public function renderVerifyEmail() {
+        $verified = (new EmailVerificationModel($this->db))->verify((string)($_GET['token'] ?? ''));
+        $logged = isset($_SESSION['merchant_id']);
+
+        if ($verified === null) {
+            redirect($logged ? 'merchant/confirm-email' : 'merchant/login', ['error' => 'confirmacao_invalida']);
+        }
+
+        redirect($logged ? 'merchant/dashboard' : 'merchant/login', ['success' => 'email_confirmado']);
     }
 
     public function handleLogin(){
@@ -1073,7 +1127,8 @@ class MerchantController {
     // o id SEMPRE vem da sessao, nunca do formulario.
     // a cada requisicao: sessao parada demais expira, e a conta e conferida no banco
     // (lojista desativado perde o acesso na hora, nao so no proximo login).
-    private function authGuard(): int {
+    // $allowUnverified: so a tela de confirmar o e-mail aceita conta que ainda nao confirmou (task 50)
+    private function authGuard(bool $allowUnverified = false): int {
         if(!isset($_SESSION['merchant_id'])){
             redirect('merchant/login', ['error' => 'sessao_expirada']);
         }
@@ -1097,6 +1152,11 @@ class MerchantController {
 
         // a loja da requisicao fica a mao (ex.: regra de pontos), sem consultar o banco de novo
         $this->merchant = $merchant;
+
+        // conta nova que ainda nao confirmou o e-mail so ve a tela de confirmar
+        if (!$allowUnverified && $merchant['email_verified_at'] === null) {
+            redirect('merchant/confirm-email');
+        }
 
         // nome da loja sempre atualizado no menu (pode ter mudado desde o login)
         $_SESSION['last_seen']     = time();

@@ -29,6 +29,7 @@ merchants 1───N loyalty_cards N───1 customers
 | `password_hash` | BCRYPT (`password_hash`). |
 | `plan` | `free`/`pro`. Ainda não é usado pelo código (pós-MVP). |
 | `status` | Padrão `active`. Contas `inactive` são barradas no login. |
+| `email_verified_at` | Quando o e-mail foi confirmado pelo link (task 50). `NULL` = conta nova ainda sem confirmar: entra, mas só vê a tela de confirmação. A migration 009 marcou as contas antigas como confirmadas. |
 | `category`, `state` | Validados contra as listas de `MerchantController::CATEGORIES` e `STATES`. |
 
 ### `customers` — clientes
@@ -93,3 +94,6 @@ O `schema.sql` já insere todas as migrations existentes: banco novo nasce sem p
 | `token_hash` | `UNIQUE`. SHA-256 do token; o token em si só existe no e-mail. |
 | `expires_at` | 1 hora depois do pedido. |
 | `used_at` | Preenchido quando o link é usado, quando um pedido novo é feito ou quando a senha é trocada por ele: depois disso não vale mais. |
+
+### `email_verifications` — links de confirmação do e-mail (task 50)
+Mesma forma da `password_resets` (`merchant_id`, `token_hash` com `UNIQUE`, `expires_at`, `used_at`), com validade de 24 horas. Reenviar o link cancela o anterior.

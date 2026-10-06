@@ -42,7 +42,7 @@ class MerchantModel{
     // dados que o authGuard confere a cada requisicao (o hash da senha serve pra derrubar
     // as sessoes antigas quando a senha e trocada, ver SessionGuard::passwordSignature)
     public function findById($merchantId) {
-        $stmt = $this->db->prepare('SELECT id, owner_name, store_name, status, points_rule_cents, password_hash FROM merchants WHERE id = :id');
+        $stmt = $this->db->prepare('SELECT id, owner_name, store_name, email, email_verified_at, status, points_rule_cents, password_hash FROM merchants WHERE id = :id');
         $stmt->execute([':id' => $merchantId]);
 
         return $stmt->fetch(\PDO::FETCH_ASSOC);

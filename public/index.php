@@ -104,6 +104,8 @@ switch ($domain) {
             'register'  => $controller->renderRegister(),
             'forgot'    => $controller->renderForgot(),
             'reset'     => $controller->renderReset(),
+            'confirm-email' => $controller->renderConfirmEmail(),
+            'verify-email'  => $controller->renderVerifyEmail(),
             'customer-new' => $controller->renderCustomerNew(),
             'logout'    => $controller->logout(),
             'dashboard' => $controller->renderDashboard(),

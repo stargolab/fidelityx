@@ -181,6 +181,12 @@ parameters:
 			path: views/errors/default.php
 
 		-
+			message: '#^Variable \$email might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/confirm-email.php
+
+		-
 			message: '#^Variable \$phone might not be defined\.$#'
 			identifier: variable.undefined
 			count: 2

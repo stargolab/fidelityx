@@ -56,3 +56,13 @@ function format_datetime($value): string {
 function url(string $route, array $params = []): string {
     return '/index.php?' . http_build_query(array_merge(['url' => $route], $params));
 }
+
+// como cada tipo de movimentacao aparece no extrato e nos relatorios: [rotulo, classe do selo, sinal]
+function log_type_view(string $type): array {
+    return match ($type) {
+        'earn'     => ['Ganhou', 'badge-earn', '+'],
+        'redeem'   => ['Resgatou', 'badge-redeem', '−'],
+        'reversal' => ['Estorno', 'badge-reversal', '−'],
+        default    => [$type, '', ''],
+    };
+}

@@ -23,6 +23,9 @@ CREATE TABLE IF NOT EXISTS merchants (
   category VARCHAR(30) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   plan ENUM('free', 'pro') NOT NULL DEFAULT 'free',
+  -- regra de pontos pelo valor da compra: a cada points_rule_cents centavos, 1 ponto (arredonda pra baixo).
+  -- NULL = sem regra (o lojista digita os pontos direto)
+  points_rule_cents INT UNSIGNED NULL,
   status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
 
   -- para futuras implementações (NULL)
@@ -137,10 +140,11 @@ CREATE TABLE IF NOT EXISTS points_log (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
   card_id BIGINT UNSIGNED NOT NULL,
-  type ENUM('earn', 'redeem') NOT NULL,
+  type ENUM('earn', 'redeem', 'reversal') NOT NULL, -- reversal = estorno de um earn
   quantity INT NOT NULL,
   description VARCHAR(255) NOT NULL,
   reward_id BIGINT UNSIGNED NULL, -- preenchido quando type = 'redeem'
+  reverses_id BIGINT UNSIGNED NULL, -- preenchido quando type = 'reversal': o lancamento estornado
 
   -- para futuras implementações (NULL)
   responsible_user VARCHAR(255) NULL,
@@ -154,6 +158,7 @@ CREATE TABLE IF NOT EXISTS points_log (
   KEY idx_points_log_type (type),
 
   KEY idx_points_log_reward (reward_id),
+  UNIQUE KEY uq_points_log_reverses (reverses_id), -- um lancamento so pode ser estornado uma vez
 
   CONSTRAINT fk_points_log_card
     FOREIGN KEY (card_id) REFERENCES loyalty_cards(id)
@@ -162,6 +167,10 @@ CREATE TABLE IF NOT EXISTS points_log (
   CONSTRAINT fk_points_log_reward
     FOREIGN KEY (reward_id) REFERENCES rewards(id)
     ON DELETE SET NULL
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_points_log_reverses
+    FOREIGN KEY (reverses_id) REFERENCES points_log(id)
+    ON DELETE CASCADE
     ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -196,4 +205,6 @@ INSERT IGNORE INTO schema_migrations (version) VALUES
   ('001_mvp'),
   ('002_rate_limit'),
   ('003_lgpd'),
+  ('004_estorno'),
+  ('005_regra_pontos'),
   ('006_points_log_extrato');

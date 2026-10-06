@@ -23,6 +23,7 @@ merchants 1───N loyalty_cards N───1 customers
 ### `merchants` — lojistas
 | Coluna | Observação |
 |---|---|
+| `points_rule_cents` | Regra de pontos pelo valor da compra: a cada tantos centavos, 1 ponto (sempre arredonda para baixo, `Money::pointsFor`). `NULL` = sem regra, o lojista digita os pontos. |
 | `public_code` | `UNIQUE`, 8 caracteres. Código público da loja: vai no QR do cartaz e identifica a loja na consulta de saldo. Gerado no cadastro (`App\Support\PublicCode`). |
 | `email`, `cpf`, `cnpj` | `UNIQUE`. Só um dos dois documentos é preenchido, apenas com números. |
 | `password_hash` | BCRYPT (`password_hash`). |
@@ -58,8 +59,9 @@ merchants 1───N loyalty_cards N───1 customers
 ### `points_log` — histórico
 | Coluna | Observação |
 |---|---|
-| `type` | `earn` (ganho) ou `redeem` (resgate). `quantity` é sempre positivo. |
+| `type` | `earn` (ganho), `redeem` (resgate) ou `reversal` (estorno de um ganho). `quantity` é sempre positivo. |
 | `reward_id` | Preenchido em resgates. Vira `NULL` se o prêmio for apagado. |
+| `reverses_id` | Preenchido em estornos (`reversal`): o lançamento estornado. `UNIQUE`, então cada lançamento é estornado no máximo uma vez. |
 | `ip_address` | IP de quem fez a operação (o do cliente, mesmo atrás de proxy confiável: `TRUSTED_PROXIES`). |
 | índice `idx_points_log_card_created` | `(card_id, created_at)`: o extrato de um cartão é lido já na ordem de data, sem ordenar tudo a cada página. Também atende a chave estrangeira de `card_id`. |
 

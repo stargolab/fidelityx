@@ -47,8 +47,8 @@ class LoyaltyCardModel {
         return $stmt->fetch(\PDO::FETCH_ASSOC);
     }
 
-    // soma pontos no cartao e registra no historico (tudo ou nada)
-    public function addPoints($cardId, $points, $description) {
+    // soma pontos no cartao e registra no historico (tudo ou nada). devolve o id do lancamento.
+    public function addPoints($cardId, $points, $description): int {
         $this->db->beginTransaction();
         try {
             $stmt = $this->db->prepare(
@@ -60,9 +60,76 @@ class LoyaltyCardModel {
             );
             $stmt->execute([':p1' => $points, ':p2' => $points, ':id' => $cardId]);
 
-            $this->log($cardId, 'earn', $points, $description, null);
+            $logId = $this->log($cardId, 'earn', $points, $description, null);
 
             $this->db->commit();
+            return $logId;
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    // estorno de um lancamento de pontos (digitou 500 em vez de 50). nada e apagado: o estorno vira uma
+    // linha nova 'reversal' que aponta pro lancamento, e o saldo e o total acumulado voltam ao que eram.
+    // so vale para lancamento (earn) desta loja, feito nas ultimas REVERSAL_WINDOW_HOURS horas, ainda nao estornado,
+    // e quando o saldo atual cobre os pontos (se o cliente ja gastou, o saldo ficaria negativo).
+    // devolve 'ok', 'not_found', 'already', 'expired' ou 'insufficient'.
+    public const REVERSAL_WINDOW_HOURS = 24;
+
+    public function reverse($logId, $merchantId): string {
+        $this->db->beginTransaction();
+        try {
+            $stmt = $this->db->prepare(
+                "SELECT pl.id, pl.card_id, pl.quantity, pl.description,
+                        pl.created_at >= NOW() - INTERVAL " . self::REVERSAL_WINDOW_HOURS . " HOUR AS recent,
+                        EXISTS (SELECT 1 FROM points_log r WHERE r.reverses_id = pl.id) AS reversed
+                 FROM points_log pl
+                 JOIN loyalty_cards lc ON lc.id = pl.card_id
+                 WHERE pl.id = :id AND lc.merchant_id = :merchant_id AND pl.type = 'earn' AND lc.anonymized_at IS NULL"
+            );
+            $stmt->execute([':id' => $logId, ':merchant_id' => $merchantId]);
+            $entry = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+            $problem = match (true) {
+                !$entry               => 'not_found',
+                (bool)$entry['reversed'] => 'already',
+                !$entry['recent']     => 'expired',
+                default               => null,
+            };
+            if ($problem) {
+                $this->db->rollBack();
+                return $problem;
+            }
+
+            // trava o cartao: um resgate ao mesmo tempo nao consegue gastar os pontos que estao sendo estornados
+            $stmt = $this->db->prepare('SELECT current_points FROM loyalty_cards WHERE id = :id FOR UPDATE');
+            $stmt->execute([':id' => $entry['card_id']]);
+            $quantity = (int)$entry['quantity'];
+            if ((int)$stmt->fetchColumn() < $quantity) {
+                $this->db->rollBack();
+                return 'insufficient';
+            }
+
+            $this->db->prepare(
+                'UPDATE loyalty_cards
+                 SET current_points = current_points - :p1, total_accumulated = total_accumulated - :p2,
+                     last_use_at = CURRENT_TIMESTAMP
+                 WHERE id = :id'
+            )->execute([':p1' => $quantity, ':p2' => $quantity, ':id' => $entry['card_id']]);
+
+            $description = mb_substr('Estorno: ' . $entry['description'], 0, 255);
+            $this->log($entry['card_id'], 'reversal', $quantity, $description, null, (int)$entry['id']);
+
+            $this->db->commit();
+            return 'ok';
+        } catch (\PDOException $e) {
+            $this->db->rollBack();
+            // dois estornos do mesmo lancamento ao mesmo tempo: o UNIQUE barra o segundo
+            if (($e->errorInfo[1] ?? null) === 1062) {
+                return 'already';
+            }
+            throw $e;
         } catch (\Throwable $e) {
             $this->db->rollBack();
             throw $e;
@@ -185,7 +252,7 @@ class LoyaltyCardModel {
             )->execute([':id' => $cardId]);
 
             $this->db->prepare(
-                "UPDATE points_log SET description = 'Cliente excluído' WHERE card_id = :id AND type = 'earn'"
+                "UPDATE points_log SET description = 'Cliente excluído' WHERE card_id = :id AND type IN ('earn', 'reversal')"
             )->execute([':id' => $cardId]);
 
             if ($customerId !== null) {
@@ -204,10 +271,11 @@ class LoyaltyCardModel {
         }
     }
 
-    private function log($cardId, $type, $quantity, $description, $rewardId) {
+    // grava uma linha no historico e devolve o id dela
+    private function log($cardId, $type, $quantity, $description, $rewardId, $reversesId = null): int {
         $stmt = $this->db->prepare(
-            'INSERT INTO points_log (card_id, type, quantity, description, reward_id, ip_address)
-             VALUES (:card_id, :type, :quantity, :description, :reward_id, :ip)'
+            'INSERT INTO points_log (card_id, type, quantity, description, reward_id, reverses_id, ip_address)
+             VALUES (:card_id, :type, :quantity, :description, :reward_id, :reverses_id, :ip)'
         );
         $stmt->execute([
             ':card_id'     => $cardId,
@@ -215,7 +283,10 @@ class LoyaltyCardModel {
             ':quantity'    => $quantity,
             ':description' => $description,
             ':reward_id'   => $rewardId,
+            ':reverses_id' => $reversesId,
             ':ip'          => isset($_SERVER['REMOTE_ADDR']) ? \App\Support\RateLimiter::clientIp() : null,
         ]);
+
+        return (int)$this->db->lastInsertId();
     }
 }

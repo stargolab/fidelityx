@@ -181,7 +181,7 @@ CREATE TABLE IF NOT EXISTS points_log (
 CREATE TABLE IF NOT EXISTS rate_limit_hits (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
-  bucket VARCHAR(40) NOT NULL, -- ex.: login_email, login_ip, balance_ip
+  bucket VARCHAR(40) NOT NULL, -- ex.: login_pair, login_ip, login_account, password_change, balance_ip
   key_hash CHAR(64) NOT NULL,
 
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

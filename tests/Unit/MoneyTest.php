@@ -27,7 +27,7 @@ final class MoneyTest extends TestCase {
     }
 
     public function testRecusaOQueNaoEValor(): void {
-        foreach (['', 'abc', '12,345', '1,2,3', '9999999999', null] as $input) {
+        foreach (['', 'abc', '12,345', '1,2,3', '9999999999', null, '-10', 'R$ -12,90', '10-'] as $input) {
             $this->assertNull(Money::toCents($input), var_export($input, true));
         }
     }

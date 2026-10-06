@@ -638,7 +638,7 @@ class MerchantController {
             $back = ($_POST['back'] ?? '') === 'statement' ? 'merchant/statement' : 'merchant/customer';
             $logId = filter_var($_POST['log_id'] ?? '', FILTER_VALIDATE_INT);
             // o lancamento precisa ser do cartao deste cliente (o model confere tambem a loja)
-            $result = $logId && $this->logBelongsToCard($logId, (int)$card['id'])
+            $result = $logId && (new PointsLogModel($this->db))->belongsToCard($logId, (int)$card['id'])
                 ? $cardModel->reverse($logId, $merchantId)
                 : 'not_found';
 
@@ -682,7 +682,7 @@ class MerchantController {
                 redirect('merchant/customer', ['phone' => $phone, 'error' => 'valor_sem_pontos']);
             }
             if ($points > self::MAX_POINTS_PER_ENTRY) {
-                redirect('merchant/customer', ['phone' => $phone, 'error' => 'pontos_invalidos']);
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'valor_pontos_demais']);
             }
             $defaultDescription = 'Compra de ' . Money::format($cents);
         } else {
@@ -702,12 +702,6 @@ class MerchantController {
 
         // a tela do cliente mostra a confirmacao (novo saldo, quanto falta, Desfazer) a partir do lancamento
         redirect('merchant/customer', ['phone' => $phone, 'lancamento' => $logId]);
-    }
-
-    private function logBelongsToCard(int $logId, int $cardId): bool {
-        $stmt = $this->db->prepare('SELECT 1 FROM points_log WHERE id = :id AND card_id = :card_id');
-        $stmt->execute([':id' => $logId, ':card_id' => $cardId]);
-        return (bool)$stmt->fetchColumn();
     }
 
     // criar, ativar/desativar ou excluir premio

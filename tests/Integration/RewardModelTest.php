@@ -38,6 +38,10 @@ final class RewardModelTest extends DatabaseTestCase {
 
         $this->assertSame('deleted', (new RewardModel($this->db))->deleteOrDeactivate($reward['id'], $merchant));
         $this->assertSame(0, (int)$this->scalar('SELECT COUNT(*) FROM rewards'));
+        // task 52: conferencia e exclusao numa transacao so, encerrada em todos os caminhos
+        $this->assertFalse($this->db->inTransaction());
+        $this->assertNull((new RewardModel($this->db))->deleteOrDeactivate($reward['id'], $merchant), 'ja apagado');
+        $this->assertFalse($this->db->inTransaction());
     }
 
     public function testPremioJaResgatadoSoEDesativadoEHistoricoFica(): void {

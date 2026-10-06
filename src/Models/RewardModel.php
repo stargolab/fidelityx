@@ -96,22 +96,36 @@ class RewardModel {
 
     // premio ja resgatado nao pode sumir (o historico aponta pra ele): so desativa.
     // sem resgates, apaga de verdade. devolve 'deleted', 'deactivated' ou null (nao e desta loja).
+    // tudo numa transacao com a linha do premio travada (FOR UPDATE): um resgate gravando o log ao mesmo
+    // tempo espera a trava (a chave estrangeira do points_log le o premio), entao a contagem nao fica velha.
     public function deleteOrDeactivate($rewardId, $merchantId) {
-        if (!$this->findForMerchant($rewardId, $merchantId)) {
-            return null;
-        }
-
-        $stmt = $this->db->prepare('SELECT COUNT(*) FROM points_log WHERE reward_id = :id');
-        $stmt->execute([':id' => $rewardId]);
-
-        if ((int)$stmt->fetchColumn() > 0) {
-            $stmt = $this->db->prepare('UPDATE rewards SET active = 0 WHERE id = :id AND merchant_id = :merchant_id');
+        $this->db->beginTransaction();
+        try {
+            $stmt = $this->db->prepare('SELECT id FROM rewards WHERE id = :id AND merchant_id = :merchant_id FOR UPDATE');
             $stmt->execute([':id' => $rewardId, ':merchant_id' => $merchantId]);
-            return 'deactivated';
-        }
+            if ($stmt->fetchColumn() === false) {
+                $this->db->rollBack();
+                return null;
+            }
 
-        $stmt = $this->db->prepare('DELETE FROM rewards WHERE id = :id AND merchant_id = :merchant_id');
-        $stmt->execute([':id' => $rewardId, ':merchant_id' => $merchantId]);
-        return 'deleted';
+            $stmt = $this->db->prepare('SELECT COUNT(*) FROM points_log WHERE reward_id = :id');
+            $stmt->execute([':id' => $rewardId]);
+
+            if ((int)$stmt->fetchColumn() > 0) {
+                $stmt = $this->db->prepare('UPDATE rewards SET active = 0 WHERE id = :id AND merchant_id = :merchant_id');
+                $stmt->execute([':id' => $rewardId, ':merchant_id' => $merchantId]);
+                $result = 'deactivated';
+            } else {
+                $stmt = $this->db->prepare('DELETE FROM rewards WHERE id = :id AND merchant_id = :merchant_id');
+                $stmt->execute([':id' => $rewardId, ':merchant_id' => $merchantId]);
+                $result = 'deleted';
+            }
+
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
     }
 }

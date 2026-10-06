@@ -30,6 +30,7 @@ $flashMessages = [
         'estorno_invalido'      => 'Lançamento não encontrado para este cliente.',
         'regra_invalida'        => 'Informe um valor de R$ 0,01 a R$ 1.000.000,00.',
         'valor_invalido'        => 'Informe o valor da compra, ex.: 12,90.',
+        'valor_pontos_demais'   => 'Essa compra daria mais de 10.000 pontos, o limite por lançamento. Confira o valor ou divida em mais de um lançamento.',
         'valor_sem_pontos'      => 'O valor da compra não chega a 1 ponto pela regra da loja.',
         'estorno_repetido'      => 'Este lançamento já foi estornado.',
         'estorno_expirado'      => 'Só dá para estornar lançamentos das últimas 24 horas.',

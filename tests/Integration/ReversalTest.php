@@ -23,6 +23,17 @@ final class ReversalTest extends DatabaseTestCase {
         return $this->db->query("SELECT current_points, total_accumulated FROM loyalty_cards WHERE id = {$this->card}")->fetch();
     }
 
+    // task 52: a conferencia que o controller fazia com sql direto agora e do model
+    public function testMovimentacaoPertenceSoAoProprioCartao(): void {
+        $logId = $this->cards->addPoints($this->card, 50, 'Compra');
+        $other = $this->createCard($this->merchant, 'Caio', '11933330003');
+
+        $logs = new PointsLogModel($this->db);
+        $this->assertTrue($logs->belongsToCard($logId, $this->card));
+        $this->assertFalse($logs->belongsToCard($logId, $other));
+        $this->assertFalse($logs->belongsToCard($logId + 999, $this->card));
+    }
+
     public function testEstornoDevolveSaldoETotalENadaEApagado(): void {
         $this->cards->addPoints($this->card, 50, 'Compra');
         $errado = $this->cards->addPoints($this->card, 500, 'Compra errada');

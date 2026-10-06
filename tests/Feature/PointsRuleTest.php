@@ -90,7 +90,14 @@ final class PointsRuleTest extends HttpTestCase {
     public function testValorQuePassaDoLimiteDePontosNaoLanca(): void {
         $this->setUpStore(1); // R$ 0,01 = 1 ponto
 
-        $this->assertSame(self::SCREEN . '&error=pontos_invalidos', $this->launch(['amount' => '200,00']));
+        // mensagem propria (task 52): a de "pontos entre 1 e 10.000" nao fazia sentido pra quem digitou um valor
+        $this->assertSame(self::SCREEN . '&error=valor_pontos_demais', $this->launch(['amount' => '200,00']));
+        $this->assertSame(0, (int)$this->scalar('SELECT COUNT(*) FROM points_log'));
+        $this->get(self::SCREEN . '&error=valor_pontos_demais');
+        $this->assertStringContainsString('mais de 10.000 pontos', $this->lastBody);
+
+        // valor negativo nao vira positivo
+        $this->assertSame(self::SCREEN . '&error=valor_invalido', $this->launch(['amount' => '-10,00']));
         $this->assertSame(0, (int)$this->scalar('SELECT COUNT(*) FROM points_log'));
     }
 

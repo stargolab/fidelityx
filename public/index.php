@@ -1,19 +1,11 @@
 <?php
-// ----------------------------------------------------------------------------------------
-// explicação breve fluxo de dados, com exemplo do registro
+// ponto de entrada unico: toda requisicao chega aqui com ?url=dominio/acao.
+// ordem: cabecalhos de seguranca e limpeza dos parametros (RequestGuard), registro de erros (ErrorLog),
+// configuracao (Env), sessao, conexao com o banco e, por fim, o roteamento:
+// o switch escolhe o controller pelo dominio (ex.: merchant) e o match chama o metodo da acao (ex.: register).
+// ex.: o formulario de cadastro manda POST para index.php?url=merchant/register -> MerchantController::renderRegister().
 
-// navegador: vê o action="index.php?url=merchant/register" e manda o POST pra lá (ele cai aqui no index.php, e o switch guia ele pro merchant, depois o match guia pro controller, e assim vai.)
-
-// index.php: lê o $_GET['url'], vê que é merchant/register.
-
-// roteador (switch/match): o seu código no index.php vê que o domínio é merchant e a ação é register.
-
-// namespace: index.php usa o namespace para chamar o controller certo: new \App\Controllers\MerchantController($db).
-// -----------------------------------------------------------------------------------------
-
-// autoloading psr-4 , carrega as classes necessárias, não tem necessidade de ficar puxando com require, include, etc.
-// pro nosso caso especifico, substitui massivamente os requires, deixa o código mais limpo e combinado com o singleton
-// aumenta muito o desempenho e otimizaçao pra larga escala.
+// autoload psr-4 do composer: as classes de src/ (namespace App\) carregam sozinhas, sem require
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
@@ -65,7 +57,7 @@ use App\Database;
 // conexao com o banco
 $db = Database::getConnection();
 
-// sistema tratamento da url. exemplo resultado final: http://localhost:8080/index.php?url=merchant/register
+// rota da url, ex.: http://localhost:8000/index.php?url=merchant/register (sem url = home)
 $url = filter_var(rtrim((string)($_GET['url'] ?? ''), '/'), FILTER_SANITIZE_URL);
 $url = $url === '' ? 'home' : $url;
 $urlParts = explode('/', $url);

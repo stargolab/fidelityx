@@ -59,6 +59,13 @@ class PointsLogModel {
         return $stmt->fetch(\PDO::FETCH_ASSOC);
     }
 
+    // a movimentacao e deste cartao (o estorno confere antes, pra nao estornar lancamento de outro cliente)
+    public function belongsToCard(int $logId, int $cardId): bool {
+        $stmt = $this->db->prepare('SELECT 1 FROM points_log WHERE id = :id AND card_id = :card_id');
+        $stmt->execute([':id' => $logId, ':card_id' => $cardId]);
+        return (bool)$stmt->fetchColumn();
+    }
+
     public function countByCard($cardId): int {
         $stmt = $this->db->prepare('SELECT COUNT(*) FROM points_log WHERE card_id = :card_id');
         $stmt->execute([':card_id' => $cardId]);

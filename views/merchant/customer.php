@@ -181,6 +181,7 @@
         var original = preview.textContent;
 
         var toCents = function (text) {
+            if (text.indexOf('-') >= 0) return null;
             var v = text.replace(/[^\d,.]/g, '');
             var intPart, dec = '';
             if (v === '' || (v.match(/,/g) || []).length > 1) return null;

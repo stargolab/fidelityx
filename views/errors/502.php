@@ -20,7 +20,7 @@
         <h1>Resposta inválida</h1>
         <p>Recebemos uma resposta inesperada ao processar sua solicitação. Tente novamente em instantes.</p>
         
-        <a href="/index.php?url=merchant/dashboard" class="btn-home">Voltar ao Painel</a>
+        <a href="<?= e($backUrl) ?>" class="btn-home"><?= e($backLabel) ?></a>
     </div>
 </body>
 </html>

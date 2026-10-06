@@ -97,3 +97,11 @@ O `schema.sql` já insere todas as migrations existentes: banco novo nasce sem p
 
 ### `email_verifications` — links de confirmação do e-mail (task 50)
 Mesma forma da `password_resets` (`merchant_id`, `token_hash` com `UNIQUE`, `expires_at`, `used_at`), com validade de 24 horas. Reenviar o link cancela o anterior.
+
+### `admins` — administradores do FidelityX (task 30)
+| Coluna | Observação |
+|---|---|
+| `email` | `UNIQUE`. Login do painel `admin/login`. |
+| `password_hash` | bcrypt. A conta é criada por `php bin/create-admin.php`. |
+
+Separada de `merchants` de propósito: um admin não é uma loja e um lojista nunca vira admin por um campo trocado.

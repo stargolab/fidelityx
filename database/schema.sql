@@ -230,6 +230,23 @@ CREATE TABLE IF NOT EXISTS email_verifications (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================
+-- admins // administradores do FidelityX (task 30)
+-- =========================
+-- login proprio em admin/login, conta criada por php bin/create-admin.php. veem as lojas, nunca os clientes.
+CREATE TABLE IF NOT EXISTS admins (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+  email VARCHAR(255) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  UNIQUE KEY uq_admins_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================
 -- schema_migrations // quais migrations de database/migrations ja rodaram neste banco
 -- =========================
 -- controle usado pelo php bin/migrate.php (App\Support\Migrator).
@@ -249,4 +266,5 @@ INSERT IGNORE INTO schema_migrations (version) VALUES
   ('006_points_log_extrato'),
   ('007_customers_so_telefone'),
   ('008_password_resets'),
-  ('009_email_verifications');
+  ('009_email_verifications'),
+  ('010_admins');

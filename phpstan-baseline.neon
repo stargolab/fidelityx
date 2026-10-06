@@ -1,6 +1,18 @@
 parameters:
 	ignoreErrors:
 		-
+			message: '#^Variable \$merchants might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/admin/dashboard.php
+
+		-
+			message: '#^Variable \$paginator might not be defined\.$#'
+			identifier: variable.undefined
+			count: 3
+			path: views/admin/dashboard.php
+
+		-
 			message: '#^Variable \$categories might not be defined\.$#'
 			identifier: variable.undefined
 			count: 1

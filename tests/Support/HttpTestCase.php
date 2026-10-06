@@ -15,6 +15,8 @@ abstract class HttpTestCase extends DatabaseTestCase {
     protected array $lastHeaders = [];
     // ip do cliente simulado nas proximas requisicoes (null = o ip real da conexao, 127.0.0.1)
     private ?string $clientIp = null;
+    // cabecalhos extras das proximas requisicoes (ex.: X-Forwarded-Proto de um proxy https)
+    private array $extraHeaders = [];
 
     public static function setUpBeforeClass(): void {
         $port = self::freePort();
@@ -63,6 +65,12 @@ abstract class HttpTestCase extends DatabaseTestCase {
         parent::setUp();
         $this->cookieJar = tempnam(sys_get_temp_dir(), 'fx-cookie');
         $this->clientIp = null;
+        $this->extraHeaders = [];
+    }
+
+    // as proximas requisicoes levam estes cabecalhos (o servidor de teste confia no 127.0.0.1 como proxy)
+    protected function withHeaders(array $headers): void {
+        $this->extraHeaders = $headers;
     }
 
     // as proximas requisicoes chegam como se viessem deste ip (outra pessoa, em outra rede).
@@ -148,8 +156,12 @@ abstract class HttpTestCase extends DatabaseTestCase {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($fields));
         }
+        $headers = $this->extraHeaders;
         if ($this->clientIp !== null) {
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Forwarded-For: ' . $this->clientIp]);
+            $headers[] = 'X-Forwarded-For: ' . $this->clientIp;
+        }
+        if ($headers !== []) {
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         }
 
         $body = curl_exec($ch);

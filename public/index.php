@@ -28,6 +28,7 @@ ErrorLog::register();
 // em producao (docker) nao ha .env, so variaveis de ambiente. tudo fica no $_ENV, usado no Database.php!
 Env::load(__DIR__ . '/..');
 ErrorLog::useFile(Env::get('LOG_FILE'));
+RequestGuard::sendHsts();
 
 // cookie de sessao so via http (js nao le), sem envio em POST vindo de outro site e, em https, so por https.
 // use_strict_mode: id de sessao inventado por quem chega (session fixation) e trocado por um novo.

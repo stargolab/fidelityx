@@ -1,6 +1,7 @@
 // comportamento comum dos formularios (so apresentacao: sem js tudo continua funcionando).
 // - o botao de enviar mostra "carregando" e o formulario nao e enviado duas vezes (clique duplo no balcao
 //   lancaria os pontos em dobro)
+// - data-confirm no <form> pergunta antes de enviar (no lugar do onsubmit="return confirm(...)")
 // - o campo apontado pela mensagem de erro (data-fields no .alert-error, ver views/partials/flash.php)
 //   fica marcado, ligado a mensagem e com o foco
 // sem import/export de proposito: o arquivo e carregado como script comum (<script src>).
@@ -17,7 +18,14 @@ function lockOnSubmit(form: HTMLFormElement): void {
             event.preventDefault();
             return;
         }
-        // envio cancelado antes (ex.: confirm respondido com "Cancelar"): nada a travar
+        // pergunta antes de enviar (excluir premio, estornar...): data-confirm no lugar do onsubmit,
+        // que a CSP bloqueia
+        const question = form.dataset.confirm;
+        if (question && !window.confirm(question)) {
+            event.preventDefault();
+            return;
+        }
+        // envio cancelado antes por outro script: nada a travar
         if (event.defaultPrevented) return;
 
         form.dataset.submitting = "1";

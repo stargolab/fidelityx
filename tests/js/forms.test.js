@@ -30,12 +30,16 @@ function form(buttons) {
     return f;
 }
 
-function load({ forms = [], fields = [], alert = null }) {
+function load({ forms = [], fields = [], alert = null, answer = true }) {
     const timers = [];
     const pageshow = [];
+    const asked = [];
     const ctx = {
         setTimeout: (fn) => timers.push(fn),
-        window: { addEventListener: (type, fn) => pageshow.push(fn) },
+        window: {
+            addEventListener: (type, fn) => pageshow.push(fn),
+            confirm: (question) => { asked.push(question); return answer; },
+        },
         document: {
             querySelectorAll: (sel) => {
                 if (sel === 'form') return forms;
@@ -47,7 +51,7 @@ function load({ forms = [], fields = [], alert = null }) {
     };
     vm.createContext(ctx);
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../../public/js/forms.js'), 'utf8'), ctx);
-    return { runTimers: () => timers.splice(0).forEach((fn) => fn()), pageshow: (e) => pageshow.forEach((fn) => fn(e)) };
+    return { asked, runTimers: () => timers.splice(0).forEach((fn) => fn()), pageshow: (e) => pageshow.forEach((fn) => fn(e)) };
 }
 
 let checks = 0;
@@ -76,13 +80,29 @@ const check = (cond, msg) => { assert.ok(cond, msg); checks++; };
     check(f.submit() === false, 'pode enviar de novo');
 }
 
-// envio cancelado antes (confirm com Cancelar) nao trava o formulario
+// envio cancelado antes por outro script nao trava o formulario
 {
     const send = element({ type: 'submit' });
     const f = form([send]);
     load({ forms: [f] });
     f.submit(true);
     check(!send.classList.contains('is-loading') && f.dataset.submitting === undefined, 'cancelado nao trava');
+}
+
+// data-confirm (task 48, no lugar do onsubmit): Cancelar nao envia nem trava; OK envia
+{
+    const send = element({ type: 'submit' });
+    const f = form([send]);
+    f.dataset.confirm = 'Excluir este prêmio?';
+    const page = load({ forms: [f], answer: false });
+    check(f.submit() === true, 'cancelar barra o envio');
+    check(page.asked[0] === 'Excluir este prêmio?', 'pergunta o texto do data-confirm');
+    check(!send.classList.contains('is-loading'), 'cancelado nao trava');
+
+    const ok = form([element({ type: 'submit' })]);
+    ok.dataset.confirm = 'Estornar?';
+    load({ forms: [ok], answer: true });
+    check(ok.submit() === false, 'ok envia');
 }
 
 // erro: o campo apontado pela mensagem fica marcado, ligado a ela e com foco; hidden nao conta

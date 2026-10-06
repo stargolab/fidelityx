@@ -57,6 +57,7 @@ TRUSTED_PROXIES=127.0.0.1,172.16.0.0/12
 - Requisição vinda de qualquer outro endereço: os cabeçalhos são ignorados e vale o IP da conexão. É o comportamento com a variável vazia.
 - Liste só os seus proxies. Faixa larga demais (ex.: `0.0.0.0/0`) deixa qualquer pessoa escolher o próprio IP e furar o limite de tentativas.
 - O proxy precisa **sobrescrever ou acrescentar** o `X-Forwarded-For` (o padrão do Nginx com `$proxy_add_x_forwarded_for`) e enviar `X-Forwarded-Proto`.
+- Com HTTPS reconhecido (direto ou pelo `X-Forwarded-Proto` de um proxy da lista), toda resposta leva `Strict-Transport-Security: max-age=31536000` (task 48): o navegador passa a usar só HTTPS no domínio por um ano. Sem `includeSubDomains`/`preload`; ligue-os no proxy se o domínio todo for HTTPS.
 
 Com o Compose, o proxy no host chega ao container pelo gateway da rede do Docker, normalmente um endereço em `172.16.0.0/12`.
 

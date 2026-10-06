@@ -37,7 +37,7 @@
                                         ? 'Estornar este resgate? Os pontos voltam ao saldo do cliente.'
                                         : 'Estornar este lançamento? Os pontos saem do saldo do cliente.'; ?>
                                     <form action="<?= e(url('merchant/customer')) ?>" method="POST"
-                                          onsubmit="return confirm(<?= e(json_encode($confirmText, JSON_UNESCAPED_UNICODE)) ?>);">
+                                          data-confirm="<?= e($confirmText) ?>">
                                         <?= \App\Support\Csrf::field() ?>
                                         <input type="hidden" name="action" value="reverse">
                                         <input type="hidden" name="back" value="statement">

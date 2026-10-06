@@ -15,6 +15,7 @@ Toda a configuração vem de **variáveis de ambiente**. O arquivo `.env` na rai
 | `TRUSTED_PROXIES` | não | IPs ou faixas CIDR dos proxies confiáveis, separados por vírgula. Ver [Proxy reverso](#proxy-reverso). |
 | `LOG_FILE` | não | Arquivo do log de erros. Vazio usa o destino do `php.ini`. |
 | `BACKUP_DIR`, `BACKUP_KEEP_DAYS`, `MYSQLDUMP_BIN` | não | Backup: pasta (padrão `storage/backups`), dias guardados (padrão `14`, `0` nunca apaga) e caminho do `mysqldump`. |
+| `MAIL_DRIVER`, `MAIL_LOG_FILE` | não | E-mail transacional (task 55). Vazio: nenhum e-mail sai e o log registra cada envio perdido (sem o conteúdo). `log`: grava os e-mails inteiros em `MAIL_LOG_FILE` (padrão `storage/mail.log`), **só para desenvolvimento** (tem os links com token). O provedor de produção (SMTP/API, SPF e DKIM do domínio) ainda não foi escolhido. |
 | `DB_ROOT_PASS`, `APP_PORT` | só no Compose | Senha do root do MySQL do container e porta publicada no host (padrão `8080`). |
 
 ## Docker

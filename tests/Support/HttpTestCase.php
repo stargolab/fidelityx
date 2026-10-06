@@ -9,6 +9,8 @@ use RuntimeException;
 abstract class HttpTestCase extends DatabaseTestCase {
     private static $server = null;
     private static string $baseUrl;
+    // e-mails "enviados" pelo servidor de teste (MAIL_DRIVER=log), uma linha json por mensagem
+    private static string $mailLog;
     private string $cookieJar;
     protected string $lastBody = '';
     // cabecalhos da ultima resposta: nome em minusculas => lista de valores (set-cookie pode vir repetido)
@@ -30,6 +32,10 @@ abstract class HttpTestCase extends DatabaseTestCase {
         // o teste e o "proxy confiavel" do servidor: com isso um teste pode se passar por clientes de
         // ips diferentes mandando X-Forwarded-For (ver fromIp). sem o cabecalho nada muda: vale o 127.0.0.1.
         $env['TRUSTED_PROXIES'] = '127.0.0.1';
+        // e-mail transacional vai pra um arquivo que o teste le (sentMails), nunca pra fora
+        self::$mailLog = tempnam(sys_get_temp_dir(), 'fx-mail');
+        $env['MAIL_DRIVER'] = 'log';
+        $env['MAIL_LOG_FILE'] = self::$mailLog;
 
         // comando em array: roda o php direto, sem shell no meio (assim o proc_terminate mata o servidor mesmo)
         self::$server = proc_open(
@@ -59,12 +65,14 @@ abstract class HttpTestCase extends DatabaseTestCase {
             proc_close(self::$server);
             self::$server = null;
         }
+        @unlink(self::$mailLog);
     }
 
     protected function setUp(): void {
         parent::setUp();
         $this->cookieJar = tempnam(sys_get_temp_dir(), 'fx-cookie');
         $this->clientIp = null;
+        file_put_contents(self::$mailLog, '');
         $this->extraHeaders = [];
     }
 
@@ -82,6 +90,11 @@ abstract class HttpTestCase extends DatabaseTestCase {
 
     protected function tearDown(): void {
         @unlink($this->cookieJar);
+    }
+
+    // e-mails que o sistema mandou neste teste: [['to' =>, 'subject' =>, 'body' =>, 'at' =>], ...]
+    protected function sentMails(): array {
+        return \App\Mail\LogMailer::read(self::$mailLog);
     }
 
     // sessao nova (como apagar o cookie no navegador)

@@ -1,12 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 2
-			path: src/Controllers/MerchantController.php
-
-		-
 			message: '#^Variable \$categories might not be defined\.$#'
 			identifier: variable.undefined
 			count: 1

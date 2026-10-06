@@ -118,7 +118,7 @@ class MerchantController {
         View::render('auth/merchant/forgot');
     }
 
-    private function handleForgot(): never {
+    private function handleForgot() {
         Csrf::verify();
 
         $email = trim((string)($_POST['email'] ?? ''));
@@ -172,7 +172,7 @@ class MerchantController {
         ]);
     }
 
-    private function handleReset(): never {
+    private function handleReset() {
         Csrf::verify();
 
         $token = (string)($_POST['token'] ?? '');

@@ -12,6 +12,8 @@ use App\Support\LoginGuard;
 use App\Support\Money;
 use App\Support\Paginator;
 use App\Support\PasswordPolicy;
+use App\Support\Period;
+use App\Support\Csv;
 use App\Support\Privacy;
 use App\Support\QrSvg;
 use App\Support\RateLimiter;
@@ -40,6 +42,8 @@ class MerchantController {
 
     private const MAX_POINTS_PER_ENTRY = 10000;
     private const PER_PAGE = 20;
+    // a exportacao le o banco em blocos, pra loja grande nao carregar tudo na memoria de uma vez
+    private const EXPORT_CHUNK = 500;
     // confirmacao do lancamento: o botao Desfazer fica UNDO_SECONDS na tela; o aviso so aparece
     // se o lancamento tiver ate UNDO_BANNER_SECONDS (o estorno em si vale por 24 h, pelo extrato)
     private const UNDO_SECONDS = 30;
@@ -292,18 +296,61 @@ class MerchantController {
         ]);
     }
 
-    // relatorios: indicadores da loja + historico de todas as movimentacoes, paginado
+    // relatorios: indicadores da loja + historico das movimentacoes, paginado, os dois pelo periodo escolhido (task 59)
     public function renderReports() {
         $merchantId = $this->authGuard();
 
+        $period = Period::fromQuery($_GET);
         $logModel = new PointsLogModel($this->db);
-        $paginator = new Paginator($logModel->countByMerchant($merchantId), $_GET['page'] ?? 1, self::PER_PAGE);
+        $paginator = new Paginator($logModel->countByMerchant($merchantId, $period), $_GET['page'] ?? 1, self::PER_PAGE);
 
         View::render('merchant/reports', [
-            'stats'     => $logModel->statsByMerchant($merchantId),
-            'entries'   => $logModel->pageByMerchant($merchantId, $paginator->perPage, $paginator->offset()),
+            'stats'     => $logModel->statsByMerchant($merchantId, $period),
+            'entries'   => $logModel->pageByMerchant($merchantId, $paginator->perPage, $paginator->offset(), $period),
             'paginator' => $paginator,
+            'period'    => $period,
         ]);
+    }
+
+    // planilha (csv) do historico do periodo ou da lista de clientes (com a busca), so desta loja (task 59)
+    public function renderExport() {
+        $merchantId = $this->authGuard();
+        $today = date('Y-m-d');
+
+        if (($_GET['tipo'] ?? '') === 'clientes') {
+            $search = mb_substr(trim((string)($_GET['q'] ?? '')), 0, 100);
+            $cardModel = new LoyaltyCardModel($this->db);
+            Csv::sendHeaders("clientes-$today.csv");
+            echo Csv::BOM . Csv::line(['Cliente', 'Telefone', 'Saldo', 'Total acumulado', 'Última visita']);
+            for ($offset = 0; $rows = $cardModel->searchByMerchant($merchantId, $search, self::EXPORT_CHUNK, $offset); $offset += self::EXPORT_CHUNK) {
+                foreach ($rows as $row) {
+                    echo Csv::line([
+                        (string)$row['name'], format_phone($row['phone']), (int)$row['current_points'],
+                        (int)$row['total_accumulated'], format_datetime($row['last_use_at']),
+                    ]);
+                }
+            }
+            return;
+        }
+
+        $period = Period::fromQuery($_GET);
+        $logModel = new PointsLogModel($this->db);
+        Csv::sendHeaders("historico-$today.csv");
+        echo Csv::BOM . Csv::line(['Data', 'Cliente', 'Telefone', 'Tipo', 'Pontos', 'Descrição']);
+        for ($offset = 0; $rows = $logModel->pageByMerchant($merchantId, self::EXPORT_CHUNK, $offset, $period); $offset += self::EXPORT_CHUNK) {
+            foreach ($rows as $row) {
+                [$label, , $sign] = log_type_view($row['type'], $row['reversed_type'] ?? null);
+                $anonymized = $row['phone'] === null;
+                echo Csv::line([
+                    format_datetime($row['created_at']),
+                    $anonymized ? 'Cliente excluído' : (string)$row['customer_name'],
+                    $anonymized ? '' : format_phone($row['phone']),
+                    $label,
+                    $sign === '+' ? (int)$row['quantity'] : -(int)$row['quantity'],
+                    (string)$row['description'],
+                ]);
+            }
+        }
     }
 
     // extrato do cliente: todas as movimentacoes dele nesta loja, paginadas.

@@ -870,3 +870,20 @@ span.btn-secondary {
         justify-content: space-between;
     }
 }
+
+/* filtro de periodo dos relatorios (task 59): campos lado a lado a partir do tablet */
+.period-form {
+    display: grid;
+    gap: 0 1rem;
+    align-items: end;
+}
+
+@media (min-width: 640px) {
+    .period-form {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    }
+
+    .period-form .btn-secondary {
+        margin-bottom: 1.5rem;
+    }
+}

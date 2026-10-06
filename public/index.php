@@ -104,6 +104,7 @@ switch ($domain) {
             'poster'    => $controller->renderPoster(),
             'points-rule' => $controller->renderPointsRule(),
             'reports'   => $controller->renderReports(),
+            'export'    => $controller->renderExport(),
             'rewards'   => $controller->renderRewards(),
             'reward-edit' => $controller->renderRewardEdit(),
             'customers' => $controller->renderCustomers(),

@@ -30,6 +30,12 @@ Env::load(__DIR__ . '/..');
 ErrorLog::useFile(Env::get('LOG_FILE'));
 RequestGuard::sendHsts();
 
+// rota de saude do monitor e do healthcheck: antes da sessao, pra checagem nao criar arquivo de sessao
+if (($_GET['url'] ?? '') === 'health') {
+    \App\Support\Health::respond();
+    exit;
+}
+
 // cookie de sessao so via http (js nao le), sem envio em POST vindo de outro site e, em https, so por https.
 // use_strict_mode: id de sessao inventado por quem chega (session fixation) e trocado por um novo.
 // gc_maxlifetime acompanha a expiracao por inatividade (SessionGuard), senao o PHP apagaria a sessao em 24 min.

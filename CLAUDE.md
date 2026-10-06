@@ -32,7 +32,7 @@ Banco: `mysql -u root -p < database/schema.sql` em instalação nova. Banco já 
 
 ## Arquitetura
 
-**Roteamento** — tudo entra por `public/index.php` com `?url=dominio/acao`. Um `switch` no domínio (`merchant`, `customer`, mais `home` e `privacy` sem ação) instancia o controller e um `match` na ação chama o método `render*()`. Rota nova = novo braço no `match` + método no controller. O `index.php` abre a conexão com o banco antes de rotear, então sem MySQL (ou sem as variáveis obrigatórias do banco) toda rota devolve 503.
+**Roteamento** — tudo entra por `public/index.php` com `?url=dominio/acao`. Um `switch` no domínio (`merchant`, `customer`, mais `home` e `privacy` sem ação) instancia o controller e um `match` na ação chama o método `render*()`. Rota nova = novo braço no `match` + método no controller. A exceção é `?url=health` (`App\Support\Health`, task 56): responde antes da sessão, só `ok`/`erro` em JSON, conferindo o banco. O `index.php` abre a conexão com o banco antes de rotear, então sem MySQL (ou sem as variáveis obrigatórias do banco) toda rota devolve 503.
 
 **Configuração** — `App\Support\Env::load()` (chamado pelo `index.php`, pelo bootstrap dos testes e pelos scripts de `bin/`) põe tudo no `$_ENV`: variável de ambiente real primeiro, e o `.env`, se existir, só completa o que falta (`safeLoad`: a aplicação sobe sem o arquivo). Variável nova entra em `Env::KEYS` e no `.env.example`; leia com `Env::get()` ou `$_ENV`, nunca com `getenv()` direto.
 

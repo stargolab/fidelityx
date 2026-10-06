@@ -61,6 +61,10 @@ TRUSTED_PROXIES=127.0.0.1,172.16.0.0/12
 
 Com o Compose, o proxy no host chega ao container pelo gateway da rede do Docker, normalmente um endereço em `172.16.0.0/12`.
 
+## Rota de saúde
+
+`GET /index.php?url=health` responde `200 {"status":"ok"}` quando a aplicação consegue falar com o banco e `503 {"status":"erro"}` quando não (o motivo vai para o log, nunca para a resposta). Ela roda antes da sessão, então checar a cada 30 s não cria arquivo no volume de sessões, e sai com `Cache-Control: no-store`. É o endereço para o monitor externo e para o `HEALTHCHECK` do container (task 56; a troca do healthcheck no `Dockerfile` e o monitor com alerta ainda estão pendentes).
+
 ## Migrations
 
 A tabela `schema_migrations` guarda o nome de cada arquivo de `database/migrations/` que já rodou no banco.

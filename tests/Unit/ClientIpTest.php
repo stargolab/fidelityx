@@ -73,6 +73,25 @@ final class ClientIpTest extends TestCase {
         $this->assertFalse(ClientIp::inRange('nao-e-ip', '10.0.0.0/8'));
     }
 
+    public function testChaveDoLimiteEmIpv4EOProprioEndereco(): void {
+        $this->assertSame('203.0.113.9', ClientIp::rateLimitKey('203.0.113.9'));
+        $this->assertSame('desconhecido', ClientIp::rateLimitKey('desconhecido'));
+    }
+
+    // um assinante ipv6 tem a rede /64 inteira: todos os enderecos dela contam como um so
+    public function testChaveDoLimiteEmIpv6EARede64(): void {
+        $this->assertSame('2001:db8:aaaa:bbbb::/64', ClientIp::rateLimitKey('2001:db8:aaaa:bbbb::1'));
+        $this->assertSame('2001:db8:aaaa:bbbb::/64', ClientIp::rateLimitKey('2001:db8:aaaa:bbbb:1234:5678:9abc:def0'));
+        $this->assertSame('2001:db8:aaaa:bbbb::/64', ClientIp::rateLimitKey('2001:0DB8:AAAA:BBBB:0000:0000:0000:0001'), 'outra escrita do mesmo endereco');
+        $this->assertNotSame(ClientIp::rateLimitKey('2001:db8:aaaa:bbbb::1'), ClientIp::rateLimitKey('2001:db8:aaaa:cccc::1'));
+    }
+
+    // ipv4 escrito no formato ipv6 continua sendo aquele ipv4 (senao todos dividiriam a rede ::/64)
+    public function testChaveDoLimiteDeIpv4EmFormatoIpv6(): void {
+        $this->assertSame('203.0.113.9', ClientIp::rateLimitKey('::ffff:203.0.113.9'));
+        $this->assertNotSame(ClientIp::rateLimitKey('::ffff:203.0.113.9'), ClientIp::rateLimitKey('::ffff:203.0.113.10'));
+    }
+
     public function testEntradaInvalidaDaListaEDescartada(): void {
         $this->assertSame(
             ['10.0.0.1', '172.16.0.0/12'],

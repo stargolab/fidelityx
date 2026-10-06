@@ -27,6 +27,18 @@ function format_phone($phone): string {
     return $digits;
 }
 
+// "52998224725" -> "529.982.247-25"; "11222333000181" -> "11.222.333/0001-81" (so pra exibicao)
+function format_document($document): string {
+    $digits = preg_replace('/\D/', '', (string)$document);
+    if (strlen($digits) === 11) {
+        return sprintf('%s.%s.%s-%s', substr($digits, 0, 3), substr($digits, 3, 3), substr($digits, 6, 3), substr($digits, 9));
+    }
+    if (strlen($digits) === 14) {
+        return sprintf('%s.%s.%s/%s-%s', substr($digits, 0, 2), substr($digits, 2, 3), substr($digits, 5, 3), substr($digits, 8, 4), substr($digits, 12));
+    }
+    return $digits;
+}
+
 // fuso da aplicacao: APP_TIMEZONE do .env (nome IANA) ou horario de Brasilia.
 // o index.php e o bootstrap dos testes aplicam no PHP, e o Database usa o mesmo na conexao,
 // entao PHP e MySQL nunca ficam em fusos diferentes (independe do php.ini e do servidor de banco).

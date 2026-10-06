@@ -45,6 +45,8 @@ Para colocar na internet, ponha um proxy com HTTPS na frente (Nginx, Caddy, Trae
 
 Atrás de proxy, a conexão que o PHP enxerga vem do proxy, não do cliente. Sem configurar, o limite de tentativas contaria todos os clientes como um só IP e o cookie de sessão não seria marcado como `Secure`.
 
+Isso pesa no login: o bloqueio por tentativas vale para quem errou a senha (e-mail + IP), justamente para ninguém conseguir trancar a dona de uma conta errando a senha dela de propósito. Se todos os clientes aparecerem com o IP do proxy, esse cuidado se perde (o erro de um estranho volta a bloquear a dona) e 20 erros de login de qualquer pessoa bloqueiam o login de todas as lojas por 15 minutos. **Atrás de proxy, `TRUSTED_PROXIES` é obrigatório.**
+
 `TRUSTED_PROXIES` lista quem pode informar o IP e o protocolo reais:
 
 ```

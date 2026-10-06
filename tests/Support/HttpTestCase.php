@@ -13,6 +13,8 @@ abstract class HttpTestCase extends DatabaseTestCase {
     protected string $lastBody = '';
     // cabecalhos da ultima resposta: nome em minusculas => lista de valores (set-cookie pode vir repetido)
     protected array $lastHeaders = [];
+    // ip do cliente simulado nas proximas requisicoes (null = o ip real da conexao, 127.0.0.1)
+    private ?string $clientIp = null;
 
     public static function setUpBeforeClass(): void {
         $port = self::freePort();
@@ -23,6 +25,9 @@ abstract class HttpTestCase extends DatabaseTestCase {
         foreach (['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASS'] as $key) {
             $env[$key] = (string)($_ENV[$key] ?? '');
         }
+        // o teste e o "proxy confiavel" do servidor: com isso um teste pode se passar por clientes de
+        // ips diferentes mandando X-Forwarded-For (ver fromIp). sem o cabecalho nada muda: vale o 127.0.0.1.
+        $env['TRUSTED_PROXIES'] = '127.0.0.1';
 
         // comando em array: roda o php direto, sem shell no meio (assim o proc_terminate mata o servidor mesmo)
         self::$server = proc_open(
@@ -57,6 +62,14 @@ abstract class HttpTestCase extends DatabaseTestCase {
     protected function setUp(): void {
         parent::setUp();
         $this->cookieJar = tempnam(sys_get_temp_dir(), 'fx-cookie');
+        $this->clientIp = null;
+    }
+
+    // as proximas requisicoes chegam como se viessem deste ip (outra pessoa, em outra rede).
+    // troca tambem a sessao: outro aparelho nao tem o cookie do anterior.
+    protected function fromIp(string $ip): void {
+        $this->clientIp = $ip;
+        $this->newSession();
     }
 
     protected function tearDown(): void {
@@ -135,6 +148,9 @@ abstract class HttpTestCase extends DatabaseTestCase {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($fields));
         }
+        if ($this->clientIp !== null) {
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Forwarded-For: ' . $this->clientIp]);
+        }
 
         $body = curl_exec($ch);
         if ($body === false) {
@@ -142,7 +158,9 @@ abstract class HttpTestCase extends DatabaseTestCase {
         }
         $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         $redirect = (string)curl_getinfo($ch, CURLINFO_REDIRECT_URL);
-        curl_close($ch);
+        // libera a conexao agora: e nesse momento que o curl grava os cookies no arquivo
+        // (curl_close nao faz nada desde o PHP 8.0 e virou aviso de obsoleto no 8.5)
+        unset($ch);
 
         $this->lastBody = $body;
         $this->lastHeaders = $headers;

@@ -20,7 +20,7 @@
         <h1>Serviço indisponível</h1>
         <p>Estamos passando por instabilidade ou manutenção. Em breve tudo volta ao normal.</p>
         
-        <a href="/index.php?url=merchant/dashboard" class="btn-home">Voltar ao Painel</a>
+        <a href="<?= e($backUrl) ?>" class="btn-home"><?= e($backLabel) ?></a>
     </div>
 </body>
 </html>

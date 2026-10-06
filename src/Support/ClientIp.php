@@ -53,6 +53,23 @@ final class ClientIp {
         return $proto === 'https';
     }
 
+    // chave usada nos limites de tentativas por ip.
+    // ipv4: o proprio endereco. ipv6: a rede /64 do endereco, porque cada assinante recebe um bloco
+    // inteiro desses e, se o limite fosse por endereco, bastaria trocar de endereco a cada tentativa.
+    public static function rateLimitKey(string $ip): string {
+        $packed = filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) === false ? false : inet_pton($ip);
+        if ($packed === false) {
+            return $ip; // ipv4 (ou "desconhecido")
+        }
+
+        // ipv4 escrito como ipv6 ("::ffff:203.0.113.9"): vale o ipv4, senao todos cairiam na mesma rede
+        if (substr($packed, 0, 12) === str_repeat("\0", 10) . "\xff\xff") {
+            return inet_ntop(substr($packed, 12));
+        }
+
+        return inet_ntop(substr($packed, 0, 8) . str_repeat("\0", 8)) . '/64';
+    }
+
     // "10.0.0.1, 172.16.0.0/12" -> ['10.0.0.1', '172.16.0.0/12'] (so entradas validas)
     public static function parseList(string $list): array {
         $entries = [];

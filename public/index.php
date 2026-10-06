@@ -112,6 +112,7 @@ switch ($domain) {
             'rewards'   => $controller->renderRewards(),
             'reward-edit' => $controller->renderRewardEdit(),
             'customers' => $controller->renderCustomers(),
+            'profile'   => $controller->renderProfile(),
             default     => (new ErrorController())->handle(404),
         };
         break;

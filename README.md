@@ -24,7 +24,7 @@ Recentemente refatorado para adotar o padrão **MVC com separação clara de res
 
 **Painel do lojista**
 - ✅ **Cadastro de Lojistas** — Registro completo com validação de documentos (CPF/CNPJ), e-mail, telefone e confirmação de senha; máscaras de telefone e documento
-- ✅ **Autenticação Segura** — Login com hash BCRYPT, renovação do ID de sessão, logout, bloqueio de contas inativas e limite de 5 erros em 15 min
+- ✅ **Autenticação Segura** — Login com hash BCRYPT, renovação do ID de sessão, logout, bloqueio de contas inativas e limite de tentativas que trava só quem errou a senha, nunca a dona da conta
 - ✅ **Atendimento pelo telefone** — A home é um único campo de telefone: cliente da loja vai direto para a tela do cliente; qualquer outro telefone vai para o cadastro rápido
 - ✅ **Tela do cliente** — Nome e saldo no topo, progresso até o próximo prêmio, lançar pontos (atalhos +1/+5/+10 ou pelo valor da compra) e resgatar os prêmios que o saldo já paga
 - ✅ **Confirmação e Desfazer** — Depois de lançar, mostra os pontos, o saldo novo e quanto falta para o próximo prêmio, com Desfazer por 30 s
@@ -37,6 +37,7 @@ Recentemente refatorado para adotar o padrão **MVC com separação clara de res
 - ✅ **Clientes** — Lista paginada com busca por nome ou telefone; extrato de pontos de cada cliente
 - ✅ **Relatórios** — Clientes, pontos emitidos, resgates, pontos em circulação e histórico paginado
 - ✅ **Cartaz com QR code** — Pronto para imprimir, leva o cliente à consulta de saldo da loja
+- ✅ **Perfil** — O lojista edita os dados da loja e troca a senha informando a atual; a troca encerra as sessões abertas em outros aparelhos
 - ✅ **Primeiros passos** — Guia para a loja nova até o primeiro prêmio e os primeiros pontos
 - ✅ **Funciona do celular ao PC** — Layout mobile-first (360 px a 1440 px), menu de celular e alvos de toque de 44 px
 
@@ -60,6 +61,7 @@ Recentemente refatorado para adotar o padrão **MVC com separação clara de res
 | `merchant/reports?page=` | lojista | Indicadores e histórico de movimentações |
 | `merchant/poster` | lojista | Cartaz com QR code e código da loja |
 | `merchant/points-rule` | lojista | Regra de pontos pelo valor da compra |
+| `merchant/profile` | lojista | Dados da loja e troca de senha |
 | `customer/balance?loja=` | público | Consulta de saldo pelo telefone, na loja do código |
 
 ---
@@ -323,7 +325,7 @@ public function renderCustomer() {
 - ✅ **CSRF** — Token por sessão em todos os formulários POST
 - ✅ **XSS** — Toda saída nas views passa por `e()` (`htmlspecialchars`)
 - ✅ **Sessão** — Cookie `HttpOnly` + `SameSite=Lax` e `session_regenerate_id()` no login
-- ✅ **Limite de tentativas** — Login bloqueia com 429 após 5 erros em 15 min por e-mail ou IP; consulta pública limitada a 5/min por IP. Contagem no banco (sobrevive a apagar o cookie), com e-mail e IP guardados só como hash SHA-256
+- ✅ **Limite de tentativas** — Login bloqueia com 429, por 15 min, quem errar 5 vezes a senha de uma conta (contado por e-mail + IP) ou 20 vezes somando todas as contas (por IP). O bloqueio nunca é só pelo e-mail, então errar a senha de uma loja de propósito não tranca a dona dela. Consulta pública limitada a 5/min por IP. Em IPv6 o limite vale pela rede /64. Contagem no banco (sobrevive a apagar o cookie), com e-mail e IP guardados só como hash SHA-256
 - ✅ **Isolamento entre lojas** — Consultas filtram pelo `merchant_id` da sessão
 - ✅ **Erros** — Detalhes técnicos vão para o log (sem query string nem dados de formulário); o usuário vê só as páginas de erro, com um código para localizar o erro no log
 - ✅ **Atrás de proxy** — O IP do cliente só é lido do `X-Forwarded-For` quando a requisição vem de um proxy listado em `TRUSTED_PROXIES`
@@ -353,7 +355,8 @@ public function renderCustomer() {
 ### Próximos passos
 
 - [ ] Análise estática (PHPStan) e padronização de código (PHP-CS-Fixer)
-- [ ] Edição de perfil do lojista e recuperação de senha
+- [x] Perfil do lojista e troca de senha
+- [ ] Recuperação de senha por e-mail
 - [ ] Máscaras de input no front-end (TypeScript)
 - [ ] Planos Free/Pro com limites
 - [ ] Área do cliente com login

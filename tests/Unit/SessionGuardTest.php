@@ -17,6 +17,20 @@ final class SessionGuardTest extends TestCase {
         $this->assertFalse(SessionGuard::isExpired(null, 1_800_000_000));
     }
 
+    public function testSessaoAbertaComSenhaAntigaDeixaDeValer(): void {
+        $old = password_hash('antiga', PASSWORD_BCRYPT);
+        $new = password_hash('nova', PASSWORD_BCRYPT);
+        $signature = SessionGuard::passwordSignature($old);
+
+        $this->assertFalse(SessionGuard::passwordChanged($signature, $old));
+        $this->assertTrue(SessionGuard::passwordChanged($signature, $new));
+        $this->assertStringNotContainsString($old, $signature, 'a sessao nao guarda o hash da senha');
+    }
+
+    public function testSessaoSemAssinaturaNaoEDerrubada(): void {
+        $this->assertFalse(SessionGuard::passwordChanged(null, password_hash('qualquer', PASSWORD_BCRYPT)));
+    }
+
     public function testLimiteEUmDiaDeBalcao(): void {
         $this->assertSame(8 * 3600, SessionGuard::IDLE_SECONDS);
     }

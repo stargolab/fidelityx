@@ -18,9 +18,9 @@
         </div>
         
         <h1>Ops! Algo deu errado.</h1>
-        <p>Ocorreu um problema ao carregar esta página. Tente novamente em instantes ou volte para o painel.</p>
+        <p>Ocorreu um problema ao carregar esta página. Tente novamente em instantes ou volte para o início.</p>
         
-        <a href="/index.php?url=merchant/dashboard" class="btn-home">Voltar ao Painel</a>
+        <a href="<?= e($backUrl) ?>" class="btn-home"><?= e($backLabel) ?></a>
     </div>
 </body>
 </html>

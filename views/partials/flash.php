@@ -32,6 +32,8 @@ $flashMessages = [
         'estorno_repetido'      => 'Este lançamento já foi estornado.',
         'estorno_expirado'      => 'Só dá para estornar lançamentos das últimas 24 horas.',
         'estorno_sem_saldo'     => 'Não dá para estornar: o cliente já usou parte desses pontos.',
+        'senha_atual_incorreta' => 'A senha atual não confere.',
+        'muitas_tentativas'     => 'Muitas tentativas com a senha atual errada. Aguarde alguns minutos e tente de novo.',
     ],
     'success' => [
         'cadastrado'        => 'Cadastro realizado! Faça login para continuar.',
@@ -49,6 +51,8 @@ $flashMessages = [
         'lancamento_estornado' => 'Lançamento estornado. Os pontos saíram do saldo.',
         'regra_salva'       => 'Regra de pontos salva.',
         'regra_removida'    => 'Regra de pontos removida.',
+        'perfil_atualizado' => 'Dados da loja atualizados.',
+        'senha_alterada'    => 'Senha alterada. Os outros aparelhos conectados precisam entrar de novo.',
     ],
 ];
 

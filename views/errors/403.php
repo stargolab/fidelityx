@@ -20,7 +20,7 @@
         <h1>Acesso negado</h1>
         <p>Você não tem permissão para ver esta página. Se isso parecer errado, fale com o administrador.</p>
         
-        <a href="/index.php?url=merchant/dashboard" class="btn-home">Voltar ao Painel</a>
+        <a href="<?= e($backUrl) ?>" class="btn-home"><?= e($backLabel) ?></a>
     </div>
 </body>
 </html>

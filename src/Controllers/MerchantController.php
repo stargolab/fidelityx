@@ -10,6 +10,7 @@ use App\Models\RewardModel;
 use App\Support\Csrf;
 use App\Support\Money;
 use App\Support\Paginator;
+use App\Support\PasswordPolicy;
 use App\Support\Privacy;
 use App\Support\QrSvg;
 use App\Support\RateLimiter;
@@ -47,7 +48,6 @@ class MerchantController {
     private const MAX_LOGIN_FAILURES = 5;         // mesmo e-mail + mesmo ip
     private const MAX_LOGIN_FAILURES_PER_IP = 20; // mesmo ip, somando todas as contas
     private const LOGIN_WINDOW_SECONDS = 900;
-    private const MIN_PASSWORD_LENGTH = 6;
     // senha atual errada na troca de senha: mesmo limite do login, contado por conta
     private const MAX_PASSWORD_FAILURES = 5;
     private const PASSWORD_WINDOW_SECONDS = 900;
@@ -468,8 +468,9 @@ class MerchantController {
             redirect('merchant/register', ['error' => 'documento_invalido']);
         }
 
-        if (strlen($password) < self::MIN_PASSWORD_LENGTH) {
-            redirect('merchant/register', ['error' => 'senha_curta']);
+        $passwordProblem = PasswordPolicy::problem((string)$password);
+        if ($passwordProblem !== null) {
+            redirect('merchant/register', ['error' => $passwordProblem]);
         }
 
         if (!hash_equals($password, (string)$passwordConfirm)) {
@@ -783,7 +784,8 @@ class MerchantController {
             'profile'     => $this->merchantModel->findProfile($merchantId),
             'categories'  => self::CATEGORIES,
             'states'      => self::STATES,
-            'minPassword' => self::MIN_PASSWORD_LENGTH,
+            'minPassword' => PasswordPolicy::MIN_BYTES,
+            'maxPassword' => PasswordPolicy::MAX_BYTES,
         ]);
     }
 
@@ -849,8 +851,14 @@ class MerchantController {
             redirect('merchant/profile', ['error' => 'senha_atual_incorreta']);
         }
 
-        if (strlen($new) < self::MIN_PASSWORD_LENGTH) {
-            redirect('merchant/profile', ['error' => 'senha_curta']);
+        $passwordProblem = PasswordPolicy::problem($new);
+        if ($passwordProblem !== null) {
+            redirect('merchant/profile', ['error' => $passwordProblem]);
+        }
+
+        // trocar pela mesma senha nao derruba quem pegou a senha antiga: precisa ser outra
+        if (password_verify($new, $merchant['password_hash'])) {
+            redirect('merchant/profile', ['error' => 'senha_igual']);
         }
 
         if (!hash_equals($new, $confirm)) {

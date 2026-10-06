@@ -90,15 +90,15 @@
         <div class="form-row">
             <div class="form-group">
                 <label for="new_password">Nova senha</label>
-                <input type="password" name="new_password" id="new_password" minlength="<?= (int)$minPassword ?>" autocomplete="new-password" required>
+                <input type="password" name="new_password" id="new_password" minlength="<?= (int)$minPassword ?>" maxlength="<?= (int)$maxPassword ?>" autocomplete="new-password" required>
             </div>
 
             <div class="form-group">
                 <label for="new_password_confirm">Confirmar nova senha</label>
-                <input type="password" name="new_password_confirm" id="new_password_confirm" minlength="<?= (int)$minPassword ?>" autocomplete="new-password" required>
+                <input type="password" name="new_password_confirm" id="new_password_confirm" minlength="<?= (int)$minPassword ?>" maxlength="<?= (int)$maxPassword ?>" autocomplete="new-password" required>
             </div>
         </div>
-        <p class="muted form-hint">Mínimo de <?= (int)$minPassword ?> caracteres. Ao trocar, os outros aparelhos conectados nesta conta precisam entrar de novo.</p>
+        <p class="muted form-hint">De <?= (int)$minPassword ?> a <?= (int)$maxPassword ?> caracteres, diferente da atual. Ao trocar, os outros aparelhos conectados nesta conta precisam entrar de novo.</p>
 
         <button type="submit" class="btn-primary btn-inline">Trocar senha</button>
     </form>

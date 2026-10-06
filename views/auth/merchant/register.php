@@ -88,12 +88,12 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="password">Senha</label>
-                    <input type="password" name="password" id="password" placeholder="Mínimo 6 dígitos" minlength="6" required>
+                    <input type="password" name="password" id="password" placeholder="De 8 a 72 caracteres" minlength="8" maxlength="72" autocomplete="new-password" required>
                 </div>
 
                 <div class="form-group">
                     <label for="password_confirm">Confirmar Senha</label>
-                    <input type="password" name="password_confirm" id="password_confirm" placeholder="Repita a senha" minlength="6" required>
+                    <input type="password" name="password_confirm" id="password_confirm" placeholder="Repita a senha" minlength="8" maxlength="72" autocomplete="new-password" required>
                 </div>
             </div>
 

@@ -69,6 +69,7 @@ Banco: `mysql -u root -p < database/schema.sql` em instalação nova. Banco já 
 - Commits no padrão `tipo(escopo): descrição` (`feat`, `fix`, `refactor`, `docs`, `test`, `chore`); branches `tipo/nome` com o mesmo tipo do commit (ex.: `feat/logout`, `fix/csrf-token`). Nunca commitar direto na `main`: tudo entra por PR, e o PR referencia a issue com `close #N` quando houver.
 - SQL sempre com prepared statements; o PDO usa `ATTR_EMULATE_PREPARES = false`, então o mesmo placeholder não pode aparecer duas vezes na query (use `:p1`, `:p2`).
 - Máscaras de telefone e CPF/CNPJ ficam em `src/ts/masks.ts` (`data-mask="phone"` / `"document"` no input), compiladas com `tsc` para `public/js/masks.js`, que é versionado: rode `tsc` ao mexer no `.ts`. É só apresentação; o back-end continua limpando os dígitos.
+- `src/ts/forms.ts` (compilado para `public/js/forms.js`, também versionado) vale para todo `<form>`: no envio, o botão clicado ganha a classe `is-loading` (`components.css`) e um segundo envio do mesmo formulário é barrado. Página nova com formulário carrega `/js/forms.js`; o botão não recebe `disabled`.
 
 ## Backlog
 

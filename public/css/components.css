@@ -58,6 +58,43 @@
     background: var(--primary-hover);
     transform: translateY(-1px);
 }
+
+/* botao de um formulario que ja foi enviado (classe posta pelo public/js/forms.js): fica apagado,
+   ganha uma rodinha girando ao lado do texto e para de receber clique. vale para qualquer botao
+   (.btn-primary, .btn-secondary, o "Sair" do menu), por isso usa a cor do proprio texto (currentColor) */
+.is-loading {
+    opacity: 0.7;
+    cursor: progress;
+    pointer-events: none;
+}
+
+.is-loading::after {
+    content: "";
+    display: inline-block;
+    flex-shrink: 0;
+    width: 1em;
+    height: 1em;
+    margin-left: 0.5em;
+    vertical-align: -0.15em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: btn-spin 0.7s linear infinite;
+}
+
+@keyframes btn-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* quem pediu menos movimento no sistema ve a rodinha parada (o botao apagado ja avisa) */
+@media (prefers-reduced-motion: reduce) {
+    .is-loading::after {
+        animation: none;
+    }
+}
+
 /* Selects e textareas com o mesmo visual dos inputs */
 .form-group select,
 .form-group textarea {

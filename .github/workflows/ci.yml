@@ -72,6 +72,9 @@ jobs:
       - name: Testes das mascaras (JavaScript)
         run: node tests/js/masks.test.js
 
+      - name: Testes do envio de formulario (JavaScript)
+        run: node tests/js/forms.test.js
+
   # o public/js/masks.js e versionado e gerado do src/ts/masks.ts: se alguem mexer no .ts e esquecer
   # de rodar o tsc (ou editar o .js na mao), o compilado deixa de bater com o fonte e o job falha.
   mascaras:

@@ -25,6 +25,7 @@
 
    Foco
      --focus-ring       anel de foco de inputs (acessibilidade: o foco precisa ser visivel)
+                        o contorno de foco dos demais elementos (:focus-visible) usa --primary-hover
 
    Papel (cartaz impresso)
      --paper            fundo da folha do cartaz e da impressao (qr code precisa de fundo claro)
@@ -92,4 +93,12 @@ a {
 
 a:hover {
     color: var(--primary-hover);
+}
+
+/* foco do teclado sempre visivel: links, botoes, menu, <summary>... tudo que recebe tab ganha o
+   mesmo contorno. :focus-visible so vale pra quem navega pelo teclado (clique do mouse nao acende).
+   campos de formulario tem o proprio anel de foco (components.css). */
+:focus-visible {
+    outline: 2px solid var(--primary-hover);
+    outline-offset: 2px;
 }

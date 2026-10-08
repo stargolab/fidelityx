@@ -19,7 +19,9 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     font-size: 1rem;
-    outline: none;
+    /* contorno transparente em vez de "none": no modo de alto contraste do windows a sombra do
+       foco some e o navegador pinta este contorno, entao o foco nunca fica invisivel */
+    outline: 2px solid transparent;
     transition: all 0.2s ease-in-out;
     background: var(--bg-card);
     /* Fundo do input levemente mais claro que o body */
@@ -105,13 +107,36 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     font-size: 1rem;
-    outline: none;
+    outline: 2px solid transparent;
 }
 
 .form-group select:focus,
 .form-group textarea:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* campo com erro (aria-invalid="true", posto pelo field_error_attr() do helpers.php): borda vermelha
+   mais grossa (a sombra de 1px engrossa sem mexer no tamanho do campo). vem depois das regras de
+   foco de proposito: com o foco no campo, a borda continua vermelha e o anel fica em volta */
+.form-group input[aria-invalid="true"],
+.form-group select[aria-invalid="true"],
+.form-group textarea[aria-invalid="true"] {
+    border-color: var(--error);
+    box-shadow: 0 0 0 1px var(--error);
+}
+
+.form-group input[aria-invalid="true"]:focus,
+.form-group select[aria-invalid="true"]:focus,
+.form-group textarea[aria-invalid="true"]:focus {
+    border-color: var(--error);
+    box-shadow: 0 0 0 1px var(--error), 0 0 0 4px var(--focus-ring);
+}
+
+/* checkbox nao tem borda pra pintar: o erro vira um contorno em volta da caixinha */
+.form-group .checkbox input[aria-invalid="true"] {
+    outline: 2px solid var(--error);
+    outline-offset: 2px;
 }
 
 /* Linha com 2+ campos: um embaixo do outro no celular, lado a lado a partir de 640px */

@@ -47,13 +47,13 @@
 
             <div class="form-group">
                 <label for="document">CPF ou CNPJ</label>
-                <input type="text" name="document" id="document" placeholder="000.000.000-00 ou 00.000.000/0000-00" inputmode="numeric" maxlength="18" data-mask="document" required>
+                <input type="text" name="document" id="document"<?= field_error_attr('document') ?> placeholder="000.000.000-00 ou 00.000.000/0000-00" inputmode="numeric" maxlength="18" data-mask="document" required>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
                     <label for="phone">Telefone</label>
-                    <input type="tel" name="phone" id="phone" placeholder="(11) 99999-9999" maxlength="15" data-mask="phone" required>
+                    <input type="tel" name="phone" id="phone"<?= field_error_attr('phone') ?> placeholder="(11) 99999-9999" maxlength="15" data-mask="phone" required>
                 </div>
 
                 <div class="form-group">
@@ -83,18 +83,18 @@
 
             <div class="form-group">
                 <label for="email">E-mail Comercial</label>
-                <input type="email" name="email" id="email" placeholder="seu@email.com" maxlength="255" required>
+                <input type="email" name="email" id="email"<?= field_error_attr('email') ?> placeholder="seu@email.com" maxlength="255" required>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
                     <label for="password">Senha</label>
-                    <input type="password" name="password" id="password" placeholder="Mínimo 6 dígitos" minlength="6" required>
+                    <input type="password" name="password" id="password"<?= field_error_attr('password') ?> placeholder="Mínimo 6 dígitos" minlength="6" required>
                 </div>
 
                 <div class="form-group">
                     <label for="password_confirm">Confirmar Senha</label>
-                    <input type="password" name="password_confirm" id="password_confirm" placeholder="Repita a senha" minlength="6" required>
+                    <input type="password" name="password_confirm" id="password_confirm"<?= field_error_attr('password_confirm') ?> placeholder="Repita a senha" minlength="6" required>
                 </div>
             </div>
 

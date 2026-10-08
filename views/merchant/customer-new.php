@@ -12,13 +12,13 @@
 
         <div class="form-group">
             <label for="name">Nome do cliente</label>
-            <input type="text" name="name" id="name" placeholder="Ex: Maria Silva" maxlength="255"
+            <input type="text" name="name" id="name"<?= field_error_attr('name') ?> placeholder="Ex: Maria Silva" maxlength="255"
                    autocomplete="off" required autofocus>
         </div>
 
         <div class="form-group">
             <label class="checkbox">
-                <input type="checkbox" name="consent" value="1" required>
+                <input type="checkbox" name="consent" value="1"<?= field_error_attr('consent') ?> required>
                 <span>O cliente autorizou esta loja a guardar o nome e o telefone dele para o programa de pontos
                     (<a href="<?= e(url('privacy')) ?>" target="_blank" rel="noopener">política de privacidade</a>).</span>
             </label>

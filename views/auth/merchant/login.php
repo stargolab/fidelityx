@@ -25,12 +25,12 @@
 
             <div class="form-group">
                 <label for="email">E-mail Comercial</label>
-                <input type="email" name="email" id="email" placeholder="seu@email.com" required autocomplete="email">
+                <input type="email" name="email" id="email"<?= field_error_attr('email') ?> placeholder="seu@email.com" required autocomplete="email">
             </div>
 
             <div class="form-group">
                 <label for="password">Senha</label>
-                <input type="password" name="password" id="password" placeholder="••••••••" required>
+                <input type="password" name="password" id="password"<?= field_error_attr('password') ?> placeholder="••••••••" required>
             </div>
 
             <button type="submit" class="btn-primary">Entrar no Painel</button>

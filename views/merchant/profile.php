@@ -32,7 +32,7 @@
         <div class="form-row">
             <div class="form-group">
                 <label for="phone">Telefone</label>
-                <input type="tel" name="phone" id="phone" maxlength="15" data-mask="phone" value="<?= e(format_phone($profile['phone'])) ?>" required>
+                <input type="tel" name="phone" id="phone"<?= field_error_attr('phone') ?> maxlength="15" data-mask="phone" value="<?= e(format_phone($profile['phone'])) ?>" required>
             </div>
 
             <div class="form-group">
@@ -84,18 +84,18 @@
 
         <div class="form-group">
             <label for="current_password">Senha atual</label>
-            <input type="password" name="current_password" id="current_password" autocomplete="current-password" required>
+            <input type="password" name="current_password" id="current_password"<?= field_error_attr('current_password') ?> autocomplete="current-password" required>
         </div>
 
         <div class="form-row">
             <div class="form-group">
                 <label for="new_password">Nova senha</label>
-                <input type="password" name="new_password" id="new_password" minlength="<?= (int)$minPassword ?>" autocomplete="new-password" required>
+                <input type="password" name="new_password" id="new_password"<?= field_error_attr('new_password') ?> minlength="<?= (int)$minPassword ?>" autocomplete="new-password" required>
             </div>
 
             <div class="form-group">
                 <label for="new_password_confirm">Confirmar nova senha</label>
-                <input type="password" name="new_password_confirm" id="new_password_confirm" minlength="<?= (int)$minPassword ?>" autocomplete="new-password" required>
+                <input type="password" name="new_password_confirm" id="new_password_confirm"<?= field_error_attr('new_password_confirm') ?> minlength="<?= (int)$minPassword ?>" autocomplete="new-password" required>
             </div>
         </div>
         <p class="muted form-hint">Mínimo de <?= (int)$minPassword ?> caracteres. Ao trocar, os outros aparelhos conectados nesta conta precisam entrar de novo.</p>

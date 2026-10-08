@@ -30,7 +30,7 @@
         <input type="hidden" name="url" value="merchant/dashboard">
         <div class="form-group">
             <label for="phone">Telefone do cliente</label>
-            <input type="tel" name="phone" id="phone" inputmode="numeric" maxlength="15" data-mask="phone" autocomplete="off"
+            <input type="tel" name="phone" id="phone"<?= field_error_attr('phone') ?> inputmode="numeric" maxlength="15" data-mask="phone" autocomplete="off"
                    placeholder="(11) 99999-9999" required autofocus>
         </div>
         <button type="submit" class="btn-primary">Continuar</button>

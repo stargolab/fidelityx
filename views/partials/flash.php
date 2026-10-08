@@ -56,9 +56,11 @@ $flashMessages = [
     ],
 ];
 
-foreach (['error', 'success'] as $flashType):
+// role faz o leitor de tela ler a mensagem ao abrir a pagina (alert interrompe, status espera a vez).
+// o id e o alvo do aria-describedby dos campos marcados por field_error_attr() (helpers.php).
+foreach (['error' => 'alert', 'success' => 'status'] as $flashType => $flashRole):
     $flashCode = $_GET[$flashType] ?? null;
     if (is_string($flashCode) && isset($flashMessages[$flashType][$flashCode])): ?>
-        <div class="alert alert-<?= $flashType ?>"><?= e($flashMessages[$flashType][$flashCode]) ?></div>
+        <div class="alert alert-<?= $flashType ?>" id="flash-<?= $flashType ?>" role="<?= $flashRole ?>"><?= e($flashMessages[$flashType][$flashCode]) ?></div>
     <?php endif;
 endforeach;

@@ -26,7 +26,7 @@
         <?php if (!$store): ?>
             <?php // sem loja: pede o codigo (vem impresso no cartaz, embaixo do QR). nao lista lojas de proposito ?>
             <?php if ($error === 'loja_invalida'): ?>
-                <div class="alert alert-error">Código de loja não encontrado. Confira o código no cartaz da loja.</div>
+                <div class="alert alert-error" id="flash-error" role="alert">Código de loja não encontrado. Confira o código no cartaz da loja.</div>
             <?php endif; ?>
 
             <p class="muted balance-help">Aponte a câmera do celular para o QR code no balcão da loja, ou digite o código que aparece embaixo dele.</p>
@@ -35,14 +35,14 @@
                 <input type="hidden" name="url" value="customer/balance">
                 <div class="form-group">
                     <label for="loja">Código da loja</label>
-                    <input type="text" name="loja" id="loja" maxlength="12" autocomplete="off" autocapitalize="characters"
+                    <input type="text" name="loja" id="loja"<?= field_error_attr('loja', $error) ?> maxlength="12" autocomplete="off" autocapitalize="characters"
                            placeholder="Ex: 7K2M9QXA" required autofocus>
                 </div>
                 <button type="submit" class="btn-primary">Continuar</button>
             </form>
         <?php else: ?>
             <?php if ($error === 'telefone_invalido'): ?>
-                <div class="alert alert-error">Informe um telefone válido com DDD.</div>
+                <div class="alert alert-error" id="flash-error" role="alert">Informe um telefone válido com DDD.</div>
             <?php endif; ?>
 
             <form action="<?= e(url('customer/balance')) ?>" method="POST">
@@ -51,7 +51,7 @@
 
                 <div class="form-group">
                     <label for="phone">Seu telefone</label>
-                    <input type="tel" name="phone" id="phone" placeholder="(11) 99999-9999" maxlength="15" data-mask="phone"
+                    <input type="tel" name="phone" id="phone"<?= field_error_attr('phone', $error) ?> placeholder="(11) 99999-9999" maxlength="15" data-mask="phone"
                            value="<?= e(format_phone($phone)) ?>" required>
                 </div>
 

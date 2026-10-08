@@ -57,6 +57,40 @@ function url(string $route, array $params = []): string {
     return '/index.php?' . http_build_query(array_merge(['url' => $route], $params));
 }
 
+// marca o campo que causou o erro: devolve os atributos pra colar dentro do <input> quando o
+// codigo de erro da tela aponta pro campo $field (pelo name), ou texto vazio.
+// aria-invalid pinta a borda (components.css) e avisa o leitor de tela; aria-describedby liga o
+// campo a mensagem (o id="flash-error" do partials/flash.php).
+// $code: por padrao o ?error= da url; tela que nao usa flash (consulta publica) passa o proprio codigo.
+// codigo novo de erro ligado a um campo entra neste mapa.
+function field_error_attr(string $field, ?string $code = null): string {
+    static $fields = [
+        'documento_invalido'        => ['document'],
+        'email_invalido'            => ['email'],
+        'senha_curta'               => ['password', 'new_password'],
+        'senhas_diferentes'         => ['password', 'password_confirm', 'new_password', 'new_password_confirm'],
+        'ja_cadastrado'             => ['email', 'document'],
+        'credenciais_invalidas'     => ['email', 'password'],
+        'senha_atual_incorreta'     => ['current_password'],
+        'telefone_invalido'         => ['phone'],
+        'cliente_nao_encontrado'    => ['phone'],
+        'loja_invalida'             => ['loja'],
+        'nome_obrigatorio'          => ['name'],
+        'consentimento_obrigatorio' => ['consent'],
+        'confirmacao_obrigatoria'   => ['confirm'],
+        'pontos_invalidos'          => ['points'],
+        'valor_invalido'            => ['amount'],
+        'valor_sem_pontos'          => ['amount'],
+        'regra_invalida'            => ['rule'],
+    ];
+
+    $code ??= $_GET['error'] ?? null;
+    if (!is_string($code) || !in_array($field, $fields[$code] ?? [], true)) {
+        return '';
+    }
+    return ' aria-invalid="true" aria-describedby="flash-error"';
+}
+
 // como cada tipo de movimentacao aparece no extrato e nos relatorios: [rotulo, classe do selo, sinal]
 function log_type_view(string $type): array {
     return match ($type) {

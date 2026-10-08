@@ -16,7 +16,7 @@
 
         <div class="form-group">
             <label for="rule">A cada quantos reais em compras o cliente ganha 1 ponto?</label>
-            <input type="text" name="rule" id="rule" inputmode="decimal" autocomplete="off" maxlength="15"
+            <input type="text" name="rule" id="rule"<?= field_error_attr('rule') ?> inputmode="decimal" autocomplete="off" maxlength="15"
                    placeholder="1,00" value="<?= $ruleCents ? e(number_format($ruleCents / 100, 2, ',', '.')) : '' ?>" required autofocus>
             <p class="muted rule-example">Ex.: com R$ 1,00, uma compra de R$ 12,90 dá 12 pontos. Com R$ 5,00, dá 2 pontos.</p>
         </div>

@@ -49,7 +49,7 @@
             <input type="hidden" name="phone" value="<?= e($card['phone']) ?>">
             <div class="form-group">
                 <label class="checkbox">
-                    <input type="checkbox" name="consent" value="1" required>
+                    <input type="checkbox" name="consent" value="1"<?= field_error_attr('consent') ?> required>
                     <span>O cliente autorizou esta loja a guardar o nome e o telefone dele para o programa de pontos
                         (<a href="<?= e(url('privacy')) ?>" target="_blank" rel="noopener">política de privacidade</a>).</span>
                 </label>
@@ -76,7 +76,7 @@
             <?php // com regra: o lojista digita o valor e ve os pontos antes de confirmar (o servidor recalcula) ?>
             <div class="form-group">
                 <label for="amount">Valor da compra (R$)</label>
-                <input type="text" name="amount" id="amount" inputmode="decimal" autocomplete="off"
+                <input type="text" name="amount" id="amount"<?= field_error_attr('amount') ?> inputmode="decimal" autocomplete="off"
                        placeholder="0,00" maxlength="15" data-rule-cents="<?= (int)$pointsRule ?>" autofocus>
                 <p class="muted amount-preview" id="amount-preview" aria-live="polite">
                     A cada <?= e(\App\Support\Money::format($pointsRule)) ?> em compras, 1 ponto (arredonda pra baixo).
@@ -86,7 +86,7 @@
 
         <div class="form-group">
             <label for="points">Pontos<?php if ($pointsRule): ?> <span class="muted">(ou digite direto)</span><?php endif; ?></label>
-            <input type="number" name="points" id="points" min="1" max="10000" inputmode="numeric"
+            <input type="number" name="points" id="points"<?= field_error_attr('points') ?> min="1" max="10000" inputmode="numeric"
                    placeholder="0"<?= $pointsRule ? '' : ' required autofocus' ?>>
             <div class="quick-points">
                 <button type="button" class="btn-secondary" data-add="1">+1</button>
@@ -145,7 +145,7 @@
         <input type="hidden" name="phone" value="<?= e($card['phone']) ?>">
         <div class="form-group">
             <label class="checkbox">
-                <input type="checkbox" name="confirm" value="1" required>
+                <input type="checkbox" name="confirm" value="1"<?= field_error_attr('confirm') ?> required>
                 <span>O cliente pediu a exclusão dos dados dele.</span>
             </label>
         </div>

@@ -25,8 +25,9 @@ final class RewardProgressScreenTest extends HttpTestCase {
 
         $this->post('customer/balance', ['phone' => '11911110001', 'loja' => $code], true, 'customer/balance&loja=' . $code);
         $this->assertMatchesRegularExpression('/Faltam\s*<strong>20 pontos<\/strong>\s*para\s*<strong>Suco<\/strong>/', $this->lastBody);
-        $this->assertStringContainsString('aria-valuenow="60"', $this->lastBody);
-        $this->assertStringContainsString('width: 60%', $this->lastBody);
+        $this->assertStringContainsString('max="100" value="60"', $this->lastBody);
+        // a largura vem do atributo value: a view nao pode voltar a ter estilo solto
+        $this->assertStringNotContainsString('style=', $this->lastBody);
     }
 
     public function testTelaDoLojistaMostraOMesmoProgresso(): void {
@@ -35,7 +36,7 @@ final class RewardProgressScreenTest extends HttpTestCase {
 
         $this->get('merchant/customer&phone=11911110001');
         $this->assertMatchesRegularExpression('/Faltam\s*<strong>20 pontos<\/strong>\s*para\s*<strong>Suco<\/strong>/', $this->lastBody);
-        $this->assertStringContainsString('aria-valuenow="60"', $this->lastBody);
+        $this->assertStringContainsString('max="100" value="60"', $this->lastBody);
     }
 
     public function testSaldoZeroMostraOPrimeiroPremio(): void {
@@ -44,7 +45,7 @@ final class RewardProgressScreenTest extends HttpTestCase {
 
         $this->get('merchant/customer&phone=11911110001');
         $this->assertMatchesRegularExpression('/Faltam\s*<strong>20 pontos<\/strong>\s*para\s*<strong>Cafe<\/strong>/', $this->lastBody);
-        $this->assertStringContainsString('aria-valuenow="0"', $this->lastBody);
+        $this->assertStringContainsString('max="100" value="0"', $this->lastBody);
     }
 
     public function testQuandoPagaTudoDizQueJaDaParaResgatar(): void {
@@ -53,7 +54,7 @@ final class RewardProgressScreenTest extends HttpTestCase {
 
         $this->get('merchant/customer&phone=11911110001');
         $this->assertStringContainsString('Já dá para resgatar qualquer prêmio', $this->lastBody);
-        $this->assertStringContainsString('aria-valuenow="100"', $this->lastBody);
+        $this->assertStringContainsString('max="100" value="100"', $this->lastBody);
     }
 
     public function testLojaSemPremioNaoMostraBarra(): void {
@@ -63,7 +64,7 @@ final class RewardProgressScreenTest extends HttpTestCase {
         $this->loginAs('loja@teste.test');
 
         $this->get('merchant/customer&phone=11911110001');
-        $this->assertStringNotContainsString('progressbar', $this->lastBody);
+        $this->assertStringNotContainsString('<progress', $this->lastBody);
     }
 
     public function testPremioInativoNaoEntraNoProgresso(): void {

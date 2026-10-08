@@ -14,8 +14,6 @@ if (!$progress) {
             para <strong><?= e($progress['reward']['name']) ?></strong>
         </p>
     <?php endif; ?>
-    <div class="progress" role="progressbar" aria-label="Progresso até o próximo prêmio"
-         aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= (int)$progress['percent'] ?>">
-        <div class="progress-bar" style="width: <?= (int)$progress['percent'] ?>%"></div>
-    </div>
+    <progress class="progress" aria-label="Progresso até o próximo prêmio"
+              max="100" value="<?= (int)$progress['percent'] ?>"><?= (int)$progress['percent'] ?>%</progress>
 </div>

@@ -170,3 +170,44 @@
     border-color: var(--warning);
     color: var(--warning-text);
 }
+
+/* botao de envio que vem logo depois de uma linha de campos: um respiro a mais em cima */
+.form-submit {
+    margin-top: 1rem;
+}
+
+/* card de formulario longo (cadastro da loja): no celular segue 100%, em tela grande vai ate 600px.
+   o seletor duplo vence o max-width que o auth.css da ao .auth-container nas telas maiores */
+.auth-container.auth-container-wide {
+    max-width: 600px;
+}
+
+/* barra de progresso: <progress max="100" value="N">. o preenchimento vem do atributo value,
+   entao a view nao precisa de style="width". cada navegador desenha a barra com um
+   pseudo-elemento proprio, e eles nao podem dividir a mesma regra (um seletor desconhecido anula a regra toda) */
+.progress {
+    display: block;
+    width: 100%;
+    height: 0.6rem;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--bg-body);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progress::-webkit-progress-bar {
+    background: var(--bg-body);
+    border-radius: 999px;
+}
+
+.progress::-webkit-progress-value {
+    background: var(--primary);
+    border-radius: 999px;
+}
+
+.progress::-moz-progress-bar {
+    background: var(--primary);
+    border-radius: 999px;
+}

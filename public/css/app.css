@@ -561,7 +561,7 @@ span.btn-secondary {
     }
 }
 
-/* progresso ate o proximo premio: barra fina com o preenchimento na cor da marca */
+/* progresso ate o proximo premio: frase em cima da barra (a barra em si e o .progress do components.css) */
 .reward-progress {
     margin-top: 0.75rem;
 }
@@ -569,20 +569,6 @@ span.btn-secondary {
 .reward-progress-text {
     font-size: 0.9rem;
     margin-bottom: 0.4rem;
-}
-
-.progress {
-    height: 0.6rem;
-    background: var(--bg-body);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    overflow: hidden;
-}
-
-.progress-bar {
-    height: 100%;
-    background: var(--primary);
-    border-radius: 999px;
 }
 
 /* cartaz: folha clara (--paper) com nome da loja e qr code; centralizado e legivel de longe */

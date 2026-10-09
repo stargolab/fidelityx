@@ -15,6 +15,7 @@ Toda a configuração vem de **variáveis de ambiente**. O arquivo `.env` na rai
 | `TRUSTED_PROXIES` | não | IPs ou faixas CIDR dos proxies confiáveis, separados por vírgula. Ver [Proxy reverso](#proxy-reverso). |
 | `LOG_FILE` | não | Arquivo do log de erros. Vazio usa o destino do `php.ini`. |
 | `BACKUP_DIR`, `BACKUP_KEEP_DAYS`, `MYSQLDUMP_BIN` | não | Backup: pasta (padrão `storage/backups`), dias guardados (padrão `14`, `0` nunca apaga) e caminho do `mysqldump`. |
+| `MAIL_DRIVER`, `MAIL_LOG_FILE` | não | E-mail transacional (task 55). Vazio: nenhum e-mail sai e o log registra cada envio perdido (sem o conteúdo). `log`: grava os e-mails inteiros em `MAIL_LOG_FILE` (padrão `storage/mail.log`), **só para desenvolvimento** (tem os links com token). O provedor de produção (SMTP/API, SPF e DKIM do domínio) ainda não foi escolhido. |
 | `DB_ROOT_PASS`, `APP_PORT` | só no Compose | Senha do root do MySQL do container e porta publicada no host (padrão `8080`). |
 
 ## Docker
@@ -60,6 +61,17 @@ TRUSTED_PROXIES=127.0.0.1,172.16.0.0/12
 - Com HTTPS reconhecido (direto ou pelo `X-Forwarded-Proto` de um proxy da lista), toda resposta leva `Strict-Transport-Security: max-age=31536000` (task 48): o navegador passa a usar só HTTPS no domínio por um ano. Sem `includeSubDomains`/`preload`; ligue-os no proxy se o domínio todo for HTTPS.
 
 Com o Compose, o proxy no host chega ao container pelo gateway da rede do Docker, normalmente um endereço em `172.16.0.0/12`.
+
+## Administrador
+
+O painel de administração (`/index.php?url=admin/login`) tem contas próprias, que não são lojistas. Para criar uma (no container, `docker compose exec app php bin/create-admin.php ...`):
+
+```bash
+php bin/create-admin.php admin@seudominio.com.br "Nome da pessoa"
+# a senha (8 a 72 bytes) é pedida em seguida; não passe a senha como argumento
+```
+
+O admin vê todas as lojas e ativa ou desativa um lojista (a desativação derruba a sessão dele na hora). Não há tela para criar ou remover admins: remover é `DELETE FROM admins WHERE email = ...` no banco.
 
 ## Rota de saúde
 

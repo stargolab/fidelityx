@@ -1,6 +1,18 @@
 parameters:
 	ignoreErrors:
 		-
+			message: '#^Variable \$merchants might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/admin/dashboard.php
+
+		-
+			message: '#^Variable \$paginator might not be defined\.$#'
+			identifier: variable.undefined
+			count: 3
+			path: views/admin/dashboard.php
+
+		-
 			message: '#^Variable \$categories might not be defined\.$#'
 			identifier: variable.undefined
 			count: 1
@@ -11,6 +23,24 @@ parameters:
 			identifier: variable.undefined
 			count: 1
 			path: views/auth/merchant/register.php
+
+		-
+			message: '#^Variable \$maxPassword might not be defined\.$#'
+			identifier: variable.undefined
+			count: 3
+			path: views/auth/merchant/reset.php
+
+		-
+			message: '#^Variable \$minPassword might not be defined\.$#'
+			identifier: variable.undefined
+			count: 3
+			path: views/auth/merchant/reset.php
+
+		-
+			message: '#^Variable \$token might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/auth/merchant/reset.php
 
 		-
 			message: '#^Variable \$card might not be defined\.$#'
@@ -155,6 +185,12 @@ parameters:
 			identifier: variable.undefined
 			count: 1
 			path: views/errors/default.php
+
+		-
+			message: '#^Variable \$email might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: views/merchant/confirm-email.php
 
 		-
 			message: '#^Variable \$phone might not be defined\.$#'

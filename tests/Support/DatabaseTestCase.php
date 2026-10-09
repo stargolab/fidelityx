@@ -19,8 +19,8 @@ abstract class DatabaseTestCase extends TestCase {
 
     protected function createMerchant(string $email = 'loja@teste.test'): int {
         $stmt = $this->db->prepare(
-            "INSERT INTO merchants (public_code, owner_name, store_name, address, state, city, email, phone, category, cpf, password_hash)
-             VALUES (:code, 'Dona Teste', 'Loja Teste', 'Rua 1', 'SP', 'Sao Paulo', :email, '11988887777', 'varejo', :cpf, :hash)"
+            "INSERT INTO merchants (public_code, owner_name, store_name, address, state, city, email, email_verified_at, phone, category, cpf, password_hash)
+             VALUES (:code, 'Dona Teste', 'Loja Teste', 'Rua 1', 'SP', 'Sao Paulo', :email, CURRENT_TIMESTAMP, '11988887777', 'varejo', :cpf, :hash)"
         );
         $stmt->execute([
             ':code'  => strtoupper(substr(md5($email), 0, 8)),

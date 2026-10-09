@@ -66,6 +66,7 @@ function log_type_view(string $type, ?string $reversedType = null): array {
         $type === 'redeem' => ['Resgatou', 'badge-redeem', '−'],
         $type === 'reversal' && $reversedType === 'redeem' => ['Estorno de resgate', 'badge-reversal', '+'],
         $type === 'reversal' => ['Estorno', 'badge-reversal', '−'],
+        $type === 'expire' => ['Venceu', 'badge-expire', '−'],
         default            => [$type, '', ''],
     };
 }

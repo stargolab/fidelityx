@@ -33,10 +33,16 @@ class LoyaltyCardModel {
     }
 
     // cartao do cliente (pelo telefone) nesta loja. cartao anonimizado nao tem mais telefone, entao nao aparece.
+    // expires_at: quando o saldo vence pela validade da loja (ultima movimentacao + prazo, a mesma conta
+    // do EXPIRABLE la embaixo). NULL quando nao ha o que vencer: sem saldo ou loja sem prazo.
     public function findByMerchantAndPhone($merchantId, $phone) {
-        $sql = 'SELECT lc.id, lc.current_points, lc.total_accumulated, lc.customer_name, lc.consent_at, lc.consent_version, c.phone
+        $sql = 'SELECT lc.id, lc.current_points, lc.total_accumulated, lc.customer_name, lc.consent_at, lc.consent_version, c.phone,
+                       CASE WHEN lc.current_points > 0 AND m.points_expiry_months IS NOT NULL
+                            THEN COALESCE(lc.last_use_at, lc.created_at) + INTERVAL m.points_expiry_months MONTH
+                       END AS expires_at
                 FROM loyalty_cards lc
                 JOIN customers c ON c.id = lc.customer_id
+                JOIN merchants m ON m.id = lc.merchant_id
                 WHERE lc.merchant_id = :merchant_id AND c.phone = :phone';
         $stmt = $this->db->prepare($sql);
         $stmt->execute([

@@ -16,6 +16,11 @@ final class HelpersTest extends TestCase {
         $this->assertSame('', format_document(null));
     }
 
+    public function testFormatDateMostraSoODia(): void {
+        $this->assertSame('08/10/2027', format_date('2027-10-08 21:15:00'));
+        $this->assertSame('—', format_date(null));
+    }
+
     public function testVencimentoTemRotuloESeloProprioNoExtrato(): void {
         $this->assertSame(['Venceu', 'badge-expire', '−'], log_type_view('expire'));
     }

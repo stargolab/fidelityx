@@ -16,6 +16,7 @@ if (!$progress) {
     <?php endif; ?>
     <div class="progress" role="progressbar" aria-label="Progresso até o próximo prêmio"
          aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= (int)$progress['percent'] ?>">
-        <div class="progress-bar" style="width: <?= (int)$progress['percent'] ?>%"></div>
+        <?php // largura por classe, em passos de 5% (atributo style seria bloqueado pela CSP, task 48) ?>
+        <div class="progress-bar progress-w-<?= (int)(round(max(0, min(100, (int)$progress['percent'])) / 5) * 5) ?>"></div>
     </div>
 </div>

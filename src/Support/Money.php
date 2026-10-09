@@ -7,7 +7,11 @@ final class Money {
     // o que o lojista digitou -> centavos. aceita "12,90", "12.90", "1.234,56", "R$ 12,90", "12".
     // com virgula, a virgula e a decimal e o ponto e milhar; sem virgula, ponto seguido de 1 ou 2
     // digitos e decimal ("12.9"), senao e milhar ("1.234"). devolve null se nao for um valor.
+    // sinal de menos recusa o valor (antes o "-" era descartado e "-10" virava R$ 10,00).
     public static function toCents($input): ?int {
+        if (str_contains((string)$input, '-')) {
+            return null;
+        }
         $value = preg_replace('/[^\d,.]/', '', (string)$input);
         if ($value === '' || substr_count($value, ',') > 1) {
             return null;

@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS merchants (
   owner_name VARCHAR(255) NOT NULL,
   store_name VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL,
+  email_verified_at TIMESTAMP NULL, -- conta nova so usa o painel depois de confirmar o e-mail (task 50)
   phone VARCHAR(30) NOT NULL,
   category VARCHAR(30) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
@@ -57,18 +58,10 @@ CREATE TABLE IF NOT EXISTS customers (
 
   phone VARCHAR(30) NOT NULL,
 
-  -- Future-proofing (NULL)
-  cpf VARCHAR(11) NULL,
-  email VARCHAR(255) NULL,
-  birth_date DATE NULL,
-  gender ENUM('male', 'female', 'other') NULL,
-
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-  UNIQUE KEY uq_customers_phone (phone),
-  UNIQUE KEY uq_customers_cpf (cpf),
-  KEY idx_customers_email (email)
+  UNIQUE KEY uq_customers_phone (phone)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================
@@ -140,11 +133,11 @@ CREATE TABLE IF NOT EXISTS points_log (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
   card_id BIGINT UNSIGNED NOT NULL,
-  type ENUM('earn', 'redeem', 'reversal') NOT NULL, -- reversal = estorno de um earn
+  type ENUM('earn', 'redeem', 'reversal') NOT NULL, -- reversal = estorno de um earn ou de um redeem
   quantity INT NOT NULL,
   description VARCHAR(255) NOT NULL,
   reward_id BIGINT UNSIGNED NULL, -- preenchido quando type = 'redeem'
-  reverses_id BIGINT UNSIGNED NULL, -- preenchido quando type = 'reversal': o lancamento estornado
+  reverses_id BIGINT UNSIGNED NULL, -- preenchido quando type = 'reversal': o ganho ou resgate estornado
 
   -- para futuras implementações (NULL)
   responsible_user VARCHAR(255) NULL,
@@ -181,13 +174,76 @@ CREATE TABLE IF NOT EXISTS points_log (
 CREATE TABLE IF NOT EXISTS rate_limit_hits (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
-  bucket VARCHAR(40) NOT NULL, -- ex.: login_email, login_ip, balance_ip
+  bucket VARCHAR(40) NOT NULL, -- ex.: login_pair, login_ip, login_account, password_change, balance_ip
   key_hash CHAR(64) NOT NULL,
 
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   KEY idx_rate_limit_lookup (bucket, key_hash, created_at),
   KEY idx_rate_limit_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================
+-- password_resets // links de redefinicao de senha (task 21)
+-- =========================
+-- o token vai so no e-mail; aqui fica o hash sha-256 dele. vale 1 hora e uma vez so.
+CREATE TABLE IF NOT EXISTS password_resets (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+  merchant_id BIGINT UNSIGNED NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  used_at TIMESTAMP NULL, -- usado ou cancelado (pedido novo ou senha trocada)
+
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  UNIQUE KEY uq_password_resets_token (token_hash),
+  KEY idx_password_resets_merchant (merchant_id),
+
+  CONSTRAINT fk_password_resets_merchant
+    FOREIGN KEY (merchant_id) REFERENCES merchants(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================
+-- email_verifications // links de confirmacao do e-mail do lojista (task 50)
+-- =========================
+-- como o de nova senha: so o hash do token fica aqui. vale 24 horas e uma vez.
+CREATE TABLE IF NOT EXISTS email_verifications (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+  merchant_id BIGINT UNSIGNED NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  used_at TIMESTAMP NULL, -- usado ou cancelado (reenvio)
+
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  UNIQUE KEY uq_email_verifications_token (token_hash),
+  KEY idx_email_verifications_merchant (merchant_id),
+
+  CONSTRAINT fk_email_verifications_merchant
+    FOREIGN KEY (merchant_id) REFERENCES merchants(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =========================
+-- admins // administradores do FidelityX (task 30)
+-- =========================
+-- login proprio em admin/login, conta criada por php bin/create-admin.php. veem as lojas, nunca os clientes.
+CREATE TABLE IF NOT EXISTS admins (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+  email VARCHAR(255) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  UNIQUE KEY uq_admins_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =========================
@@ -207,4 +263,8 @@ INSERT IGNORE INTO schema_migrations (version) VALUES
   ('003_lgpd'),
   ('004_estorno'),
   ('005_regra_pontos'),
-  ('006_points_log_extrato');
+  ('006_points_log_extrato'),
+  ('007_customers_so_telefone'),
+  ('008_password_resets'),
+  ('009_email_verifications'),
+  ('010_admins');

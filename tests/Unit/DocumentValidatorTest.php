@@ -15,6 +15,10 @@ final class DocumentValidatorTest extends TestCase {
             'cnpj sem mascara' => ['11222333000181'],
             'cnpj com mascara' => ['11.222.333/0001-81'],
             'outro cnpj'       => ['11.444.777/0001-61'],
+            // task 57: exemplo oficial da Receita de cnpj alfanumerico
+            'cnpj alfanumerico'            => ['12ABC34501DE35'],
+            'cnpj alfanumerico com mascara' => ['12.ABC.345/01DE-35'],
+            'cnpj alfanumerico minusculo'  => ['12.abc.345/01de-35'],
         ];
     }
 
@@ -31,7 +35,18 @@ final class DocumentValidatorTest extends TestCase {
             'longo demais'              => ['112223330001811'],
             'vazio'                     => [''],
             'so letras'                 => ['abc.def.ghi-jk'],
+            'cnpj alfanumerico com dv errado' => ['12ABC34501DE36'],
+            'letra no digito verificador'     => ['12ABC34501DE3A'],
+            'cpf com letra'                   => ['5299822472A'],
+            'cnpj todas letras iguais'        => ['AAAAAAAAAAAAAA'],
+            'letra fora de A-Z'               => ['12ÁBC34501DE35'],
         ];
+    }
+
+    public function testNormalizaParaMaiusculasEDigitos(): void {
+        $this->assertSame('12ABC34501DE35', DocumentValidator::normalize(' 12.abc.345/01de-35 '));
+        $this->assertSame('52998224725', DocumentValidator::normalize('529.982.247-25'));
+        $this->assertSame('', DocumentValidator::normalize(null));
     }
 
     #[DataProvider('validos')]

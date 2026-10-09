@@ -158,7 +158,10 @@ final class ProfileTest extends HttpTestCase {
         $hash = $this->merchantField($id, 'password_hash');
         $this->loginAs('loja@teste.test');
 
-        $this->assertSame('merchant/profile&error=senha_curta', $this->changePassword('teste123', '12345'));
+        $this->assertSame('merchant/profile&error=senha_curta', $this->changePassword('teste123', '1234567'));
+        $this->assertSame('merchant/profile&error=senha_longa', $this->changePassword('teste123', str_repeat('a', 73)));
+        // task 46: a nova precisa ser outra (a senha atual de quem tem acesso indevido continuaria valendo)
+        $this->assertSame('merchant/profile&error=senha_igual', $this->changePassword('teste123', 'teste123'));
         $this->assertSame('merchant/profile&error=senhas_diferentes', $this->changePassword('teste123', 'nova-senha-1', 'nova-senha-2'));
         $this->assertSame('merchant/profile&error=campos_obrigatorios', $this->changePassword('teste123', ''));
         $this->assertSame($hash, $this->merchantField($id, 'password_hash'));

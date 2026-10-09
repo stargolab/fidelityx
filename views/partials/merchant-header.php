@@ -20,8 +20,8 @@ $navItems = [
     <link rel="stylesheet" href="/css/global.css">
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/app.css">
-    <?php // marca que o js esta ligado: so assim o menu do celular comeca fechado (sem js os links ficam visiveis) ?>
-    <script>document.documentElement.classList.add('js');</script>
+    <?php // marca que o js esta ligado (o menu do celular comeca fechado) e liga o menu: public/js/nav.js ?>
+    <script src="/js/nav.js"></script>
 </head>
 <body>
     <nav class="app-nav">
@@ -43,14 +43,6 @@ $navItems = [
             </form>
         </div>
     </nav>
-    <script>
-        // abre/fecha o menu no celular (no pc o botao fica escondido e o menu sempre aparece)
-        document.querySelector('.nav-toggle').addEventListener('click', function () {
-            var open = this.getAttribute('aria-expanded') === 'true';
-            this.setAttribute('aria-expanded', String(!open));
-            document.getElementById('nav-menu').classList.toggle('open', !open);
-        });
-    </script>
 
     <main class="app-main">
         <h1><?= e($title) ?></h1>

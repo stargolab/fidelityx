@@ -12,7 +12,7 @@
 </head>
 <body class="auth-page">
 
-    <div class="auth-container" style="max-width: 600px;"> <header class="auth-header">
+    <div class="auth-container auth-container-wide"> <header class="auth-header">
             <img src="/assets/fidelityx-logo.svg" alt="FidelityX Logo" class="auth-logo">
             <p>Registre sua empresa no ecossistema FidelityX</p>
         </header>
@@ -46,7 +46,7 @@
 
             <div class="form-group">
                 <label for="document">CPF ou CNPJ</label>
-                <input type="text" name="document" id="document" placeholder="000.000.000-00 ou 00.000.000/0000-00" inputmode="numeric" maxlength="18" data-mask="document" required>
+                <input type="text" name="document" id="document" placeholder="000.000.000-00 ou 00.000.000/0000-00" autocapitalize="characters" autocomplete="off" maxlength="18" data-mask="document" required>
             </div>
 
             <div class="form-row">
@@ -88,16 +88,16 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="password">Senha</label>
-                    <input type="password" name="password" id="password" placeholder="Mínimo 6 dígitos" minlength="6" required>
+                    <input type="password" name="password" id="password" placeholder="De 8 a 72 caracteres" minlength="8" maxlength="72" autocomplete="new-password" required>
                 </div>
 
                 <div class="form-group">
                     <label for="password_confirm">Confirmar Senha</label>
-                    <input type="password" name="password_confirm" id="password_confirm" placeholder="Repita a senha" minlength="6" required>
+                    <input type="password" name="password_confirm" id="password_confirm" placeholder="Repita a senha" minlength="8" maxlength="72" autocomplete="new-password" required>
                 </div>
             </div>
 
-            <button type="submit" class="btn-primary" style="margin-top: 1rem;">Criar Minha Conta Profissional</button>
+            <button type="submit" class="btn-primary btn-spaced">Criar Minha Conta Profissional</button>
         </form>
 
         <footer class="auth-footer">
@@ -106,5 +106,6 @@
     </div>
 
     <script src="/js/masks.js"></script>
+    <script src="/js/forms.js"></script>
 </body>
 </html>

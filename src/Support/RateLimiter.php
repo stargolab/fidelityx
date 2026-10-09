@@ -15,6 +15,11 @@ class RateLimiter {
 
     // true se a chave ja atingiu $max tentativas nos ultimos $windowSeconds
     public function tooMany(string $bucket, string $key, int $max, int $windowSeconds): bool {
+        return $this->count($bucket, $key, $windowSeconds) >= $max;
+    }
+
+    // tentativas da chave nos ultimos $windowSeconds
+    public function count(string $bucket, string $key, int $windowSeconds): int {
         $stmt = $this->db->prepare(
             'SELECT COUNT(*) FROM rate_limit_hits
              WHERE bucket = :bucket AND key_hash = :key_hash
@@ -26,7 +31,7 @@ class RateLimiter {
             ':window'   => $windowSeconds,
         ]);
 
-        return (int)$stmt->fetchColumn() >= $max;
+        return (int)$stmt->fetchColumn();
     }
 
     // registra uma tentativa

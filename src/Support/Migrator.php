@@ -116,19 +116,69 @@ final class Migrator {
         );
     }
 
-    // quebra um arquivo .sql em comandos. tira os comentarios de linha inteira e os comandos que
-    // escolhem o banco (USE / CREATE DATABASE): a migration roda sempre no banco da conexao (DB_NAME).
+    // quebra um arquivo .sql em comandos. tira os comentarios (-- e # ate o fim da linha, /* ... */) e os
+    // comandos que escolhem o banco (USE / CREATE DATABASE): a migration roda sempre no banco da conexao (DB_NAME).
+    // o ';' so separa comandos fora de texto ('...', "...", `...`) e fora de comentario, entao um
+    // DEFAULT 'a;b' ou um COMMENT com ponto e virgula nao corta o comando no meio.
     public static function statements(string $sql): array {
-        $sql = preg_replace('/^\s*--.*$/m', '', $sql);
         $statements = [];
-        foreach (explode(';', $sql) as $statement) {
+        $current = '';
+        $length = strlen($sql);
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $sql[$i];
+            $next = $sql[$i + 1] ?? '';
+
+            // texto entre aspas ou crases: copia ate fechar (\x e '' escapam, como no mysql)
+            if ($char === "'" || $char === '"' || $char === '`') {
+                $current .= $char;
+                for ($i++; $i < $length; $i++) {
+                    $current .= $sql[$i];
+                    if ($sql[$i] === '\\' && $char !== '`' && $i + 1 < $length) {
+                        $current .= $sql[++$i];
+                    } elseif ($sql[$i] === $char) {
+                        if (($sql[$i + 1] ?? '') !== $char) {
+                            break;
+                        }
+                        $current .= $sql[++$i];
+                    }
+                }
+                continue;
+            }
+
+            // comentario de linha: "-- " (o mysql exige o espaco) ou "#"
+            if (($char === '-' && $next === '-' && in_array($sql[$i + 2] ?? "\n", [' ', "\t", "\r", "\n"], true)) || $char === '#') {
+                $end = strpos($sql, "\n", $i);
+                $i = $end === false ? $length : $end - 1;
+                continue;
+            }
+
+            if ($char === '/' && $next === '*') {
+                $end = strpos($sql, '*/', $i + 2);
+                $i = $end === false ? $length : $end + 1;
+                $current .= ' ';
+                continue;
+            }
+
+            if ($char === ';') {
+                $statements[] = $current;
+                $current = '';
+                continue;
+            }
+
+            $current .= $char;
+        }
+        $statements[] = $current;
+
+        $result = [];
+        foreach ($statements as $statement) {
             $statement = trim($statement);
             if ($statement === '' || preg_match('/^(USE|CREATE\s+DATABASE)\s/i', $statement)) {
                 continue;
             }
-            $statements[] = $statement;
+            $result[] = $statement;
         }
-        return $statements;
+        return $result;
     }
 
     // o mysql confirma cada ALTER/CREATE na hora (nao ha rollback de DDL): se um comando falhar no meio,

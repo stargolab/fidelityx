@@ -1,0 +1,18 @@
+# analise estatica (task 51): comeca no nivel 5 com a baseline dos erros que ja existiam.
+# erro novo quebra o "composer analyse"; ao corrigir um da baseline, gere de novo:
+#   composer analyse -- --generate-baseline
+# subir de nivel: troque o level, gere a baseline e va limpando aos poucos.
+includes:
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+    paths:
+        - src
+        - views
+        - bin
+        - public
+    # as views recebem as variaveis pelo extract() do View::render, que o phpstan nao enxerga: os
+    # "might not be defined" delas estao na baseline. variavel nova numa view entra la tambem.
+    bootstrapFiles:
+        - vendor/autoload.php

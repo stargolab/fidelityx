@@ -170,3 +170,60 @@
     border-color: var(--warning);
     color: var(--warning-text);
 }
+
+/* acessibilidade (task 18) ------------------------------------------------ */
+
+/* foco do teclado sempre visivel (inputs e selects ja tem o anel em :focus) */
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible,
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* campo apontado pela mensagem de erro (public/js/forms.js) */
+.form-group input.is-invalid,
+.form-group select.is-invalid,
+.form-group textarea.is-invalid,
+input.is-invalid {
+    border-color: var(--error);
+    box-shadow: 0 0 0 3px var(--error-soft);
+}
+
+/* botao enviando: texto apagado + girador, sem aceitar outro clique */
+button.is-loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+}
+
+button.is-loading::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 1.1em;
+    height: 1.1em;
+    border: 2px solid currentColor;
+    border-color: var(--text-main) transparent var(--text-main) transparent;
+    border-radius: 50%;
+    animation: btn-spin 0.8s linear infinite;
+}
+
+.btn-primary.is-loading::after {
+    border-color: var(--on-primary) transparent var(--on-primary) transparent;
+}
+
+@keyframes btn-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    button.is-loading::after { animation-duration: 2.4s; }
+}
+
+/* espaco que antes vinha em style="" na view */
+.btn-spaced { margin-top: 1rem; }

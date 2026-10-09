@@ -42,7 +42,7 @@ class MerchantModel{
     // dados que o authGuard confere a cada requisicao (o hash da senha serve pra derrubar
     // as sessoes antigas quando a senha e trocada, ver SessionGuard::passwordSignature)
     public function findById($merchantId) {
-        $stmt = $this->db->prepare('SELECT id, owner_name, store_name, status, points_rule_cents, password_hash FROM merchants WHERE id = :id');
+        $stmt = $this->db->prepare('SELECT id, owner_name, store_name, email, email_verified_at, status, points_rule_cents, password_hash FROM merchants WHERE id = :id');
         $stmt->execute([':id' => $merchantId]);
 
         return $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -106,5 +106,31 @@ class MerchantModel{
         $stmt->execute([':code' => $code]);
 
         return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    // painel administrativo (task 30): as lojas, da mais nova pra mais antiga, com o numero de clientes.
+    // so dados da loja: nada de cliente (nome, telefone) sai daqui.
+    public function countAll(): int {
+        return (int)$this->db->query('SELECT COUNT(*) FROM merchants')->fetchColumn();
+    }
+
+    public function pageForAdmin(int $limit, int $offset): array {
+        $sql = 'SELECT m.id, m.store_name, m.owner_name, m.email, m.cpf, m.cnpj, m.status, m.created_at,
+                       (SELECT COUNT(*) FROM loyalty_cards lc WHERE lc.merchant_id = m.id AND lc.anonymized_at IS NULL) AS customers
+                FROM merchants m
+                ORDER BY m.created_at DESC, m.id DESC
+                LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset;
+        return $this->db->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    // ativa ou desativa a loja. desativada perde o acesso na hora (o authGuard confere o status a cada requisicao).
+    // devolve false se a loja nao existe.
+    public function setStatus(int $merchantId, string $status): bool {
+        if (!in_array($status, ['active', 'inactive'], true)) {
+            return false;
+        }
+        $stmt = $this->db->prepare('UPDATE merchants SET status = :status WHERE id = :id');
+        $stmt->execute([':status' => $status, ':id' => $merchantId]);
+        return $stmt->rowCount() > 0 || $this->findById($merchantId) !== false;
     }
 }

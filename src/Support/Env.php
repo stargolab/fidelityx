@@ -12,6 +12,7 @@ final class Env {
         'DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASS',
         'APP_URL', 'APP_TIMEZONE', 'TRUSTED_PROXIES', 'LOG_FILE',
         'BACKUP_DIR', 'BACKUP_KEEP_DAYS', 'MYSQLDUMP_BIN',
+        'MAIL_DRIVER', 'MAIL_LOG_FILE',
     ];
 
     // sem estas o banco nao conecta (DB_PASS pode ser vazia, DB_PORT tem padrao)

@@ -29,6 +29,7 @@ merchants 1───N loyalty_cards N───1 customers
 | `password_hash` | BCRYPT (`password_hash`). |
 | `plan` | `free`/`pro`. Ainda não é usado pelo código (pós-MVP). |
 | `status` | Padrão `active`. Contas `inactive` são barradas no login. |
+| `email_verified_at` | Quando o e-mail foi confirmado pelo link (task 50). `NULL` = conta nova ainda sem confirmar: entra, mas só vê a tela de confirmação. A migration 009 marcou as contas antigas como confirmadas. |
 | `category`, `state` | Validados contra as listas de `MerchantController::CATEGORIES` e `STATES`. |
 
 ### `customers` — clientes
@@ -36,7 +37,7 @@ merchants 1───N loyalty_cards N───1 customers
 |---|---|
 | `phone` | `UNIQUE`, 10 ou 11 dígitos sem máscara. É a chave de busca no balcão e na consulta pública. |
 
-| `cpf`, `email`, `birth_date`, `gender` | Opcionais, para uso futuro. |
+O cliente é **só o telefone** (task 11, ADR 002). As colunas `cpf`, `email`, `birth_date` e `gender`, que estavam “para uso futuro”, saíram na migration 007 (task 49): dado pessoal sem uso e sem base legal não fica no banco. Nome e consentimento ficam no cartão de cada loja.
 
 ### `loyalty_cards` — cartões de fidelidade
 | Coluna | Observação |
@@ -59,9 +60,9 @@ merchants 1───N loyalty_cards N───1 customers
 ### `points_log` — histórico
 | Coluna | Observação |
 |---|---|
-| `type` | `earn` (ganho), `redeem` (resgate) ou `reversal` (estorno de um ganho). `quantity` é sempre positivo. |
+| `type` | `earn` (ganho), `redeem` (resgate) ou `reversal` (estorno de um ganho ou de um resgate, task 44). `quantity` é sempre positivo: o sinal vem do tipo (o estorno de resgate devolve pontos). |
 | `reward_id` | Preenchido em resgates. Vira `NULL` se o prêmio for apagado. |
-| `reverses_id` | Preenchido em estornos (`reversal`): o lançamento estornado. `UNIQUE`, então cada lançamento é estornado no máximo uma vez. |
+| `reverses_id` | Preenchido em estornos (`reversal`): o ganho ou resgate estornado. `UNIQUE`, então cada movimentação é estornada no máximo uma vez. |
 | `ip_address` | IP de quem fez a operação (o do cliente, mesmo atrás de proxy confiável: `TRUSTED_PROXIES`). |
 | índice `idx_points_log_card_created` | `(card_id, created_at)`: o extrato de um cartão é lido já na ordem de data, sem ordenar tudo a cada página. Também atende a chave estrangeira de `card_id`. |
 
@@ -85,3 +86,22 @@ O `schema.sql` já insere todas as migrations existentes: banco novo nasce sem p
 - **Lançar e resgatar** rodam em transação: o saldo do cartão e a linha do `points_log` são gravados juntos, ou nenhum dos dois é gravado.
 - **Resgate** trava a linha do cartão com `SELECT ... FOR UPDATE` antes de checar o saldo. Assim, dois resgates simultâneos não conseguem gastar os mesmos pontos.
 - **Cartão novo** é criado com `INSERT ... ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`, que devolve o id existente sem risco de duplicar.
+
+### `password_resets` — links de nova senha (task 21)
+| Coluna | Observação |
+|---|---|
+| `merchant_id` | Dono do link. `ON DELETE CASCADE`. |
+| `token_hash` | `UNIQUE`. SHA-256 do token; o token em si só existe no e-mail. |
+| `expires_at` | 1 hora depois do pedido. |
+| `used_at` | Preenchido quando o link é usado, quando um pedido novo é feito ou quando a senha é trocada por ele: depois disso não vale mais. |
+
+### `email_verifications` — links de confirmação do e-mail (task 50)
+Mesma forma da `password_resets` (`merchant_id`, `token_hash` com `UNIQUE`, `expires_at`, `used_at`), com validade de 24 horas. Reenviar o link cancela o anterior.
+
+### `admins` — administradores do FidelityX (task 30)
+| Coluna | Observação |
+|---|---|
+| `email` | `UNIQUE`. Login do painel `admin/login`. |
+| `password_hash` | bcrypt. A conta é criada por `php bin/create-admin.php`. |
+
+Separada de `merchants` de propósito: um admin não é uma loja e um lojista nunca vira admin por um campo trocado.

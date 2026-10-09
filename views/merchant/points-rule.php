@@ -26,7 +26,7 @@
 
     <?php if ($ruleCents): ?>
         <form action="<?= e(url('merchant/points-rule')) ?>" method="POST" class="rule-clear"
-              onsubmit="return confirm('Remover a regra? No balcão, os pontos voltam a ser digitados direto.');">
+              data-confirm="Remover a regra? No balcão, os pontos voltam a ser digitados direto.">
             <?= Csrf::field() ?>
             <input type="hidden" name="action" value="clear">
             <button type="submit" class="btn-secondary btn-danger">Remover regra</button>

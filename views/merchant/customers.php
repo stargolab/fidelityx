@@ -23,6 +23,7 @@
         <?php endif; ?>
     <?php else: ?>
         <p class="muted list-count"><?= $paginator->total ?> <?= $paginator->total === 1 ? 'cliente' : 'clientes' ?></p>
+        <p class="form-back"><a href="<?= e(url('merchant/export', ['tipo' => 'clientes'] + ($search === '' ? [] : ['q' => $search]))) ?>" download>Baixar planilha (CSV)</a></p>
         <div class="table-wrap">
             <table>
                 <thead>

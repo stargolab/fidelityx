@@ -70,10 +70,12 @@ class LoyaltyCardModel {
         }
     }
 
-    // estorno de um lancamento de pontos (digitou 500 em vez de 50). nada e apagado: o estorno vira uma
-    // linha nova 'reversal' que aponta pro lancamento, e o saldo e o total acumulado voltam ao que eram.
-    // so vale para lancamento (earn) desta loja, feito nas ultimas REVERSAL_WINDOW_HOURS horas, ainda nao estornado,
-    // e quando o saldo atual cobre os pontos (se o cliente ja gastou, o saldo ficaria negativo).
+    // estorno de um lancamento de pontos (digitou 500 em vez de 50) ou de um resgate feito por engano (task 44).
+    // nada e apagado: o estorno vira uma linha nova 'reversal' que aponta pra movimentacao estornada.
+    // - lancamento (earn): saldo e total acumulado voltam ao que eram, e so quando o saldo atual cobre os pontos
+    //   (se o cliente ja gastou, o saldo ficaria negativo).
+    // - resgate (redeem): os pontos voltam ao saldo; o total acumulado nao muda (o resgate nao mexeu nele).
+    // so vale para movimentacao desta loja, feita nas ultimas REVERSAL_WINDOW_HOURS horas e ainda nao estornada.
     // devolve 'ok', 'not_found', 'already', 'expired' ou 'insufficient'.
     public const REVERSAL_WINDOW_HOURS = 24;
 
@@ -81,12 +83,13 @@ class LoyaltyCardModel {
         $this->db->beginTransaction();
         try {
             $stmt = $this->db->prepare(
-                "SELECT pl.id, pl.card_id, pl.quantity, pl.description,
+                "SELECT pl.id, pl.card_id, pl.type, pl.quantity, pl.description,
                         pl.created_at >= NOW() - INTERVAL " . self::REVERSAL_WINDOW_HOURS . " HOUR AS recent,
                         EXISTS (SELECT 1 FROM points_log r WHERE r.reverses_id = pl.id) AS reversed
                  FROM points_log pl
                  JOIN loyalty_cards lc ON lc.id = pl.card_id
-                 WHERE pl.id = :id AND lc.merchant_id = :merchant_id AND pl.type = 'earn' AND lc.anonymized_at IS NULL"
+                 WHERE pl.id = :id AND lc.merchant_id = :merchant_id AND pl.type IN ('earn', 'redeem')
+                   AND lc.anonymized_at IS NULL"
             );
             $stmt->execute([':id' => $logId, ':merchant_id' => $merchantId]);
             $entry = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -106,17 +109,25 @@ class LoyaltyCardModel {
             $stmt = $this->db->prepare('SELECT current_points FROM loyalty_cards WHERE id = :id FOR UPDATE');
             $stmt->execute([':id' => $entry['card_id']]);
             $quantity = (int)$entry['quantity'];
-            if ((int)$stmt->fetchColumn() < $quantity) {
-                $this->db->rollBack();
-                return 'insufficient';
-            }
 
-            $this->db->prepare(
-                'UPDATE loyalty_cards
-                 SET current_points = current_points - :p1, total_accumulated = total_accumulated - :p2,
-                     last_use_at = CURRENT_TIMESTAMP
-                 WHERE id = :id'
-            )->execute([':p1' => $quantity, ':p2' => $quantity, ':id' => $entry['card_id']]);
+            if ($entry['type'] === 'redeem') {
+                $this->db->prepare(
+                    'UPDATE loyalty_cards SET current_points = current_points + :p1, last_use_at = CURRENT_TIMESTAMP
+                     WHERE id = :id'
+                )->execute([':p1' => $quantity, ':id' => $entry['card_id']]);
+            } else {
+                if ((int)$stmt->fetchColumn() < $quantity) {
+                    $this->db->rollBack();
+                    return 'insufficient';
+                }
+
+                $this->db->prepare(
+                    'UPDATE loyalty_cards
+                     SET current_points = current_points - :p1, total_accumulated = total_accumulated - :p2,
+                         last_use_at = CURRENT_TIMESTAMP
+                     WHERE id = :id'
+                )->execute([':p1' => $quantity, ':p2' => $quantity, ':id' => $entry['card_id']]);
+            }
 
             $description = mb_substr('Estorno: ' . $entry['description'], 0, 255);
             $this->log($entry['card_id'], 'reversal', $quantity, $description, null, (int)$entry['id']);
@@ -220,6 +231,73 @@ class LoyaltyCardModel {
              WHERE id = :id AND anonymized_at IS NULL'
         );
         $stmt->execute([':version' => $version, ':id' => $cardId]);
+    }
+
+    // corrige o nome que o cliente deu a esta loja (digitado errado no cadastro rapido). so mexe no cartao
+    // desta loja: o nome dado em outra loja continua o mesmo. devolve false se o cartao nao for desta loja.
+    public function rename($cardId, $merchantId, string $name): bool {
+        $stmt = $this->db->prepare(
+            'UPDATE loyalty_cards SET customer_name = :name
+             WHERE id = :id AND merchant_id = :merchant_id AND anonymized_at IS NULL'
+        );
+        $stmt->execute([':name' => $name, ':id' => $cardId, ':merchant_id' => $merchantId]);
+        return $stmt->rowCount() > 0 || $this->belongsTo($cardId, $merchantId);
+    }
+
+    // cliente trocou de numero: o cartao DESTA loja (saldo, historico, nome, consentimento) passa para o
+    // telefone novo. cartoes do numero antigo em outras lojas nao mudam (cada loja move o seu).
+    // o telefone antigo some quando nao sobra cartao dele em nenhuma loja (como na exclusao).
+    // devolve 'ok', 'taken' (o telefone novo ja tem cartao nesta loja) ou 'not_found'.
+    public function changePhone($cardId, $merchantId, string $newPhone): string {
+        $this->db->beginTransaction();
+        try {
+            $stmt = $this->db->prepare(
+                'SELECT customer_id FROM loyalty_cards
+                 WHERE id = :id AND merchant_id = :merchant_id AND anonymized_at IS NULL
+                 FOR UPDATE'
+            );
+            $stmt->execute([':id' => $cardId, ':merchant_id' => $merchantId]);
+            $oldCustomerId = $stmt->fetchColumn();
+            if ($oldCustomerId === false || $oldCustomerId === null) {
+                $this->db->rollBack();
+                return 'not_found';
+            }
+
+            $newCustomerId = (new CustomerModel($this->db))->findOrCreate($newPhone);
+            if ($newCustomerId === (int)$oldCustomerId) {
+                $this->db->rollBack();
+                return 'ok';
+            }
+
+            // o UNIQUE (merchant_id, customer_id) barra o telefone que ja e cliente desta loja
+            $this->db->prepare('UPDATE loyalty_cards SET customer_id = :customer_id WHERE id = :id')
+                ->execute([':customer_id' => $newCustomerId, ':id' => $cardId]);
+
+            $this->db->prepare(
+                'DELETE FROM customers
+                 WHERE id = :c1 AND NOT EXISTS (SELECT 1 FROM loyalty_cards WHERE customer_id = :c2)'
+            )->execute([':c1' => $oldCustomerId, ':c2' => $oldCustomerId]);
+
+            $this->db->commit();
+            return 'ok';
+        } catch (\PDOException $e) {
+            $this->db->rollBack();
+            if (($e->errorInfo[1] ?? null) === 1062) {
+                return 'taken';
+            }
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    private function belongsTo($cardId, $merchantId): bool {
+        $stmt = $this->db->prepare(
+            'SELECT 1 FROM loyalty_cards WHERE id = :id AND merchant_id = :merchant_id AND anonymized_at IS NULL'
+        );
+        $stmt->execute([':id' => $cardId, ':merchant_id' => $merchantId]);
+        return (bool)$stmt->fetchColumn();
     }
 
     // exclusao a pedido do cliente (LGPD), tudo ou nada:

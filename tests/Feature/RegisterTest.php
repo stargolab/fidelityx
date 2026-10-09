@@ -27,6 +27,32 @@ final class RegisterTest extends HttpTestCase {
         $this->loginAs('padaria@teste.test', '12345678');
     }
 
+    // task 57: cnpj alfanumerico (desde jul/2026) cadastra, grava em maiusculas e aparece formatado no perfil
+    public function testCadastraCnpjAlfanumerico(): void {
+        $this->assertSame('merchant/login&success=cadastrado', $this->register(['document' => '12.abc.345/01de-35']));
+
+        $this->assertSame('12ABC34501DE35', $this->scalar('SELECT cnpj FROM merchants'));
+        $this->assertNull($this->scalar('SELECT cpf FROM merchants'));
+
+        $this->loginAs('padaria@teste.test');
+        $this->confirmEmailFromMail('padaria@teste.test');
+        $this->get('merchant/profile');
+        $this->assertStringContainsString('value="12.ABC.345/01DE-35"', $this->lastBody);
+        $this->assertStringContainsString('>CNPJ<', $this->lastBody);
+    }
+
+    public function testCnpjNumericoContinuaValendoEAlfanumericoErradoNao(): void {
+        $this->assertSame('merchant/register&error=documento_invalido', $this->register(['document' => '12.ABC.345/01DE-36']));
+        $this->assertSame('merchant/login&success=cadastrado', $this->register(['document' => '11.222.333/0001-81']));
+        $this->assertSame('11222333000181', $this->scalar('SELECT cnpj FROM merchants'));
+    }
+
+    // o mesmo cnpj digitado em minusculas nao vira uma segunda conta
+    public function testCnpjAlfanumericoRepetidoEmMinusculasEDuplicado(): void {
+        $this->register(['document' => '12ABC34501DE35']);
+        $this->assertSame('merchant/register&error=ja_cadastrado', $this->register(['document' => '12abc34501de35', 'email' => 'outra@teste.test']));
+    }
+
     // senha antiga, de antes da regra, continua entrando
     public function testSenhaCurtaCadastradaAntesDaRegraContinuaValendo(): void {
         $id = $this->createMerchant('loja@teste.test');

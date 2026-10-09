@@ -9,12 +9,16 @@ use RuntimeException;
 abstract class HttpTestCase extends DatabaseTestCase {
     private static $server = null;
     private static string $baseUrl;
+    // e-mails "enviados" pelo servidor de teste (MAIL_DRIVER=log), uma linha json por mensagem
+    private static string $mailLog;
     private string $cookieJar;
     protected string $lastBody = '';
     // cabecalhos da ultima resposta: nome em minusculas => lista de valores (set-cookie pode vir repetido)
     protected array $lastHeaders = [];
     // ip do cliente simulado nas proximas requisicoes (null = o ip real da conexao, 127.0.0.1)
     private ?string $clientIp = null;
+    // cabecalhos extras das proximas requisicoes (ex.: X-Forwarded-Proto de um proxy https)
+    private array $extraHeaders = [];
 
     public static function setUpBeforeClass(): void {
         $port = self::freePort();
@@ -28,6 +32,10 @@ abstract class HttpTestCase extends DatabaseTestCase {
         // o teste e o "proxy confiavel" do servidor: com isso um teste pode se passar por clientes de
         // ips diferentes mandando X-Forwarded-For (ver fromIp). sem o cabecalho nada muda: vale o 127.0.0.1.
         $env['TRUSTED_PROXIES'] = '127.0.0.1';
+        // e-mail transacional vai pra um arquivo que o teste le (sentMails), nunca pra fora
+        self::$mailLog = tempnam(sys_get_temp_dir(), 'fx-mail');
+        $env['MAIL_DRIVER'] = 'log';
+        $env['MAIL_LOG_FILE'] = self::$mailLog;
 
         // comando em array: roda o php direto, sem shell no meio (assim o proc_terminate mata o servidor mesmo)
         self::$server = proc_open(
@@ -57,12 +65,20 @@ abstract class HttpTestCase extends DatabaseTestCase {
             proc_close(self::$server);
             self::$server = null;
         }
+        @unlink(self::$mailLog);
     }
 
     protected function setUp(): void {
         parent::setUp();
         $this->cookieJar = tempnam(sys_get_temp_dir(), 'fx-cookie');
         $this->clientIp = null;
+        file_put_contents(self::$mailLog, '');
+        $this->extraHeaders = [];
+    }
+
+    // as proximas requisicoes levam estes cabecalhos (o servidor de teste confia no 127.0.0.1 como proxy)
+    protected function withHeaders(array $headers): void {
+        $this->extraHeaders = $headers;
     }
 
     // as proximas requisicoes chegam como se viessem deste ip (outra pessoa, em outra rede).
@@ -74,6 +90,21 @@ abstract class HttpTestCase extends DatabaseTestCase {
 
     protected function tearDown(): void {
         @unlink($this->cookieJar);
+    }
+
+    // e-mails que o sistema mandou neste teste: [['to' =>, 'subject' =>, 'body' =>, 'at' =>], ...]
+    protected function sentMails(): array {
+        return \App\Mail\LogMailer::read(self::$mailLog);
+    }
+
+    // abre o link do ultimo e-mail de confirmacao mandado para $email (task 50) e devolve o destino do redirect
+    protected function confirmEmailFromMail(string $email): ?string {
+        foreach (array_reverse($this->sentMails()) as $mail) {
+            if ($mail['to'] === $email && preg_match('#url=merchant%2Fverify-email&token=([a-f0-9]{64})#', $mail['body'], $m)) {
+                return $this->get('merchant/verify-email&token=' . $m[1])[1];
+            }
+        }
+        $this->fail("nenhum e-mail de confirmacao para $email");
     }
 
     // sessao nova (como apagar o cookie no navegador)
@@ -148,8 +179,12 @@ abstract class HttpTestCase extends DatabaseTestCase {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($fields));
         }
+        $headers = $this->extraHeaders;
         if ($this->clientIp !== null) {
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Forwarded-For: ' . $this->clientIp]);
+            $headers[] = 'X-Forwarded-For: ' . $this->clientIp;
+        }
+        if ($headers !== []) {
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         }
 
         $body = curl_exec($ch);

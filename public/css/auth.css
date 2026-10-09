@@ -95,3 +95,15 @@
         font-size: 1rem; /* Rodapé mais visível */
     }
 }
+
+/* cadastro: formulario com mais campos, card mais largo (antes era style="" na view) */
+.auth-container.auth-container-wide {
+    max-width: 600px;
+}
+
+/* link "Esqueci minha senha" logo abaixo do botao de entrar (task 21) */
+.auth-forgot {
+    margin-top: 1rem;
+    text-align: center;
+    font-size: 0.9rem;
+}

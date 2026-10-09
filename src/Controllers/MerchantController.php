@@ -3,8 +3,12 @@
 namespace App\Controllers;
 
 use App\Models\CustomerModel;
+use App\Models\EmailVerificationModel;
 use App\Models\LoyaltyCardModel;
+use App\Mail\MailerFactory;
+use App\Mail\Message;
 use App\Models\MerchantModel;
+use App\Models\PasswordResetModel;
 use App\Models\PointsLogModel;
 use App\Models\RewardModel;
 use App\Support\Csrf;
@@ -12,6 +16,8 @@ use App\Support\LoginGuard;
 use App\Support\Money;
 use App\Support\Paginator;
 use App\Support\PasswordPolicy;
+use App\Support\Period;
+use App\Support\Csv;
 use App\Support\Privacy;
 use App\Support\QrSvg;
 use App\Support\RateLimiter;
@@ -40,6 +46,8 @@ class MerchantController {
 
     private const MAX_POINTS_PER_ENTRY = 10000;
     private const PER_PAGE = 20;
+    // a exportacao le o banco em blocos, pra loja grande nao carregar tudo na memoria de uma vez
+    private const EXPORT_CHUNK = 500;
     // confirmacao do lancamento: o botao Desfazer fica UNDO_SECONDS na tela; o aviso so aparece
     // se o lancamento tiver ate UNDO_BANNER_SECONDS (o estorno em si vale por 24 h, pelo extrato)
     private const UNDO_SECONDS = 30;
@@ -52,6 +60,12 @@ class MerchantController {
     // senha atual errada na troca de senha: mesmo limite do login, contado por conta
     private const MAX_PASSWORD_FAILURES = 5;
     private const PASSWORD_WINDOW_SECONDS = 900;
+    // pedidos de link de senha (task 21): por ip (quem testa varios e-mails) e por e-mail (nao lotar a caixa de ninguem)
+    private const MAX_RESET_REQUESTS_PER_IP = 10;
+    private const MAX_RESET_REQUESTS_PER_EMAIL = 3;
+    private const RESET_WINDOW_SECONDS = 3600;
+    // reenvio do link de confirmacao do e-mail (task 50), por conta
+    private const MAX_VERIFY_RESENDS = 3;
 
     private $db;
     private $merchantModel;
@@ -91,6 +105,99 @@ class MerchantController {
         }
 
         View::render('auth/merchant/login');
+    }
+
+    // esqueci a senha (task 21): pede o e-mail e manda o link. a resposta e sempre a mesma, exista
+    // o e-mail ou nao: a tela nao revela quais e-mails sao lojas.
+    public function renderForgot() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handleForgot();
+            return;
+        }
+
+        View::render('auth/merchant/forgot');
+    }
+
+    private function handleForgot() {
+        Csrf::verify();
+
+        $email = trim((string)($_POST['email'] ?? ''));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            redirect('merchant/forgot', ['error' => 'email_invalido']);
+        }
+
+        $limiter = new RateLimiter($this->db);
+        $ip = RateLimiter::clientKey();
+        if ($limiter->tooMany('password_reset_ip', $ip, self::MAX_RESET_REQUESTS_PER_IP, self::RESET_WINDOW_SECONDS)
+            || $limiter->tooMany('password_reset_email', $email, self::MAX_RESET_REQUESTS_PER_EMAIL, self::RESET_WINDOW_SECONDS)) {
+            redirect('merchant/forgot', ['error' => 'muitos_pedidos']);
+        }
+        $limiter->hit('password_reset_ip', $ip);
+        $limiter->hit('password_reset_email', $email);
+
+        // conta desativada nao recebe link (nao conseguiria entrar mesmo)
+        $merchant = $this->merchantModel->findByEmail($email);
+        if ($merchant && $merchant['status'] === 'active') {
+            $token = (new PasswordResetModel($this->db))->create((int)$merchant['id']);
+            $link = $this->publicBaseUrl() . url('merchant/reset', ['token' => $token]);
+            MailerFactory::fromEnv()->send(new Message(
+                $email,
+                'FidelityX: criar uma nova senha',
+                "Olá, {$merchant['owner_name']}.\n\n"
+                . "Recebemos um pedido para criar uma nova senha no painel da loja {$merchant['store_name']}.\n"
+                . "Abra o link abaixo em até 1 hora (ele só funciona uma vez):\n\n$link\n\n"
+                . "Se não foi você, ignore este e-mail: a senha atual continua valendo."
+            ));
+        }
+
+        redirect('merchant/forgot', ['success' => 'reset_enviado']);
+    }
+
+    // link do e-mail: escolhe a senha nova. o token vem na url (GET) e volta num campo escondido (POST).
+    public function renderReset() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->handleReset();
+            return;
+        }
+
+        $token = (string)($_GET['token'] ?? '');
+        if (!(new PasswordResetModel($this->db))->isValid($token)) {
+            redirect('merchant/forgot', ['error' => 'link_invalido']);
+        }
+
+        View::render('auth/merchant/reset', [
+            'token'       => $token,
+            'minPassword' => PasswordPolicy::MIN_BYTES,
+            'maxPassword' => PasswordPolicy::MAX_BYTES,
+        ]);
+    }
+
+    private function handleReset() {
+        Csrf::verify();
+
+        $token = (string)($_POST['token'] ?? '');
+        $new = (string)($_POST['new_password'] ?? '');
+        $confirm = (string)($_POST['new_password_confirm'] ?? '');
+        $resets = new PasswordResetModel($this->db);
+
+        if (!$resets->isValid($token)) {
+            redirect('merchant/forgot', ['error' => 'link_invalido']);
+        }
+
+        $passwordProblem = PasswordPolicy::problem($new);
+        if ($passwordProblem !== null) {
+            redirect('merchant/reset', ['token' => $token, 'error' => $passwordProblem]);
+        }
+        if (!hash_equals($new, $confirm)) {
+            redirect('merchant/reset', ['token' => $token, 'error' => 'senhas_diferentes']);
+        }
+
+        // a senha nova derruba as sessoes abertas com a antiga (password_sig, ver authGuard)
+        if ($resets->resetPassword($token, password_hash($new, PASSWORD_BCRYPT)) === null) {
+            redirect('merchant/forgot', ['error' => 'link_invalido']);
+        }
+
+        redirect('merchant/login', ['success' => 'senha_redefinida']);
     }
 
     // RENDERS (privadas, exigem login) -----------------------------------
@@ -292,18 +399,61 @@ class MerchantController {
         ]);
     }
 
-    // relatorios: indicadores da loja + historico de todas as movimentacoes, paginado
+    // relatorios: indicadores da loja + historico das movimentacoes, paginado, os dois pelo periodo escolhido (task 59)
     public function renderReports() {
         $merchantId = $this->authGuard();
 
+        $period = Period::fromQuery($_GET);
         $logModel = new PointsLogModel($this->db);
-        $paginator = new Paginator($logModel->countByMerchant($merchantId), $_GET['page'] ?? 1, self::PER_PAGE);
+        $paginator = new Paginator($logModel->countByMerchant($merchantId, $period), $_GET['page'] ?? 1, self::PER_PAGE);
 
         View::render('merchant/reports', [
-            'stats'     => $logModel->statsByMerchant($merchantId),
-            'entries'   => $logModel->pageByMerchant($merchantId, $paginator->perPage, $paginator->offset()),
+            'stats'     => $logModel->statsByMerchant($merchantId, $period),
+            'entries'   => $logModel->pageByMerchant($merchantId, $paginator->perPage, $paginator->offset(), $period),
             'paginator' => $paginator,
+            'period'    => $period,
         ]);
+    }
+
+    // planilha (csv) do historico do periodo ou da lista de clientes (com a busca), so desta loja (task 59)
+    public function renderExport() {
+        $merchantId = $this->authGuard();
+        $today = date('Y-m-d');
+
+        if (($_GET['tipo'] ?? '') === 'clientes') {
+            $search = mb_substr(trim((string)($_GET['q'] ?? '')), 0, 100);
+            $cardModel = new LoyaltyCardModel($this->db);
+            Csv::sendHeaders("clientes-$today.csv");
+            echo Csv::BOM . Csv::line(['Cliente', 'Telefone', 'Saldo', 'Total acumulado', 'Última visita']);
+            for ($offset = 0; $rows = $cardModel->searchByMerchant($merchantId, $search, self::EXPORT_CHUNK, $offset); $offset += self::EXPORT_CHUNK) {
+                foreach ($rows as $row) {
+                    echo Csv::line([
+                        (string)$row['name'], format_phone($row['phone']), (int)$row['current_points'],
+                        (int)$row['total_accumulated'], format_datetime($row['last_use_at']),
+                    ]);
+                }
+            }
+            return;
+        }
+
+        $period = Period::fromQuery($_GET);
+        $logModel = new PointsLogModel($this->db);
+        Csv::sendHeaders("historico-$today.csv");
+        echo Csv::BOM . Csv::line(['Data', 'Cliente', 'Telefone', 'Tipo', 'Pontos', 'Descrição']);
+        for ($offset = 0; $rows = $logModel->pageByMerchant($merchantId, self::EXPORT_CHUNK, $offset, $period); $offset += self::EXPORT_CHUNK) {
+            foreach ($rows as $row) {
+                [$label, , $sign] = log_type_view($row['type'], $row['reversed_type'] ?? null);
+                $anonymized = $row['phone'] === null;
+                echo Csv::line([
+                    format_datetime($row['created_at']),
+                    $anonymized ? 'Cliente excluído' : (string)$row['customer_name'],
+                    $anonymized ? '' : format_phone($row['phone']),
+                    $label,
+                    $sign === '+' ? (int)$row['quantity'] : -(int)$row['quantity'],
+                    (string)$row['description'],
+                ]);
+            }
+        }
     }
 
     // extrato do cliente: todas as movimentacoes dele nesta loja, paginadas.
@@ -446,7 +596,8 @@ class MerchantController {
         $passwordConfirm = $_POST['password_confirm'] ?? '';
 
         // tratamento dos input masks vindos do front-end.
-        $document   = preg_replace('/\D/', '', (string)$document);
+        // cpf so numeros; cnpj pode ter letras (alfanumerico, task 57): fica so letra maiuscula e digito
+        $document   = DocumentValidator::normalize($document);
         $phone      = PhoneValidator::sanitize($phone);
 
         // verificacao dos dados: primeiro campos vazios/fora da lista, depois as regras especificas
@@ -502,9 +653,7 @@ class MerchantController {
             ];
 
             $this->merchantModel->create($data);
-
-             // se deu certo, redireciona usuario para o login
-            redirect('merchant/login', ['success' => 'cadastrado']);
+            $merchantId = (int)$this->db->lastInsertId();
         } catch (\PDOException $e) {
             $sqlState = $e->errorInfo[0] ?? null;
             $driverCode = (int)($e->errorInfo[1] ?? 0);
@@ -540,6 +689,59 @@ class MerchantController {
             redirect('merchant/register', ['error' => 'erro_servidor']);
         }
 
+        // conta nova so usa o painel depois de confirmar o e-mail (task 50)
+        $this->sendEmailVerification($merchantId, $email, $owner_name);
+
+        // se deu certo, redireciona usuario para o login
+        redirect('merchant/login', ['success' => 'cadastrado']);
+    }
+
+    // manda (ou reenvia) o link de confirmacao do e-mail; o anterior deixa de valer
+    private function sendEmailVerification(int $merchantId, string $email, string $ownerName): void {
+        $token = (new EmailVerificationModel($this->db))->create($merchantId);
+        $link = $this->publicBaseUrl() . url('merchant/verify-email', ['token' => $token]);
+        MailerFactory::fromEnv()->send(new Message(
+            $email,
+            'FidelityX: confirme seu e-mail',
+            "Olá, $ownerName.\n\n"
+            . "Para começar a usar o painel do FidelityX, confirme que este e-mail é seu abrindo o link abaixo\n"
+            . "(ele vale por 24 horas):\n\n$link\n\n"
+            . "Se você não criou uma conta no FidelityX, ignore este e-mail."
+        ));
+    }
+
+    // tela de quem entrou mas ainda nao confirmou o e-mail: explica e reenvia o link (task 50)
+    public function renderConfirmEmail() {
+        $merchantId = $this->authGuard(true);
+        if ($this->merchant['email_verified_at'] !== null) {
+            redirect('merchant/dashboard');
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            Csrf::verify();
+            $limiter = new RateLimiter($this->db);
+            $key = 'merchant:' . $merchantId;
+            if ($limiter->tooMany('email_verify_resend', $key, self::MAX_VERIFY_RESENDS, self::RESET_WINDOW_SECONDS)) {
+                redirect('merchant/confirm-email', ['error' => 'muitos_pedidos']);
+            }
+            $limiter->hit('email_verify_resend', $key);
+            $this->sendEmailVerification($merchantId, $this->merchant['email'], $this->merchant['owner_name']);
+            redirect('merchant/confirm-email', ['success' => 'confirmacao_reenviada']);
+        }
+
+        View::render('merchant/confirm-email', ['email' => $this->merchant['email']]);
+    }
+
+    // link do e-mail de confirmacao (nao exige login: pode ser aberto no celular, fora da sessao do painel)
+    public function renderVerifyEmail() {
+        $verified = (new EmailVerificationModel($this->db))->verify((string)($_GET['token'] ?? ''));
+        $logged = isset($_SESSION['merchant_id']);
+
+        if ($verified === null) {
+            redirect($logged ? 'merchant/confirm-email' : 'merchant/login', ['error' => 'confirmacao_invalida']);
+        }
+
+        redirect($logged ? 'merchant/dashboard' : 'merchant/login', ['success' => 'email_confirmado']);
     }
 
     public function handleLogin(){
@@ -624,6 +826,32 @@ class MerchantController {
             redirect('merchant/customer', ['phone' => $phone, 'success' => 'consentimento_registrado']);
         }
 
+        // corrigir o nome dado a esta loja (task 43)
+        if (($_POST['action'] ?? '') === 'rename') {
+            $name = trim((string)($_POST['name'] ?? ''));
+            if ($name === '' || mb_strlen($name) > 255) {
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'nome_invalido']);
+            }
+            $cardModel->rename($card['id'], $merchantId, $name);
+            redirect('merchant/customer', ['phone' => $phone, 'success' => 'nome_corrigido']);
+        }
+
+        // cliente trocou de numero (task 43): o cartao desta loja vai para o telefone novo, com saldo e historico.
+        // telefone que ja tem cartao nesta loja e recusado; o que ele tem em outras lojas nao aparece nem muda.
+        if (($_POST['action'] ?? '') === 'change_phone') {
+            $newPhone = PhoneValidator::sanitize($_POST['new_phone'] ?? '');
+            if (!PhoneValidator::isValid($newPhone)) {
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'telefone_novo_invalido']);
+            }
+            if ($newPhone === $phone) {
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'telefone_igual']);
+            }
+            if ($cardModel->changePhone($card['id'], $merchantId, $newPhone) !== 'ok') {
+                redirect('merchant/customer', ['phone' => $phone, 'error' => 'telefone_ja_cliente']);
+            }
+            redirect('merchant/customer', ['phone' => $newPhone, 'success' => 'telefone_trocado']);
+        }
+
         // exclusao dos dados a pedido do cliente (LGPD). a confirmacao e obrigatoria: nao tem volta.
         if (($_POST['action'] ?? '') === 'anonymize') {
             if (($_POST['confirm'] ?? '') !== '1') {
@@ -633,17 +861,17 @@ class MerchantController {
             redirect('merchant/dashboard', ['success' => 'cliente_excluido']);
         }
 
-        // estorno de lancamento (do extrato ou do Desfazer da confirmacao). volta pra tela de onde veio.
+        // estorno de lancamento (do extrato ou do Desfazer da confirmacao) ou de resgate (do extrato, task 44).
+        // volta pra tela de onde veio.
         if (($_POST['action'] ?? '') === 'reverse') {
             $back = ($_POST['back'] ?? '') === 'statement' ? 'merchant/statement' : 'merchant/customer';
             $logId = filter_var($_POST['log_id'] ?? '', FILTER_VALIDATE_INT);
-            // o lancamento precisa ser do cartao deste cliente (o model confere tambem a loja)
-            $result = $logId && (new PointsLogModel($this->db))->belongsToCard($logId, (int)$card['id'])
-                ? $cardModel->reverse($logId, $merchantId)
-                : 'not_found';
+            // a movimentacao precisa ser do cartao deste cliente (o model confere tambem a loja)
+            $type = $logId ? (new PointsLogModel($this->db))->typeForCard($logId, (int)$card['id']) : null;
+            $result = $type !== null ? $cardModel->reverse($logId, $merchantId) : 'not_found';
 
             redirect($back, ['phone' => $phone] + match ($result) {
-                'ok'           => ['success' => 'lancamento_estornado'],
+                'ok'           => ['success' => $type === 'redeem' ? 'resgate_estornado' : 'lancamento_estornado'],
                 'already'      => ['error' => 'estorno_repetido'],
                 'expired'      => ['error' => 'estorno_expirado'],
                 'insufficient' => ['error' => 'estorno_sem_saldo'],
@@ -899,7 +1127,8 @@ class MerchantController {
     // o id SEMPRE vem da sessao, nunca do formulario.
     // a cada requisicao: sessao parada demais expira, e a conta e conferida no banco
     // (lojista desativado perde o acesso na hora, nao so no proximo login).
-    private function authGuard(): int {
+    // $allowUnverified: so a tela de confirmar o e-mail aceita conta que ainda nao confirmou (task 50)
+    private function authGuard(bool $allowUnverified = false): int {
         if(!isset($_SESSION['merchant_id'])){
             redirect('merchant/login', ['error' => 'sessao_expirada']);
         }
@@ -923,6 +1152,11 @@ class MerchantController {
 
         // a loja da requisicao fica a mao (ex.: regra de pontos), sem consultar o banco de novo
         $this->merchant = $merchant;
+
+        // conta nova que ainda nao confirmou o e-mail so ve a tela de confirmar
+        if (!$allowUnverified && $merchant['email_verified_at'] === null) {
+            redirect('merchant/confirm-email');
+        }
 
         // nome da loja sempre atualizado no menu (pode ter mudado desde o login)
         $_SESSION['last_seen']     = time();

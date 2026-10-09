@@ -95,6 +95,19 @@ switch ($domain) {
         };
         break;
 
+    case 'admin':
+        // painel administrativo (task 30): login e sessao proprios, separados dos do lojista
+        RequestGuard::sendNoStore();
+        $controller = new \App\Controllers\AdminController($db);
+
+        match ($action ?? 'dashboard') {
+            'login'     => $controller->renderLogin(),
+            'logout'    => $controller->logout(),
+            'dashboard' => $controller->renderDashboard(),
+            default     => (new ErrorController())->handle(404),
+        };
+        break;
+
     case 'merchant':
         RequestGuard::sendNoStore();
         $controller = new \App\Controllers\MerchantController($db);

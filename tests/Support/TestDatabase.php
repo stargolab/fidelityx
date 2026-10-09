@@ -7,7 +7,7 @@ use PDO;
 // banco de teste: recriado do schema.sql no inicio da rodada e esvaziado antes de cada teste
 final class TestDatabase {
     // ordem respeita as chaves estrangeiras (filhos antes dos pais)
-    private const TABLES = ['points_log', 'rewards', 'loyalty_cards', 'customers', 'password_resets', 'email_verifications', 'merchants', 'rate_limit_hits'];
+    private const TABLES = ['points_log', 'rewards', 'loyalty_cards', 'customers', 'password_resets', 'email_verifications', 'merchants', 'rate_limit_hits', 'admins'];
 
     public static function name(): string {
         return $_ENV['DB_NAME'];

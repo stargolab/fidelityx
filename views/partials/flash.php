@@ -1,8 +1,13 @@
 <?php
+use App\Support\Plan;
+
 // mostra a mensagem correspondente ao ?error= ou ?success= da url.
 // so exibe textos deste mapa, nunca o valor cru da url.
 $flashMessages = [
     'error' => [
+        // limites do plano Free (task 32): os numeros vem do Plan, pra mensagem nunca ficar diferente da regra
+        'limite_clientes'       => 'Sua loja chegou ao limite de ' . Plan::limit(Plan::FREE, Plan::CUSTOMERS) . ' clientes do plano Free. Os clientes que você já tem continuam sendo atendidos normalmente. Para cadastrar mais, fale com o suporte e peça o plano Pro.',
+        'limite_premios'        => 'O plano Free permite até ' . Plan::limit(Plan::FREE, Plan::ACTIVE_REWARDS) . ' prêmios ativos ao mesmo tempo. Desative um prêmio ou fale com o suporte e peça o plano Pro.',
         'campos_invalidos'      => 'Preencha todos os campos corretamente.',
         'campos_obrigatorios'   => 'Preencha todos os campos obrigatórios.',
         'documento_invalido'    => 'CPF ou CNPJ inválido.',

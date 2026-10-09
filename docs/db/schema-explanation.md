@@ -28,7 +28,7 @@ merchants 1───N loyalty_cards N───1 customers
 | `public_code` | `UNIQUE`, 8 caracteres. Código público da loja: vai no QR do cartaz e identifica a loja na consulta de saldo. Gerado no cadastro (`App\Support\PublicCode`). |
 | `email`, `cpf`, `cnpj` | `UNIQUE`. Só um dos dois documentos é preenchido, apenas com números. |
 | `password_hash` | BCRYPT (`password_hash`). |
-| `plan` | `free`/`pro`. Ainda não é usado pelo código (pós-MVP). |
+| `plan` | `free` (padrão) ou `pro`. O que cada um permite fica em `App\Support\Plan` (task 32): Free vai até 100 clientes e 3 prêmios ativos, Pro não tem limite. Loja acima do limite fica com o que tem, só não adiciona. |
 | `status` | Padrão `active`. Contas `inactive` são barradas no login. |
 | `email_verified_at` | Quando o e-mail foi confirmado pelo link (task 50). `NULL` = conta nova ainda sem confirmar: entra, mas só vê a tela de confirmação. A migration 009 marcou as contas antigas como confirmadas. |
 | `category`, `state` | Validados contra as listas de `MerchantController::CATEGORIES` e `STATES`. |

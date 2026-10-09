@@ -169,6 +169,90 @@ class LoyaltyCardModel {
         }
     }
 
+    // validade dos pontos (task 31): saldo parado alem do prazo da loja (merchants.points_expiry_months).
+    // o prazo conta da ultima movimentacao do cartao (cartao sem nenhuma conta da criacao). ficam de fora:
+    // cartao sem saldo ou anonimizado, loja sem prazo (pontos nao vencem) e loja inativa (saldo congelado).
+    private const EXPIRABLE = "lc.current_points > 0 AND lc.anonymized_at IS NULL
+                               AND m.status = 'active' AND m.points_expiry_months IS NOT NULL
+                               AND COALESCE(lc.last_use_at, lc.created_at) <= NOW() - INTERVAL m.points_expiry_months MONTH";
+
+    // quantos cartoes e quantos pontos venceriam agora (so consulta, nao altera nada)
+    public function countExpirable(): array {
+        $row = $this->db->query(
+            'SELECT COUNT(*) AS cards, COALESCE(SUM(lc.current_points), 0) AS points
+             FROM loyalty_cards lc JOIN merchants m ON m.id = lc.merchant_id
+             WHERE ' . self::EXPIRABLE
+        )->fetch(\PDO::FETCH_ASSOC);
+
+        return ['cards' => (int)$row['cards'], 'points' => (int)$row['points']];
+    }
+
+    // vence o saldo de um cartao: zera os pontos e registra um 'expire' no historico (tudo ou nada).
+    // confere a regra de novo com o cartao travado: se o cliente movimentou (ou a loja mudou o prazo)
+    // entre a busca e este momento, nada vence. devolve quantos pontos venceram (0 = nada a vencer).
+    // o total acumulado e a data da ultima movimentacao ficam como estavam: vencer nao e movimentacao do cliente.
+    public function expire($cardId): int {
+        $this->db->beginTransaction();
+        try {
+            // trava o cartao: lancamento ou resgate ao mesmo tempo espera o commit e ja ve o saldo certo
+            $stmt = $this->db->prepare('SELECT current_points FROM loyalty_cards WHERE id = :id FOR UPDATE');
+            $stmt->execute([':id' => $cardId]);
+            $points = (int)$stmt->fetchColumn();
+
+            $stmt = $this->db->prepare(
+                'SELECT m.points_expiry_months
+                 FROM loyalty_cards lc JOIN merchants m ON m.id = lc.merchant_id
+                 WHERE lc.id = :id AND ' . self::EXPIRABLE
+            );
+            $stmt->execute([':id' => $cardId]);
+            $months = $stmt->fetchColumn();
+
+            if ($months === false) {
+                $this->db->rollBack();
+                return 0;
+            }
+
+            $this->db->prepare('UPDATE loyalty_cards SET current_points = 0 WHERE id = :id')
+                ->execute([':id' => $cardId]);
+
+            $description = 'Pontos vencidos: ' . (int)$months . ' meses sem movimentação';
+            $this->log($cardId, 'expire', $points, $description, null);
+
+            $this->db->commit();
+            return $points;
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    // rotina do bin/expire-points.php: vence todos os saldos parados, um cartao por transacao
+    // (uma falha no meio nao desfaz os que ja venceram, e nenhuma trava fica aberta por muito tempo).
+    // devolve ['cards' => cartoes vencidos, 'points' => pontos vencidos]. rodar de novo nao vence nada em dobro.
+    public function expireIdle(int $batchSize = 200): array {
+        $total = ['cards' => 0, 'points' => 0];
+
+        do {
+            $ids = $this->db->query(
+                'SELECT lc.id FROM loyalty_cards lc JOIN merchants m ON m.id = lc.merchant_id
+                 WHERE ' . self::EXPIRABLE . ' ORDER BY lc.id LIMIT ' . (int)$batchSize
+            )->fetchAll(\PDO::FETCH_COLUMN);
+
+            $expiredInBatch = 0;
+            foreach ($ids as $cardId) {
+                $points = $this->expire($cardId);
+                if ($points > 0) {
+                    $expiredInBatch++;
+                    $total['cards']++;
+                    $total['points'] += $points;
+                }
+            }
+            // lote cheio = pode haver mais; lote sem nenhum vencimento = os que sobraram deixaram de valer, para
+        } while (count($ids) === $batchSize && $expiredInBatch > 0);
+
+        return $total;
+    }
+
     // filtro de busca por nome ou telefone. so numero (com ou sem mascara) busca no telefone;
     // qualquer outra coisa busca no nome. % e _ do que foi digitado valem como letra, nao como coringa.
     private function searchClause(string $search): array {

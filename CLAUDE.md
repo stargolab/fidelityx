@@ -20,6 +20,7 @@ composer test -- --testsuite Unit      # só os testes sem banco
 tsc                                    # compila src/ts -> public/js (tsconfig.json)
 php bin/migrate.php                    # roda as migrations pendentes (status | baseline NNN)
 php bin/backup.php                     # backup do banco (mysqldump .sql.gz em BACKUP_DIR)
+php bin/expire-points.php              # vence o saldo parado alem do prazo de cada loja (--dry-run so mostra)
 docker compose up -d --build           # aplicacao + mysql em docker (docs/operacao.md)
 ```
 
@@ -53,7 +54,8 @@ Banco: `mysql -u root -p < database/schema.sql` em instalação nova. Banco já 
 - `customers` é **só o telefone**, global e único (só dígitos, 10–11, via `PhoneValidator::sanitize`); o mesmo cliente pode ter cartão em várias lojas.
 - `loyalty_cards` = par (merchant, customer) único. Guarda o que o cliente deu **a esta loja** (`customer_name`, `consent_at`, `consent_version`), o saldo (`current_points`, `total_accumulated`) e `anonymized_at`. `findOrCreate` usa `ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)` e nunca troca nome nem consentimento de cartão existente.
 - **LGPD (regra da task 11, `docs/adr/002-lgpd-dados-por-loja.md`)**: nenhuma tela de uma loja mostra dado vindo de outra. Telefone sem cartão nesta loja vai sempre para o cadastro rápido, seja novo ou de outra loja: nunca crie caminho que diferencie os dois. Consentimento é gravado no cadastro com `Privacy::VERSION` (mudou o texto de `views/privacy.php` de forma relevante, troque a versão). Exclusão = `LoyaltyCardModel::anonymize` (cartão fica só para os relatórios, telefone some quando não há mais cartão).
-- `points_log` é o histórico (`earn`/`redeem`/`reversal`, `reward_id` nos resgates, `reverses_id` nos estornos). Toda mudança de saldo passa por `LoyaltyCardModel::addPoints` / `redeem` / `reverse`, que atualizam o cartão e gravam o log na mesma transação; `redeem` usa `SELECT ... FOR UPDATE` para impedir gasto duplo. Não altere saldo fora desses métodos.
+- `points_log` é o histórico (`earn`/`redeem`/`reversal`/`expire`, `reward_id` nos resgates, `reverses_id` nos estornos). Toda mudança de saldo passa por `LoyaltyCardModel::addPoints` / `redeem` / `reverse`, que atualizam o cartão e gravam o log na mesma transação; `redeem` usa `SELECT ... FOR UPDATE` para impedir gasto duplo. Não altere saldo fora desses métodos.
+- **Validade dos pontos (task 31)**: cada loja tem `merchants.points_expiry_months` (padrão 12, `NULL` = não vence, escolhido na tela Regra de pontos). O saldo inteiro vence depois desse tempo sem movimentação, contado de `loyalty_cards.last_use_at`; a data não é gravada, é sempre calculada. Quem vence é `LoyaltyCardModel::expire` / `expireIdle` (linha `expire` no `points_log`), chamado pelo `bin/expire-points.php`, que precisa estar agendado (`docs/operacao.md`).
 - `merchants` guarda CPF **ou** CNPJ (normalizados, UNIQUE). Validação só por dígito verificador, sem API externa (ver `docs/adr/001-documents-validation.md`).
 
 **Área pública** — a home (`HomeController`, view `views/home.php`, `public/css/home.css`) apresenta o produto e leva ao cadastro; lojista logado vai direto ao painel. `customer/balance&loja=CODIGO` consulta o saldo pelo telefone sem login, **só na loja do código** (`merchants.public_code`, impresso no cartaz e embutido no QR), com limite por IP (5/min → 429) e exibindo só o primeiro nome do cartão daquela loja. Sem código válido, a página pede o código (nunca lista lojas). `privacy` é a política de privacidade (rascunho pendente de revisão jurídica).

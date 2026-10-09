@@ -98,6 +98,7 @@ function log_type_view(string $type): array {
         'earn'     => ['Ganhou', 'badge-earn', '+'],
         'redeem'   => ['Resgatou', 'badge-redeem', '−'],
         'reversal' => ['Estorno', 'badge-reversal', '−'],
+        'expire'   => ['Venceu', 'badge-expire', '−'],
         default    => [$type, '', ''],
     };
 }

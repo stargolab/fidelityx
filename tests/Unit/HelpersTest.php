@@ -13,6 +13,10 @@ final class HelpersTest extends TestCase {
         $this->assertSame('', format_document(null));
     }
 
+    public function testVencimentoTemRotuloESeloProprioNoExtrato(): void {
+        $this->assertSame(['Venceu', 'badge-expire', '−'], log_type_view('expire'));
+    }
+
     public function testFieldErrorAttrMarcaSoOCampoQueOErroAponta(): void {
         $marcado = ' aria-invalid="true" aria-describedby="flash-error"';
 

@@ -44,6 +44,8 @@ class MerchantController {
     private const UNDO_BANNER_SECONDS = 120;
     private const RECENT_CUSTOMERS = 5;
     private const MAX_POINTS_RULE_CENTS = 100000000;
+    // prazos de validade dos pontos que a loja pode escolher, em meses sem movimentacao (task 31)
+    public const EXPIRY_MONTHS_OPTIONS = [3, 6, 12, 18, 24, 36];
     private const MAX_LOGIN_FAILURES = 5;         // mesmo e-mail + mesmo ip
     private const MAX_LOGIN_FAILURES_PER_IP = 20; // mesmo ip, somando todas as contas
     private const LOGIN_WINDOW_SECONDS = 900;
@@ -136,11 +138,32 @@ class MerchantController {
             return;
         }
 
-        View::render('merchant/points-rule', ['ruleCents' => $this->pointsRule()]);
+        View::render('merchant/points-rule', [
+            'ruleCents'     => $this->pointsRule(),
+            'expiryMonths'  => $this->pointsExpiryMonths(),
+            'expiryOptions' => self::EXPIRY_MONTHS_OPTIONS,
+        ]);
+    }
+
+    // validade dos pontos da loja logada, em meses sem movimentacao (null = nao vencem). so depois do authGuard.
+    private function pointsExpiryMonths(): ?int {
+        $months = $this->merchant['points_expiry_months'] ?? null;
+        return $months === null ? null : (int)$months;
     }
 
     private function handlePointsRule(int $merchantId) {
         Csrf::verify();
+
+        // validade dos pontos (task 31): um dos prazos da lista, ou "never" pra desligar o vencimento
+        if (($_POST['action'] ?? '') === 'expiry') {
+            $choice = (string)($_POST['expiry_months'] ?? '');
+            if ($choice !== 'never' && !in_array($choice, array_map('strval', self::EXPIRY_MONTHS_OPTIONS), true)) {
+                redirect('merchant/points-rule', ['error' => 'validade_invalida']);
+            }
+
+            $this->merchantModel->updatePointsExpiry($merchantId, $choice === 'never' ? null : (int)$choice);
+            redirect('merchant/points-rule', ['success' => 'validade_salva']);
+        }
 
         if (($_POST['action'] ?? '') === 'clear') {
             $this->merchantModel->updatePointsRule($merchantId, null);

@@ -82,6 +82,7 @@ function field_error_attr(string $field, ?string $code = null): string {
         'valor_invalido'            => ['amount'],
         'valor_sem_pontos'          => ['amount'],
         'regra_invalida'            => ['rule'],
+        'validade_invalida'         => ['expiry_months'],
     ];
 
     $code ??= $_GET['error'] ?? null;

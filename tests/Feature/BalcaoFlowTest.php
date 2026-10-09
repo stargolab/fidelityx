@@ -16,6 +16,7 @@ final class BalcaoFlowTest extends HttpTestCase {
         ]);
         $this->assertSame('merchant/login&success=cadastrado', $location);
         $this->loginAs('padaria@teste.test');
+        $this->assertSame('merchant/dashboard&success=email_confirmado', $this->confirmEmailFromMail('padaria@teste.test'));
 
         // premio
         [, $location] = $this->post('merchant/rewards', ['action' => 'create', 'name' => 'Cafe', 'points_cost' => 20]);

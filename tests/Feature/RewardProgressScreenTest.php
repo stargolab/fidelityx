@@ -26,7 +26,7 @@ final class RewardProgressScreenTest extends HttpTestCase {
         $this->post('customer/balance', ['phone' => '11911110001', 'loja' => $code], true, 'customer/balance&loja=' . $code);
         $this->assertMatchesRegularExpression('/Faltam\s*<strong>20 pontos<\/strong>\s*para\s*<strong>Suco<\/strong>/', $this->lastBody);
         $this->assertStringContainsString('aria-valuenow="60"', $this->lastBody);
-        $this->assertStringContainsString('width: 60%', $this->lastBody);
+        $this->assertStringContainsString('progress-bar progress-w-60', $this->lastBody);
     }
 
     public function testTelaDoLojistaMostraOMesmoProgresso(): void {

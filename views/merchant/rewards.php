@@ -68,7 +68,7 @@
                                         <button type="submit" class="btn-secondary"><?= $reward['active'] ? 'Desativar' : 'Ativar' ?></button>
                                     </form>
                                     <form action="<?= e(url('merchant/rewards')) ?>" method="POST"
-                                          onsubmit="return confirm('Excluir este prêmio? Se ele já foi resgatado, será só desativado.');">
+                                          data-confirm="Excluir este prêmio? Se ele já foi resgatado, será só desativado.">
                                         <?= Csrf::field() ?>
                                         <input type="hidden" name="action" value="delete">
                                         <input type="hidden" name="reward_id" value="<?= (int)$reward['id'] ?>">

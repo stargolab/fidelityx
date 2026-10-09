@@ -4,7 +4,7 @@
 <section class="card no-print">
     <p class="muted poster-help">Imprima e deixe no balcão: o cliente aponta a câmera do celular e vê os pontos dele, sem instalar nada.
         Na janela de impressão, escolha "Salvar como PDF" se quiser o arquivo.</p>
-    <button type="button" class="btn-primary btn-inline" onclick="window.print()">Imprimir ou salvar em PDF</button>
+    <button type="button" class="btn-primary btn-inline" data-print>Imprimir ou salvar em PDF</button>
 </section>
 
 <?php // a folha: fundo claro e texto escuro tambem na tela, porque o qr code so le bem escuro sobre claro ?>

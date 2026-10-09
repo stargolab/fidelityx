@@ -28,6 +28,13 @@ ErrorLog::register();
 // em producao (docker) nao ha .env, so variaveis de ambiente. tudo fica no $_ENV, usado no Database.php!
 Env::load(__DIR__ . '/..');
 ErrorLog::useFile(Env::get('LOG_FILE'));
+RequestGuard::sendHsts();
+
+// rota de saude do monitor e do healthcheck: antes da sessao, pra checagem nao criar arquivo de sessao
+if (($_GET['url'] ?? '') === 'health') {
+    \App\Support\Health::respond();
+    exit;
+}
 
 // cookie de sessao so via http (js nao le), sem envio em POST vindo de outro site e, em https, so por https.
 // use_strict_mode: id de sessao inventado por quem chega (session fixation) e trocado por um novo.
@@ -88,6 +95,19 @@ switch ($domain) {
         };
         break;
 
+    case 'admin':
+        // painel administrativo (task 30): login e sessao proprios, separados dos do lojista
+        RequestGuard::sendNoStore();
+        $controller = new \App\Controllers\AdminController($db);
+
+        match ($action ?? 'dashboard') {
+            'login'     => $controller->renderLogin(),
+            'logout'    => $controller->logout(),
+            'dashboard' => $controller->renderDashboard(),
+            default     => (new ErrorController())->handle(404),
+        };
+        break;
+
     case 'merchant':
         RequestGuard::sendNoStore();
         $controller = new \App\Controllers\MerchantController($db);
@@ -95,6 +115,10 @@ switch ($domain) {
         match ($action ?? 'dashboard') {
             'login'     => $controller->renderLogin(),
             'register'  => $controller->renderRegister(),
+            'forgot'    => $controller->renderForgot(),
+            'reset'     => $controller->renderReset(),
+            'confirm-email' => $controller->renderConfirmEmail(),
+            'verify-email'  => $controller->renderVerifyEmail(),
             'customer-new' => $controller->renderCustomerNew(),
             'logout'    => $controller->logout(),
             'dashboard' => $controller->renderDashboard(),
@@ -103,6 +127,7 @@ switch ($domain) {
             'poster'    => $controller->renderPoster(),
             'points-rule' => $controller->renderPointsRule(),
             'reports'   => $controller->renderReports(),
+            'export'    => $controller->renderExport(),
             'rewards'   => $controller->renderRewards(),
             'reward-edit' => $controller->renderRewardEdit(),
             'customers' => $controller->renderCustomers(),

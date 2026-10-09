@@ -40,10 +40,18 @@ $flashMessages = [
         'estorno_expirado'      => 'Só dá para estornar lançamentos e resgates das últimas 24 horas.',
         'estorno_sem_saldo'     => 'Não dá para estornar: o cliente já usou parte desses pontos.',
         'senha_atual_incorreta' => 'A senha atual não confere.',
+        'loja_invalida'         => 'Loja não encontrada.',
+        'confirmacao_invalida'  => 'Este link de confirmação é inválido, já foi usado ou venceu. Entre no painel e peça outro.',
+        'link_invalido'         => 'Este link de nova senha é inválido, já foi usado ou venceu. Peça outro.',
+        'muitos_pedidos'        => 'Muitos pedidos seguidos. Aguarde um pouco e tente de novo.',
         'muitas_tentativas'     => 'Muitas tentativas com a senha atual errada. Aguarde alguns minutos e tente de novo.',
     ],
     'success' => [
-        'cadastrado'        => 'Cadastro realizado! Faça login para continuar.',
+        'cadastrado'        => 'Cadastro realizado! Enviamos um link de confirmação para o seu e-mail. Faça login para continuar.',
+        'confirmacao_reenviada' => 'Enviamos um novo link de confirmação. O anterior deixou de valer.',
+        'loja_ativada'      => 'Loja ativada. O lojista já pode entrar.',
+        'loja_desativada'   => 'Loja desativada. O lojista perdeu o acesso na hora.',
+        'email_confirmado'  => 'E-mail confirmado. Bem-vindo ao FidelityX!',
         'logged'            => 'Bem-vindo de volta!',
         'logout'            => 'Você saiu da sua conta.',
         'cliente_cadastrado' => 'Cliente cadastrado. Já pode lançar os pontos.',
@@ -62,13 +70,41 @@ $flashMessages = [
         'regra_salva'       => 'Regra de pontos salva.',
         'regra_removida'    => 'Regra de pontos removida.',
         'perfil_atualizado' => 'Dados da loja atualizados.',
+        'reset_enviado'     => 'Se o e-mail for de uma loja cadastrada, enviamos um link para criar uma nova senha. Ele vale por 1 hora.',
+        'senha_redefinida'  => 'Senha nova criada. Entre com ela.',
         'senha_alterada'    => 'Senha alterada. Os outros aparelhos conectados precisam entrar de novo.',
     ],
 ];
 
+// campos que cada erro aponta (pelo name do input): o public/js/forms.js marca, liga a mensagem e poe o foco.
+// erro de login nao aponta campo de proposito (nao diz se o errado foi o e-mail ou a senha).
+$flashFields = [
+    'telefone_invalido'         => ['phone'],
+    'email_invalido'            => ['email'],
+    'documento_invalido'        => ['document'],
+    'senha_curta'               => ['password', 'password_confirm', 'new_password', 'new_password_confirm'],
+    'senha_longa'               => ['password', 'password_confirm', 'new_password', 'new_password_confirm'],
+    'senhas_diferentes'         => ['password_confirm', 'new_password_confirm'],
+    'senha_igual'               => ['new_password', 'new_password_confirm'],
+    'senha_atual_incorreta'     => ['current_password'],
+    'nome_obrigatorio'          => ['name'],
+    'nome_invalido'             => ['name'],
+    'consentimento_obrigatorio' => ['consent'],
+    'confirmacao_obrigatoria'   => ['confirm'],
+    'pontos_invalidos'          => ['points'],
+    'valor_invalido'            => ['amount'],
+    'valor_sem_pontos'          => ['amount'],
+    'valor_pontos_demais'       => ['amount'],
+    'regra_invalida'            => ['rule'],
+    'telefone_novo_invalido'    => ['new_phone'],
+    'telefone_igual'            => ['new_phone'],
+    'telefone_ja_cliente'       => ['new_phone'],
+];
+
 foreach (['error', 'success'] as $flashType):
     $flashCode = $_GET[$flashType] ?? null;
-    if (is_string($flashCode) && isset($flashMessages[$flashType][$flashCode])): ?>
-        <div class="alert alert-<?= $flashType ?>"><?= e($flashMessages[$flashType][$flashCode]) ?></div>
+    if (is_string($flashCode) && isset($flashMessages[$flashType][$flashCode])):
+        $fields = $flashType === 'error' ? ($flashFields[$flashCode] ?? []) : []; ?>
+        <div class="alert alert-<?= $flashType ?>" id="flash-<?= $flashType ?>" role="<?= $flashType === 'error' ? 'alert' : 'status' ?>"<?php if ($fields): ?> data-fields="<?= e(implode(' ', $fields)) ?>"<?php endif; ?>><?= e($flashMessages[$flashType][$flashCode]) ?></div>
     <?php endif;
 endforeach;

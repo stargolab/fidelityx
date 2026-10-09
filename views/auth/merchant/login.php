@@ -36,11 +36,14 @@
             <button type="submit" class="btn-primary">Entrar no Painel</button>
         </form>
 
+        <p class="auth-forgot"><a href="<?= e(url('merchant/forgot')) ?>">Esqueci minha senha</a></p>
+
         <footer class="auth-footer">
             <p>Ainda não é parceiro? <a href="<?= e(url('merchant/register')) ?>">Cadastre sua loja</a></p>
             <p>É cliente? <a href="<?= e(url('customer/balance')) ?>">Consulte seus pontos</a></p>
         </footer>
     </div>
 
+    <script src="/js/forms.js"></script>
 </body>
 </html>

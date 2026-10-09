@@ -16,7 +16,7 @@ final class PosterTest extends HttpTestCase {
         $this->assertStringContainsString('<svg', $this->lastBody);
         $this->assertStringNotContainsString('<?xml', $this->lastBody);
         $this->assertMatchesRegularExpression('#http://127\.0\.0\.1:\d+/index\.php\?url=customer%2Fbalance#', $this->lastBody);
-        $this->assertStringContainsString('window.print()', $this->lastBody);
+        $this->assertStringContainsString('data-print>Imprimir', $this->lastBody); // o nav.js liga no window.print()
     }
 
     public function testCartazExigeLogin(): void {

@@ -35,6 +35,7 @@ final class RegisterTest extends HttpTestCase {
         $this->assertNull($this->scalar('SELECT cpf FROM merchants'));
 
         $this->loginAs('padaria@teste.test');
+        $this->confirmEmailFromMail('padaria@teste.test');
         $this->get('merchant/profile');
         $this->assertStringContainsString('value="12.ABC.345/01DE-35"', $this->lastBody);
         $this->assertStringContainsString('>CNPJ<', $this->lastBody);

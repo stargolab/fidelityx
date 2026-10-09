@@ -18,7 +18,8 @@ final class SecurityHeadersTest extends HttpTestCase {
         foreach (array_keys($responses) as $route) {
             $this->get($route);
             $this->assertSame('DENY', $this->header('X-Frame-Options'), $route);
-            $this->assertSame("frame-ancestors 'none'", $this->header('Content-Security-Policy'), $route);
+            $this->assertSame(\App\Support\RequestGuard::CSP, $this->header('Content-Security-Policy'), $route);
+            $this->assertNull($this->header('Strict-Transport-Security'), $route . ': http nao manda hsts');
             $this->assertSame('nosniff', $this->header('X-Content-Type-Options'), $route);
             $this->assertSame('same-origin', $this->header('Referrer-Policy'), $route);
             $this->assertNull($this->header('X-Powered-By'), $route);
@@ -27,6 +28,57 @@ final class SecurityHeadersTest extends HttpTestCase {
         $this->loginAs('loja@teste.test');
         $this->get('merchant/customers');
         $this->assertSame('DENY', $this->header('X-Frame-Options'));
+    }
+
+    // task 48: a politica bloqueia script inline e de outro site (so os arquivos de public/js rodam)
+    public function testCspSoAceitaScriptDoProprioSite(): void {
+        $this->get('home');
+        $csp = (string)$this->header('Content-Security-Policy');
+
+        $this->assertStringContainsString("default-src 'self'", $csp);
+        $this->assertStringContainsString("script-src 'self';", $csp);
+        $this->assertStringNotContainsString('unsafe-inline', $csp);
+        $this->assertStringNotContainsString('unsafe-eval', $csp);
+        $this->assertStringContainsString("frame-ancestors 'none'", $csp);
+        $this->assertStringContainsString("form-action 'self'", $csp);
+    }
+
+    // nenhuma view tem <script> inline nem atributo de evento (onclick, onsubmit...): a CSP bloquearia
+    public function testViewsSemScriptInlineNemAtributoDeEvento(): void {
+        $root = dirname(__DIR__, 2) . '/views';
+        $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS));
+        foreach ($files as $file) {
+            $html = (string)file_get_contents($file->getPathname());
+            $this->assertDoesNotMatchRegularExpression('/<script(?![^>]*\ssrc=)[^>]*>/i', $html, $file->getFilename());
+            $this->assertDoesNotMatchRegularExpression('/\son[a-z]+\s*=\s*["\']/i', $html, $file->getFilename());
+        }
+    }
+
+    public function testScriptsDasTelasExistem(): void {
+        $merchant = $this->createMerchant('loja@teste.test');
+        $this->createCard($merchant, 'Bia', '11922220002');
+        $this->loginAs('loja@teste.test');
+
+        $this->get('merchant/customer&phone=11922220002');
+        preg_match_all('#<script src="(/js/[a-z]+\.js)"></script>#', $this->lastBody, $m);
+        $this->assertSame(['/js/nav.js', '/js/customer.js', '/js/masks.js', '/js/forms.js'], $m[1]);
+        foreach ($m[1] as $src) {
+            $this->assertFileExists(dirname(__DIR__, 2) . '/public' . $src);
+        }
+
+        $this->get('merchant/poster');
+        $this->assertStringContainsString('data-print>', $this->lastBody);
+    }
+
+    // hsts so por https (aqui, atras do proxy confiavel que avisa pelo X-Forwarded-Proto)
+    public function testHstsSoEmHttps(): void {
+        $this->withHeaders(['X-Forwarded-Proto: https']);
+        $this->get('home');
+        $this->assertSame('max-age=31536000', $this->header('Strict-Transport-Security'));
+
+        $this->withHeaders([]);
+        $this->get('home');
+        $this->assertNull($this->header('Strict-Transport-Security'));
     }
 
     // task 47: nome, telefone e saldo nao ficam no cache (Voltar depois do logout, computador compartilhado)

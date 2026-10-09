@@ -24,10 +24,11 @@ merchants 1───N loyalty_cards N───1 customers
 | Coluna | Observação |
 |---|---|
 | `points_rule_cents` | Regra de pontos pelo valor da compra: a cada tantos centavos, 1 ponto (sempre arredonda para baixo, `Money::pointsFor`). `NULL` = sem regra, o lojista digita os pontos. |
+| `points_expiry_months` | Validade dos pontos (task 31): o saldo do cliente vence depois deste tanto de meses sem movimentação na loja, contados de `loyalty_cards.last_use_at`. Padrão 12; `NULL` = os pontos não vencem. O lojista escolhe na tela Regra de pontos, entre os prazos de `MerchantController::EXPIRY_MONTHS_OPTIONS`. |
 | `public_code` | `UNIQUE`, 8 caracteres. Código público da loja: vai no QR do cartaz e identifica a loja na consulta de saldo. Gerado no cadastro (`App\Support\PublicCode`). |
 | `email`, `cpf`, `cnpj` | `UNIQUE`. Só um dos dois documentos é preenchido, apenas com números. |
 | `password_hash` | BCRYPT (`password_hash`). |
-| `plan` | `free`/`pro`. Ainda não é usado pelo código (pós-MVP). |
+| `plan` | `free` (padrão) ou `pro`. O que cada um permite fica em `App\Support\Plan` (task 32): Free vai até 100 clientes e 3 prêmios ativos, Pro não tem limite. Loja acima do limite fica com o que tem, só não adiciona. |
 | `status` | Padrão `active`. Contas `inactive` são barradas no login. |
 | `email_verified_at` | Quando o e-mail foi confirmado pelo link (task 50). `NULL` = conta nova ainda sem confirmar: entra, mas só vê a tela de confirmação. A migration 009 marcou as contas antigas como confirmadas. |
 | `category`, `state` | Validados contra as listas de `MerchantController::CATEGORIES` e `STATES`. |
@@ -48,7 +49,8 @@ O cliente é **só o telefone** (task 11, ADR 002). As colunas `cpf`, `email`, `
 | `anonymized_at` | Exclusão a pedido do cliente: o cartão perde nome, telefone, consentimento e saldo e fica só para os relatórios. |
 | `current_points` | Saldo disponível. Aumenta ao ganhar pontos e diminui ao resgatar. |
 | `total_accumulated` | Tudo que o cliente já ganhou nesta loja. Só aumenta. |
-| `last_use_at` | Última movimentação. |
+| `last_use_at` | Última movimentação (ganho, resgate ou estorno). É daqui que conta a validade dos pontos: vencimento = `last_use_at` + `merchants.points_expiry_months`. |
+| `expiration_date` | Sem uso. A data de vencimento é calculada na hora (linha acima) em vez de gravada, para não ficar errada quando a loja muda o prazo. |
 
 ### `rewards` — catálogo de prêmios (novo no MVP)
 | Coluna | Observação |
@@ -60,7 +62,7 @@ O cliente é **só o telefone** (task 11, ADR 002). As colunas `cpf`, `email`, `
 ### `points_log` — histórico
 | Coluna | Observação |
 |---|---|
-| `type` | `earn` (ganho), `redeem` (resgate) ou `reversal` (estorno de um ganho ou de um resgate, task 44). `quantity` é sempre positivo: o sinal vem do tipo (o estorno de resgate devolve pontos). |
+| `type` | `earn` (ganho), `redeem` (resgate), `reversal` (estorno de um ganho ou de um resgate, task 44) ou `expire` (saldo vencido por falta de movimentação, task 31). `quantity` é sempre positivo: o sinal vem do tipo (o estorno de resgate devolve pontos). |
 | `reward_id` | Preenchido em resgates. Vira `NULL` se o prêmio for apagado. |
 | `reverses_id` | Preenchido em estornos (`reversal`): o ganho ou resgate estornado. `UNIQUE`, então cada movimentação é estornada no máximo uma vez. |
 | `ip_address` | IP de quem fez a operação (o do cliente, mesmo atrás de proxy confiável: `TRUSTED_PROXIES`). |

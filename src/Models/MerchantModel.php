@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Plan;
 use App\Support\PublicCode;
 
 class MerchantModel{
@@ -42,7 +43,7 @@ class MerchantModel{
     // dados que o authGuard confere a cada requisicao (o hash da senha serve pra derrubar
     // as sessoes antigas quando a senha e trocada, ver SessionGuard::passwordSignature)
     public function findById($merchantId) {
-        $stmt = $this->db->prepare('SELECT id, owner_name, store_name, email, email_verified_at, status, points_rule_cents, password_hash FROM merchants WHERE id = :id');
+        $stmt = $this->db->prepare('SELECT id, owner_name, store_name, email, email_verified_at, status, plan, points_rule_cents, points_expiry_months, password_hash FROM merchants WHERE id = :id');
         $stmt->execute([':id' => $merchantId]);
 
         return $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -52,6 +53,12 @@ class MerchantModel{
     public function updatePointsRule($merchantId, ?int $ruleCents): void {
         $stmt = $this->db->prepare('UPDATE merchants SET points_rule_cents = :rule WHERE id = :id');
         $stmt->execute([':rule' => $ruleCents, ':id' => $merchantId]);
+    }
+
+    // validade dos pontos em meses sem movimentacao; null = os pontos da loja nao vencem
+    public function updatePointsExpiry($merchantId, ?int $months): void {
+        $stmt = $this->db->prepare('UPDATE merchants SET points_expiry_months = :months WHERE id = :id');
+        $stmt->execute([':months' => $months, ':id' => $merchantId]);
     }
 
     // dados exibidos na tela de perfil; false se a conta nao existir
@@ -115,7 +122,7 @@ class MerchantModel{
     }
 
     public function pageForAdmin(int $limit, int $offset): array {
-        $sql = 'SELECT m.id, m.store_name, m.owner_name, m.email, m.cpf, m.cnpj, m.status, m.created_at,
+        $sql = 'SELECT m.id, m.store_name, m.owner_name, m.email, m.cpf, m.cnpj, m.status, m.plan, m.created_at,
                        (SELECT COUNT(*) FROM loyalty_cards lc WHERE lc.merchant_id = m.id AND lc.anonymized_at IS NULL) AS customers
                 FROM merchants m
                 ORDER BY m.created_at DESC, m.id DESC
@@ -131,6 +138,17 @@ class MerchantModel{
         }
         $stmt = $this->db->prepare('UPDATE merchants SET status = :status WHERE id = :id');
         $stmt->execute([':status' => $status, ':id' => $merchantId]);
+        return $stmt->rowCount() > 0 || $this->findById($merchantId) !== false;
+    }
+
+    // troca o plano da loja (task 32), so pelo painel administrativo. vale na proxima requisicao do lojista.
+    // devolve false se o plano nao existe ou a loja nao existe.
+    public function setPlan(int $merchantId, string $plan): bool {
+        if (!Plan::isValid($plan)) {
+            return false;
+        }
+        $stmt = $this->db->prepare('UPDATE merchants SET plan = :plan WHERE id = :id');
+        $stmt->execute([':plan' => $plan, ':id' => $merchantId]);
         return $stmt->rowCount() > 0 || $this->findById($merchantId) !== false;
     }
 }

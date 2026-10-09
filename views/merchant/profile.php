@@ -2,6 +2,8 @@
 <?php $title = 'Perfil'; ?>
 <?php require __DIR__ . '/../partials/merchant-header.php'; ?>
 
+<?php require __DIR__ . '/../partials/plan-usage.php'; ?>
+
 <section class="card">
     <h2>Dados da loja</h2>
 

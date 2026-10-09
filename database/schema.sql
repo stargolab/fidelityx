@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS merchants (
   -- regra de pontos pelo valor da compra: a cada points_rule_cents centavos, 1 ponto (arredonda pra baixo).
   -- NULL = sem regra (o lojista digita os pontos direto)
   points_rule_cents INT UNSIGNED NULL,
+  -- validade dos pontos: o saldo vence depois deste tanto de meses sem movimentacao do cliente na loja
+  -- (loyalty_cards.last_use_at). NULL = os pontos nao vencem
+  points_expiry_months TINYINT UNSIGNED NULL DEFAULT 12,
   status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
 
   -- para futuras implementações (NULL)
@@ -82,8 +85,10 @@ CREATE TABLE IF NOT EXISTS loyalty_cards (
   current_points INT NOT NULL DEFAULT 0,
   total_accumulated INT NOT NULL DEFAULT 0,
 
-  -- para futuras implementações (NULL)
+  -- ultima movimentacao (ganho, resgate ou estorno). e daqui que conta a validade dos pontos:
+  -- vencimento = last_use_at + merchants.points_expiry_months (calculado na hora, nao fica gravado)
   last_use_at TIMESTAMP NULL,
+  -- sem uso: a data de vencimento e calculada (acima), pra nao ficar errada quando a loja muda o prazo
   expiration_date TIMESTAMP NULL,
 
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -133,7 +138,7 @@ CREATE TABLE IF NOT EXISTS points_log (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
   card_id BIGINT UNSIGNED NOT NULL,
-  type ENUM('earn', 'redeem', 'reversal') NOT NULL, -- reversal = estorno de um earn ou de um redeem
+  type ENUM('earn', 'redeem', 'reversal', 'expire') NOT NULL, -- reversal = estorno de um earn ou de um redeem, expire = saldo vencido
   quantity INT NOT NULL,
   description VARCHAR(255) NOT NULL,
   reward_id BIGINT UNSIGNED NULL, -- preenchido quando type = 'redeem'
@@ -267,4 +272,5 @@ INSERT IGNORE INTO schema_migrations (version) VALUES
   ('007_customers_so_telefone'),
   ('008_password_resets'),
   ('009_email_verifications'),
-  ('010_admins');
+  ('010_admins'),
+  ('011_validade_pontos');

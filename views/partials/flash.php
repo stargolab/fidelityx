@@ -1,8 +1,13 @@
 <?php
+use App\Support\Plan;
+
 // mostra a mensagem correspondente ao ?error= ou ?success= da url.
 // so exibe textos deste mapa, nunca o valor cru da url.
 $flashMessages = [
     'error' => [
+        // limites do plano Free (task 32): os numeros vem do Plan, pra mensagem nunca ficar diferente da regra
+        'limite_clientes'       => 'Sua loja chegou ao limite de ' . Plan::limit(Plan::FREE, Plan::CUSTOMERS) . ' clientes do plano Free. Os clientes que você já tem continuam sendo atendidos normalmente. Para cadastrar mais, fale com o suporte e peça o plano Pro.',
+        'limite_premios'        => 'O plano Free permite até ' . Plan::limit(Plan::FREE, Plan::ACTIVE_REWARDS) . ' prêmios ativos ao mesmo tempo. Desative um prêmio ou fale com o suporte e peça o plano Pro.',
         'campos_invalidos'      => 'Preencha todos os campos corretamente.',
         'campos_obrigatorios'   => 'Preencha todos os campos obrigatórios.',
         'documento_invalido'    => 'CPF ou CNPJ inválido.',
@@ -33,6 +38,7 @@ $flashMessages = [
         'confirmacao_obrigatoria' => 'Marque a confirmação de que o cliente pediu a exclusão.',
         'estorno_invalido'      => 'Lançamento não encontrado para este cliente.',
         'regra_invalida'        => 'Informe um valor de R$ 0,01 a R$ 1.000.000,00.',
+        'validade_invalida'     => 'Escolha um dos prazos de validade da lista.',
         'valor_invalido'        => 'Informe o valor da compra, ex.: 12,90.',
         'valor_pontos_demais'   => 'Essa compra daria mais de 10.000 pontos, o limite por lançamento. Confira o valor ou divida em mais de um lançamento.',
         'valor_sem_pontos'      => 'O valor da compra não chega a 1 ponto pela regra da loja.',
@@ -51,6 +57,7 @@ $flashMessages = [
         'confirmacao_reenviada' => 'Enviamos um novo link de confirmação. O anterior deixou de valer.',
         'loja_ativada'      => 'Loja ativada. O lojista já pode entrar.',
         'loja_desativada'   => 'Loja desativada. O lojista perdeu o acesso na hora.',
+        'plano_alterado'    => 'Plano da loja alterado. O limite novo já vale.',
         'email_confirmado'  => 'E-mail confirmado. Bem-vindo ao FidelityX!',
         'logged'            => 'Bem-vindo de volta!',
         'logout'            => 'Você saiu da sua conta.',
@@ -69,6 +76,7 @@ $flashMessages = [
         'resgate_estornado'    => 'Resgate estornado. Os pontos voltaram ao saldo.',
         'regra_salva'       => 'Regra de pontos salva.',
         'regra_removida'    => 'Regra de pontos removida.',
+        'validade_salva'    => 'Validade dos pontos salva.',
         'perfil_atualizado' => 'Dados da loja atualizados.',
         'reset_enviado'     => 'Se o e-mail for de uma loja cadastrada, enviamos um link para criar uma nova senha. Ele vale por 1 hora.',
         'senha_redefinida'  => 'Senha nova criada. Entre com ela.',
@@ -96,6 +104,7 @@ $flashFields = [
     'valor_sem_pontos'          => ['amount'],
     'valor_pontos_demais'       => ['amount'],
     'regra_invalida'            => ['rule'],
+    'validade_invalida'         => ['expiry_months'],
     'telefone_novo_invalido'    => ['new_phone'],
     'telefone_igual'            => ['new_phone'],
     'telefone_ja_cliente'       => ['new_phone'],

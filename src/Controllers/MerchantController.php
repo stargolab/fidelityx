@@ -17,6 +17,7 @@ use App\Support\Money;
 use App\Support\Paginator;
 use App\Support\PasswordPolicy;
 use App\Support\Period;
+use App\Support\Plan;
 use App\Support\Csv;
 use App\Support\Privacy;
 use App\Support\QrSvg;
@@ -54,6 +55,8 @@ class MerchantController {
     private const UNDO_BANNER_SECONDS = 120;
     private const RECENT_CUSTOMERS = 5;
     private const MAX_POINTS_RULE_CENTS = 100000000;
+    // prazos de validade dos pontos que a loja pode escolher, em meses sem movimentacao (task 31)
+    public const EXPIRY_MONTHS_OPTIONS = [3, 6, 12, 18, 24, 36];
     private const MAX_LOGIN_FAILURES = 5;         // mesmo e-mail + mesmo ip
     private const MAX_LOGIN_FAILURES_PER_IP = 20; // mesmo ip, somando todas as contas
     private const LOGIN_WINDOW_SECONDS = 900;
@@ -229,6 +232,47 @@ class MerchantController {
         redirect('merchant/customer-new', ['phone' => $phone]);
     }
 
+    // plano da loja logada (task 32). so depois do authGuard.
+    private function plan(): string {
+        return Plan::normalize($this->merchant['plan'] ?? null);
+    }
+
+    // true se o plano da loja ainda deixa cadastrar mais um cliente.
+    // o limite e conferido na hora do cadastro: duas abas ao mesmo tempo podem passar por 1, e tudo bem.
+    private function canAddCustomer(int $merchantId): bool {
+        $customers = (new LoyaltyCardModel($this->db))->countByMerchant($merchantId);
+        return Plan::allowsOneMore($this->plan(), Plan::CUSTOMERS, $customers);
+    }
+
+    // true se o plano da loja ainda deixa ter mais um premio ativo (premio novo ja nasce ativo)
+    private function canActivateReward(int $merchantId, RewardModel $rewardModel): bool {
+        return Plan::allowsOneMore($this->plan(), Plan::ACTIVE_REWARDS, $rewardModel->countActiveByMerchant($merchantId));
+    }
+
+    // quanto do plano a loja ja usou, pro cartao "Plano" das telas (partials/plan-usage.php).
+    // cada item: rotulo, quanto usa, o limite (null = sem limite) e a porcentagem pra barra (0 a 100).
+    private function planUsage(int $merchantId): array {
+        $plan = $this->plan();
+        $used = [
+            Plan::CUSTOMERS      => ['clientes', (new LoyaltyCardModel($this->db))->countByMerchant($merchantId)],
+            Plan::ACTIVE_REWARDS => ['prêmios ativos', (new RewardModel($this->db))->countActiveByMerchant($merchantId)],
+        ];
+
+        $items = [];
+        foreach ($used as $resource => [$label, $count]) {
+            $limit = Plan::limit($plan, $resource);
+            $items[$resource] = [
+                'label'   => $label,
+                'used'    => $count,
+                'limit'   => $limit,
+                'percent' => $limit === null ? null : (int)min(100, round($count * 100 / $limit)),
+                'full'    => !Plan::allowsOneMore($plan, $resource, $count),
+            ];
+        }
+
+        return ['plan' => $plan, 'label' => Plan::label($plan), 'items' => $items];
+    }
+
     // regra de pontos da loja logada, em centavos por ponto (null = sem regra). so depois do authGuard.
     private function pointsRule(): ?int {
         $rule = $this->merchant['points_rule_cents'] ?? null;
@@ -244,11 +288,32 @@ class MerchantController {
             return;
         }
 
-        View::render('merchant/points-rule', ['ruleCents' => $this->pointsRule()]);
+        View::render('merchant/points-rule', [
+            'ruleCents'     => $this->pointsRule(),
+            'expiryMonths'  => $this->pointsExpiryMonths(),
+            'expiryOptions' => self::EXPIRY_MONTHS_OPTIONS,
+        ]);
+    }
+
+    // validade dos pontos da loja logada, em meses sem movimentacao (null = nao vencem). so depois do authGuard.
+    private function pointsExpiryMonths(): ?int {
+        $months = $this->merchant['points_expiry_months'] ?? null;
+        return $months === null ? null : (int)$months;
     }
 
     private function handlePointsRule(int $merchantId) {
         Csrf::verify();
+
+        // validade dos pontos (task 31): um dos prazos da lista, ou "never" pra desligar o vencimento
+        if (($_POST['action'] ?? '') === 'expiry') {
+            $choice = (string)($_POST['expiry_months'] ?? '');
+            if ($choice !== 'never' && !in_array($choice, array_map('strval', self::EXPIRY_MONTHS_OPTIONS), true)) {
+                redirect('merchant/points-rule', ['error' => 'validade_invalida']);
+            }
+
+            $this->merchantModel->updatePointsExpiry($merchantId, $choice === 'never' ? null : (int)$choice);
+            redirect('merchant/points-rule', ['success' => 'validade_salva']);
+        }
 
         if (($_POST['action'] ?? '') === 'clear') {
             $this->merchantModel->updatePointsRule($merchantId, null);
@@ -492,6 +557,7 @@ class MerchantController {
         View::render('merchant/rewards', [
             'rewards'    => $rewardModel->listByMerchant($merchantId),
             'pointsRule' => $this->pointsRule(),
+            'planUsage'  => $this->planUsage($merchantId),
         ]);
     }
 
@@ -530,6 +596,11 @@ class MerchantController {
             redirect('merchant/customer', ['phone' => $phone]);
         }
 
+        // plano no limite de clientes: avisa antes de o lojista preencher o cadastro
+        if (!$this->canAddCustomer($merchantId)) {
+            redirect('merchant/dashboard', ['error' => 'limite_clientes']);
+        }
+
         View::render('merchant/customer-new', ['phone' => $phone]);
     }
 
@@ -556,6 +627,11 @@ class MerchantController {
         // ja e cliente desta loja (ex.: formulario enviado duas vezes): nao troca nome nem consentimento
         if ($cardModel->findByMerchantAndPhone($merchantId, $phone)) {
             redirect('merchant/customer', ['phone' => $phone]);
+        }
+
+        // limite de clientes do plano (task 32): quem ja e cliente continua sendo atendido, so nao entra cliente novo
+        if (!$this->canAddCustomer($merchantId)) {
+            redirect('merchant/dashboard', ['error' => 'limite_clientes']);
         }
 
         // o telefone e global; nome e consentimento ficam no cartao desta loja
@@ -938,7 +1014,12 @@ class MerchantController {
 
         if (($_POST['action'] ?? '') === 'toggle') {
             $rewardId = filter_var($_POST['reward_id'] ?? '', FILTER_VALIDATE_INT);
-            if ($rewardId) {
+            $reward = $rewardId ? $rewardModel->findForMerchant($rewardId, $merchantId) : false;
+            if ($reward) {
+                // desativar sempre pode; reativar conta no limite de premios ativos do plano (task 32)
+                if (!$reward['active'] && !$this->canActivateReward($merchantId, $rewardModel)) {
+                    redirect('merchant/rewards', ['error' => 'limite_premios']);
+                }
                 $rewardModel->toggleActive($rewardId, $merchantId);
             }
             redirect('merchant/rewards', ['success' => 'premio_atualizado']);
@@ -958,6 +1039,11 @@ class MerchantController {
         $fields = $this->readRewardFields();
         if ($fields === null) {
             redirect('merchant/rewards', ['error' => 'campos_invalidos']);
+        }
+
+        // premio novo nasce ativo: so entra se o plano ainda tem vaga (task 32)
+        if (!$this->canActivateReward($merchantId, $rewardModel)) {
+            redirect('merchant/rewards', ['error' => 'limite_premios']);
         }
 
         $rewardModel->create($merchantId, $fields['name'], $fields['description'], $fields['cost']);
@@ -1014,6 +1100,7 @@ class MerchantController {
 
         View::render('merchant/profile', [
             'profile'     => $this->merchantModel->findProfile($merchantId),
+            'planUsage'   => $this->planUsage($merchantId),
             'categories'  => self::CATEGORIES,
             'states'      => self::STATES,
             'minPassword' => PasswordPolicy::MIN_BYTES,

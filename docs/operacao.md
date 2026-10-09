@@ -73,6 +73,8 @@ php bin/create-admin.php admin@seudominio.com.br "Nome da pessoa"
 
 O admin vê todas as lojas e ativa ou desativa um lojista (a desativação derruba a sessão dele na hora). Não há tela para criar ou remover admins: remover é `DELETE FROM admins WHERE email = ...` no banco.
 
+**Planos (task 32)**: na mesma lista o admin troca o plano de cada loja. **Free** (padrão) vai até 100 clientes e 3 prêmios ativos; **Pro** não tem limite. A troca vale na hora. Loja que volta do Pro para o Free com mais do que o limite fica com o que tem e só deixa de cadastrar novos. Os números ficam em `src/Support/Plan.php`.
+
 ## Rota de saúde
 
 `GET /index.php?url=health` responde `200 {"status":"ok"}` quando a aplicação consegue falar com o banco e `503 {"status":"erro"}` quando não (o motivo vai para o log, nunca para a resposta). Ela roda antes da sessão, então checar a cada 30 s não cria arquivo no volume de sessões, e sai com `Cache-Control: no-store`. É o endereço para o monitor externo e para o `HEALTHCHECK` do container (task 56; a troca do healthcheck no `Dockerfile` e o monitor com alerta ainda estão pendentes).
@@ -134,6 +136,34 @@ gunzip -c fidelityx-20261005-030000.sql.gz | docker compose exec -T db sh -c 'my
 ```
 
 A restauração **substitui** as tabelas do banco de destino pelo conteúdo do backup. Depois dela, rode `php bin/migrate.php` (o backup pode ser anterior à última migration).
+
+## Vencimento dos pontos
+
+Cada loja tem um prazo de validade (`merchants.points_expiry_months`, padrão 12 meses; o lojista muda ou desliga na tela Regra de pontos). O saldo de um cliente vence quando ele fica esse tempo sem nenhuma movimentação naquela loja. Quem tira os pontos vencidos do saldo é este comando:
+
+```bash
+php bin/expire-points.php             # vence os saldos parados
+php bin/expire-points.php --dry-run   # só mostra quantos cartões e pontos venceriam, sem alterar nada
+```
+
+Cada saldo vencido vira uma linha `expire` no histórico (`points_log`), que aparece no extrato do cliente e nos relatórios da loja. Rodar de novo não vence nada em dobro. Lojas inativas e cartões anonimizados ficam de fora. Em caso de falha o comando sai com código 1.
+
+**Sem o agendamento nada vence**: a data aparece para o cliente, mas o saldo continua lá. Agende uma vez por dia, como o backup:
+
+```
+# cron no servidor (4h da manhã), com Docker
+0 4 * * * cd /caminho/do/fidelityx && docker compose exec -T app php bin/expire-points.php >> /var/log/fidelityx-expire.log 2>&1
+
+# cron sem Docker
+0 4 * * * cd /caminho/do/fidelityx && php bin/expire-points.php >> /var/log/fidelityx-expire.log 2>&1
+```
+
+No Windows (XAMPP), use o Agendador de Tarefas chamando `C:\xampp\php\php.exe bin\expire-points.php` na pasta do projeto.
+
+Cuidados:
+
+- O vencimento não tem "desfazer". Antes da primeira execução em um banco com dados reais, rode com `--dry-run` e faça um backup.
+- Se a loja diminuir o prazo, os saldos que já passam do prazo novo vencem na próxima execução.
 
 ## Registro de erros
 

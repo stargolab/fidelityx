@@ -57,6 +57,7 @@ $flashMessages = [
         'confirmacao_reenviada' => 'Enviamos um novo link de confirmação. O anterior deixou de valer.',
         'loja_ativada'      => 'Loja ativada. O lojista já pode entrar.',
         'loja_desativada'   => 'Loja desativada. O lojista perdeu o acesso na hora.',
+        'plano_alterado'    => 'Plano da loja alterado. O limite novo já vale.',
         'email_confirmado'  => 'E-mail confirmado. Bem-vindo ao FidelityX!',
         'logged'            => 'Bem-vindo de volta!',
         'logout'            => 'Você saiu da sua conta.',

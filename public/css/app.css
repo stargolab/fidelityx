@@ -863,6 +863,23 @@ span.btn-secondary {
     margin-top: 1rem;
 }
 
+/* painel administrativo: seletor de plano dentro da tabela de lojas (select + botao na mesma linha) */
+.plan-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.plan-form select {
+    min-height: 44px;
+    padding: 0 0.75rem;
+    background: var(--bg-card);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
 /* cartao "Plano" (partials/plan-usage.php): cada limite com o numero em cima e a barra embaixo */
 .plan-usage-item {
     margin-bottom: 1rem;

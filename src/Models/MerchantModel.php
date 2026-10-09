@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Plan;
 use App\Support\PublicCode;
 
 class MerchantModel{
@@ -121,7 +122,7 @@ class MerchantModel{
     }
 
     public function pageForAdmin(int $limit, int $offset): array {
-        $sql = 'SELECT m.id, m.store_name, m.owner_name, m.email, m.cpf, m.cnpj, m.status, m.created_at,
+        $sql = 'SELECT m.id, m.store_name, m.owner_name, m.email, m.cpf, m.cnpj, m.status, m.plan, m.created_at,
                        (SELECT COUNT(*) FROM loyalty_cards lc WHERE lc.merchant_id = m.id AND lc.anonymized_at IS NULL) AS customers
                 FROM merchants m
                 ORDER BY m.created_at DESC, m.id DESC
@@ -137,6 +138,17 @@ class MerchantModel{
         }
         $stmt = $this->db->prepare('UPDATE merchants SET status = :status WHERE id = :id');
         $stmt->execute([':status' => $status, ':id' => $merchantId]);
+        return $stmt->rowCount() > 0 || $this->findById($merchantId) !== false;
+    }
+
+    // troca o plano da loja (task 32), so pelo painel administrativo. vale na proxima requisicao do lojista.
+    // devolve false se o plano nao existe ou a loja nao existe.
+    public function setPlan(int $merchantId, string $plan): bool {
+        if (!Plan::isValid($plan)) {
+            return false;
+        }
+        $stmt = $this->db->prepare('UPDATE merchants SET plan = :plan WHERE id = :id');
+        $stmt->execute([':plan' => $plan, ':id' => $merchantId]);
         return $stmt->rowCount() > 0 || $this->findById($merchantId) !== false;
     }
 }

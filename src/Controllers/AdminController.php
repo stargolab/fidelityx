@@ -87,7 +87,7 @@ class AdminController {
         redirect('admin/login', ['success' => 'logout']);
     }
 
-    // lista das lojas, paginada; POST ativa ou desativa uma
+    // lista das lojas, paginada; POST ativa ou desativa uma, ou troca o plano dela (action=plan)
     public function renderDashboard() {
         $this->adminGuard();
         $merchants = new MerchantModel($this->db);
@@ -97,6 +97,14 @@ class AdminController {
             $merchantId = filter_var($_POST['merchant_id'] ?? '', FILTER_VALIDATE_INT);
             $status = (string)($_POST['status'] ?? '');
             $page = filter_var($_POST['page'] ?? '', FILTER_VALIDATE_INT) ?: 1;
+
+            // troca de plano (task 32): Free <-> Pro. o limite novo vale na proxima requisicao do lojista
+            if (($_POST['action'] ?? '') === 'plan') {
+                if (!$merchantId || !$merchants->setPlan($merchantId, (string)($_POST['plan'] ?? ''))) {
+                    redirect('admin/dashboard', ['page' => $page, 'error' => 'loja_invalida']);
+                }
+                redirect('admin/dashboard', ['page' => $page, 'success' => 'plano_alterado']);
+            }
 
             if (!$merchantId || !$merchants->setStatus($merchantId, $status)) {
                 redirect('admin/dashboard', ['page' => $page, 'error' => 'loja_invalida']);

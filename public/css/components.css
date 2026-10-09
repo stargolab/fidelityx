@@ -171,6 +171,13 @@
     color: var(--warning-text);
 }
 
+/* validade do saldo (partials/points-expiry.php): linha pequena embaixo dos pontos,
+   na consulta publica e na tela do cliente no painel */
+.points-expiry {
+    font-size: 0.85rem;
+    margin-top: 0.4rem;
+}
+
 /* acessibilidade (task 18) ------------------------------------------------ */
 
 /* foco do teclado sempre visivel (inputs e selects ja tem o anel em :focus) */

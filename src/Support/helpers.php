@@ -52,6 +52,11 @@ function format_datetime($value): string {
     return $value ? date('d/m/Y H:i', strtotime($value)) : '—';
 }
 
+// timestamp do banco -> "30/09/2026" (so o dia, ex.: vencimento dos pontos)
+function format_date($value): string {
+    return $value ? date('d/m/Y', strtotime($value)) : '—';
+}
+
 // monta a url de uma rota interna, pra usar em links e actions de form
 function url(string $route, array $params = []): string {
     return '/index.php?' . http_build_query(array_merge(['url' => $route], $params));

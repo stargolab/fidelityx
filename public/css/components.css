@@ -233,6 +233,13 @@
     color: var(--warning-text);
 }
 
+/* validade do saldo (partials/points-expiry.php): linha pequena embaixo dos pontos,
+   na consulta publica e na tela do cliente no painel */
+.points-expiry {
+    font-size: 0.85rem;
+    margin-top: 0.4rem;
+}
+
 /* botao de envio que vem logo depois de uma linha de campos: um respiro a mais em cima */
 .form-submit {
     margin-top: 1rem;

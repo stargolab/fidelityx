@@ -863,6 +863,23 @@ span.btn-secondary {
     margin-top: 1rem;
 }
 
+/* cartao "Plano" (partials/plan-usage.php): cada limite com o numero em cima e a barra embaixo */
+.plan-usage-item {
+    margin-bottom: 1rem;
+}
+
+.plan-usage-item p {
+    margin-bottom: 0.4rem;
+}
+
+.plan-usage-note {
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.plan-usage .plan-usage-note {
+    margin-bottom: 0;
+}
 .rule-summary {
     display: flex;
     flex-direction: column;

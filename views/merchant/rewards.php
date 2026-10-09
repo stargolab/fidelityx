@@ -13,6 +13,14 @@
 
 <section class="card">
     <h2>Novo prêmio</h2>
+    <?php $rewardsUsage = $planUsage['items'][\App\Support\Plan::ACTIVE_REWARDS]; ?>
+    <?php if ($rewardsUsage['limit'] !== null): ?>
+        <?php // limite de premios ativos do plano (task 32): avisa antes de o lojista preencher o formulario ?>
+        <p class="<?= $rewardsUsage['full'] ? 'alert alert-warning' : 'muted' ?> plan-usage-note"<?= $rewardsUsage['full'] ? ' role="note"' : '' ?>>
+            <?= (int)$rewardsUsage['used'] ?> de <?= (int)$rewardsUsage['limit'] ?> prêmios ativos do plano <?= e($planUsage['label']) ?>.
+            <?php if ($rewardsUsage['full']): ?>Para cadastrar ou reativar outro, desative um prêmio ou peça o plano Pro ao suporte.<?php endif; ?>
+        </p>
+    <?php endif; ?>
     <form action="<?= e(url('merchant/rewards')) ?>" method="POST">
         <?= Csrf::field() ?>
         <input type="hidden" name="action" value="create">

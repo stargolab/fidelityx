@@ -249,6 +249,30 @@ class MerchantController {
         return Plan::allowsOneMore($this->plan(), Plan::ACTIVE_REWARDS, $rewardModel->countActiveByMerchant($merchantId));
     }
 
+    // quanto do plano a loja ja usou, pro cartao "Plano" das telas (partials/plan-usage.php).
+    // cada item: rotulo, quanto usa, o limite (null = sem limite) e a porcentagem pra barra (0 a 100).
+    private function planUsage(int $merchantId): array {
+        $plan = $this->plan();
+        $used = [
+            Plan::CUSTOMERS      => ['clientes', (new LoyaltyCardModel($this->db))->countByMerchant($merchantId)],
+            Plan::ACTIVE_REWARDS => ['prêmios ativos', (new RewardModel($this->db))->countActiveByMerchant($merchantId)],
+        ];
+
+        $items = [];
+        foreach ($used as $resource => [$label, $count]) {
+            $limit = Plan::limit($plan, $resource);
+            $items[$resource] = [
+                'label'   => $label,
+                'used'    => $count,
+                'limit'   => $limit,
+                'percent' => $limit === null ? null : (int)min(100, round($count * 100 / $limit)),
+                'full'    => !Plan::allowsOneMore($plan, $resource, $count),
+            ];
+        }
+
+        return ['plan' => $plan, 'label' => Plan::label($plan), 'items' => $items];
+    }
+
     // regra de pontos da loja logada, em centavos por ponto (null = sem regra). so depois do authGuard.
     private function pointsRule(): ?int {
         $rule = $this->merchant['points_rule_cents'] ?? null;
@@ -533,6 +557,7 @@ class MerchantController {
         View::render('merchant/rewards', [
             'rewards'    => $rewardModel->listByMerchant($merchantId),
             'pointsRule' => $this->pointsRule(),
+            'planUsage'  => $this->planUsage($merchantId),
         ]);
     }
 
@@ -1075,6 +1100,7 @@ class MerchantController {
 
         View::render('merchant/profile', [
             'profile'     => $this->merchantModel->findProfile($merchantId),
+            'planUsage'   => $this->planUsage($merchantId),
             'categories'  => self::CATEGORIES,
             'states'      => self::STATES,
             'minPassword' => PasswordPolicy::MIN_BYTES,

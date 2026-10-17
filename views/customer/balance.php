@@ -70,6 +70,7 @@
                             <strong><?= number_format((int)$card['current_points'], 0, ',', '.') ?> pts</strong>
                         </div>
 
+                        <?php require __DIR__ . '/../partials/points-expiry.php'; ?>
                         <?php require __DIR__ . '/../partials/reward-progress.php'; ?>
 
                         <?php if ($rewards): ?>

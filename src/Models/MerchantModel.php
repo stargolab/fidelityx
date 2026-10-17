@@ -42,7 +42,7 @@ class MerchantModel{
     // dados que o authGuard confere a cada requisicao (o hash da senha serve pra derrubar
     // as sessoes antigas quando a senha e trocada, ver SessionGuard::passwordSignature)
     public function findById($merchantId) {
-        $stmt = $this->db->prepare('SELECT id, owner_name, store_name, email, email_verified_at, status, points_rule_cents, password_hash FROM merchants WHERE id = :id');
+        $stmt = $this->db->prepare('SELECT id, owner_name, store_name, email, email_verified_at, status, points_rule_cents, points_expiry_months, password_hash FROM merchants WHERE id = :id');
         $stmt->execute([':id' => $merchantId]);
 
         return $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -52,6 +52,12 @@ class MerchantModel{
     public function updatePointsRule($merchantId, ?int $ruleCents): void {
         $stmt = $this->db->prepare('UPDATE merchants SET points_rule_cents = :rule WHERE id = :id');
         $stmt->execute([':rule' => $ruleCents, ':id' => $merchantId]);
+    }
+
+    // validade dos pontos em meses sem movimentacao; null = os pontos da loja nao vencem
+    public function updatePointsExpiry($merchantId, ?int $months): void {
+        $stmt = $this->db->prepare('UPDATE merchants SET points_expiry_months = :months WHERE id = :id');
+        $stmt->execute([':months' => $months, ':id' => $merchantId]);
     }
 
     // dados exibidos na tela de perfil; false se a conta nao existir

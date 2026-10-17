@@ -8,6 +8,7 @@
         <div class="customer-name"><?= e($card['customer_name']) ?></div>
         <div class="muted"><?= e(format_phone($card['phone'])) ?></div>
         <a href="<?= e(url('merchant/statement', ['phone' => $card['phone']])) ?>" class="customer-statement-link">Ver extrato</a>
+        <?php require __DIR__ . '/../partials/points-expiry.php'; ?>
     </div>
     <div class="customer-balance">
         <span class="customer-balance-value"><?= number_format((int)$card['current_points'], 0, ',', '.') ?></span>

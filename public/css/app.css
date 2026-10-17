@@ -286,6 +286,12 @@ th.num {
     color: var(--warning-text);
 }
 
+/* pontos vencidos por falta de movimentacao */
+.badge-expire {
+    background: var(--error-soft);
+    color: var(--error-text);
+}
+
 .btn-secondary {
     min-height: 44px;
     background: transparent;

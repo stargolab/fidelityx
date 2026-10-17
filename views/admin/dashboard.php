@@ -33,7 +33,7 @@
                 <div class="table-wrap">
                     <table>
                         <thead>
-                            <tr><th>Loja</th><th>Responsável</th><th>CPF/CNPJ</th><th>E-mail</th><th class="num">Clientes</th><th>Cadastro</th><th>Situação</th><th><span class="visually-hidden">Ações</span></th></tr>
+                            <tr><th>Loja</th><th>Responsável</th><th>CPF/CNPJ</th><th>E-mail</th><th class="num">Clientes</th><th>Cadastro</th><th>Plano</th><th>Situação</th><th><span class="visually-hidden">Ações</span></th></tr>
                         </thead>
                         <tbody>
                             <?php foreach ($merchants as $merchant): ?>
@@ -45,6 +45,22 @@
                                     <td><?= e($merchant['email']) ?></td>
                                     <td class="num"><?= (int)$merchant['customers'] ?></td>
                                     <td><?= e(format_datetime($merchant['created_at'])) ?></td>
+                                    <td>
+                                        <?php // troca de plano (task 32): Free tem limite de clientes e de premios ativos, Pro nao ?>
+                                        <form action="<?= e(url('admin/dashboard')) ?>" method="POST" class="plan-form">
+                                            <?= Csrf::field() ?>
+                                            <input type="hidden" name="action" value="plan">
+                                            <input type="hidden" name="merchant_id" value="<?= (int)$merchant['id'] ?>">
+                                            <input type="hidden" name="page" value="<?= (int)$paginator->page ?>">
+                                            <label for="plan-<?= (int)$merchant['id'] ?>" class="visually-hidden">Plano de <?= e($merchant['store_name']) ?></label>
+                                            <select name="plan" id="plan-<?= (int)$merchant['id'] ?>">
+                                                <?php foreach (\App\Support\Plan::LABELS as $planValue => $planLabel): ?>
+                                                    <option value="<?= e($planValue) ?>"<?= \App\Support\Plan::normalize($merchant['plan']) === $planValue ? ' selected' : '' ?>><?= e($planLabel) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <button type="submit" class="btn-secondary">Salvar<span class="visually-hidden"> o plano de <?= e($merchant['store_name']) ?></span></button>
+                                        </form>
+                                    </td>
                                     <td><span class="badge <?= $active ? 'badge-earn' : 'badge-reversal' ?>"><?= $active ? 'Ativa' : 'Desativada' ?></span></td>
                                     <td class="num">
                                         <form action="<?= e(url('admin/dashboard')) ?>" method="POST"

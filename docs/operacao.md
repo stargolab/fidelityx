@@ -73,6 +73,8 @@ php bin/create-admin.php admin@seudominio.com.br "Nome da pessoa"
 
 O admin vê todas as lojas e ativa ou desativa um lojista (a desativação derruba a sessão dele na hora). Não há tela para criar ou remover admins: remover é `DELETE FROM admins WHERE email = ...` no banco.
 
+**Planos (task 32)**: na mesma lista o admin troca o plano de cada loja. **Free** (padrão) vai até 100 clientes e 3 prêmios ativos; **Pro** não tem limite. A troca vale na hora. Loja que volta do Pro para o Free com mais do que o limite fica com o que tem e só deixa de cadastrar novos. Os números ficam em `src/Support/Plan.php`.
+
 ## Rota de saúde
 
 `GET /index.php?url=health` responde `200 {"status":"ok"}` quando a aplicação consegue falar com o banco e `503 {"status":"erro"}` quando não (o motivo vai para o log, nunca para a resposta). Ela roda antes da sessão, então checar a cada 30 s não cria arquivo no volume de sessões, e sai com `Cache-Control: no-store`. É o endereço para o monitor externo e para o `HEALTHCHECK` do container (task 56; a troca do healthcheck no `Dockerfile` e o monitor com alerta ainda estão pendentes).
